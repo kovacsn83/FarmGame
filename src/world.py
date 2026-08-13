@@ -11,7 +11,7 @@ from constants import (
 )
 from buildings import (
     BUILD_OPTIONS, BUILDING_TYPES, can_place_building, find_building_data,
-    get_animal_pen_tiles,
+    get_animal_pen_tiles, get_orchard_tiles,
 )
 from building_renderers import (
     draw_procedural_buildings, has_procedural_renderer,
@@ -148,26 +148,35 @@ def draw_world(
 
 def draw_animal_pen_fences(screen, buildings):
     """A karámtile-ok kizárólagos külső határára rajzol kerítést."""
-    pen_tiles = get_animal_pen_tiles(buildings)
+    _draw_merged_area_fence(screen, get_animal_pen_tiles(buildings))
+
+
+def draw_orchard_fences(screen, buildings):
+    """Az összefüggő Gyümölcsösök közös külső kerítését rajzolja."""
+    _draw_merged_area_fence(screen, get_orchard_tiles(buildings))
+
+
+def _draw_merged_area_fence(screen, area_tiles):
+    """Csak egy területszerű objektum rácsának külső éleit keríti körbe."""
     fence_color = (112, 72, 38)
     fence_width = 4
-    for row, col in pen_tiles:
+    for row, col in area_tiles:
         left, top = world_to_screen(col * TILE_SIZE, row * TILE_SIZE)
         right = left + TILE_SIZE
         bottom = top + TILE_SIZE
-        if (row - 1, col) not in pen_tiles:
+        if (row - 1, col) not in area_tiles:
             pygame.draw.line(
                 screen, fence_color, (left, top), (right, top), fence_width,
             )
-        if (row + 1, col) not in pen_tiles:
+        if (row + 1, col) not in area_tiles:
             pygame.draw.line(
                 screen, fence_color, (left, bottom), (right, bottom), fence_width,
             )
-        if (row, col - 1) not in pen_tiles:
+        if (row, col - 1) not in area_tiles:
             pygame.draw.line(
                 screen, fence_color, (left, top), (left, bottom), fence_width,
             )
-        if (row, col + 1) not in pen_tiles:
+        if (row, col + 1) not in area_tiles:
             pygame.draw.line(
                 screen, fence_color, (right, top), (right, bottom), fence_width,
             )

@@ -2,7 +2,7 @@ from constants import (
     ANIMAL_PEN_BUILD_COST, BUILDING, COLOR_FIELD,
     FARMHOUSE_BUILD_COST, FARMHOUSE_LEVEL_2_MAINTENANCE_BASE,
     FARMHOUSE_LEVEL_2_UPGRADE_PRICE, GARAGE_BUILD_COST, GRASS,
-    MARKET_BUILD_COST, ROAD, TILE_SIZE, POND_BUILD_COST,
+    MARKET_BUILD_COST, ORCHARD_BUILD_COST, ROAD, TILE_SIZE, POND_BUILD_COST,
     WAREHOUSE_BUILD_COST,
 )
 from crops import CROPS
@@ -102,6 +102,17 @@ BUILDING_TYPES = {
             "A gazdaság későbbi öntözési rendszerének vízforrása."
         ),
     },
+    "orchard": {
+        "name": "Gyümölcsös",
+        "width": 4,
+        "height": 4,
+        "color": (34, 139, 34),
+        "build_cost": ORCHARD_BUILD_COST,
+        # A füves belső terület fölé külön, összeolvadó kerítés kerül.
+        "draw_grass_underlay": True,
+        "future_role": "fruit_tree_area",
+        "description": "Előkészített terület a későbbi gyümölcsfák számára.",
+    },
 }
 
 # A választóablak minden építhető területe ugyanebből a katalógusból dolgozik.
@@ -179,19 +190,21 @@ def can_place_building(
     has_road_connection = has_adjacent_road(
         world, row, col, width, height,
     )
-    if building_type == "animal_pen":
+    if building_type in ("animal_pen", "orchard"):
         candidate = {
-            "type": "animal_pen", "row": row, "col": col,
+            "type": building_type, "row": row, "col": col,
             "width": width, "height": height,
         }
-        has_pen_connection = any(
-            _animal_pens_are_adjacent(candidate, existing_pen)
-            for existing_pen in get_animal_pens(buildings)
+        connected_buildings = get_buildings_by_type(buildings, building_type)
+        has_same_type_connection = any(
+            buildings_are_side_adjacent(candidate, existing)
+            for existing in connected_buildings
         )
-        if not has_road_connection and not has_pen_connection:
+        if not has_road_connection and not has_same_type_connection:
             return False
-        if not _candidate_pen_keeps_species_separate(
-                buildings, animals, candidate):
+        if (building_type == "animal_pen"
+                and not _candidate_pen_keeps_species_separate(
+                    buildings, animals, candidate)):
             return False
     elif not has_road_connection:
         return False
@@ -252,18 +265,41 @@ def get_animal_pens(buildings):
     return [building for building in buildings if building["type"] == "animal_pen"]
 
 
-def get_animal_pen_tiles(buildings):
-    """A karámrendszer teljes, későbbi állatmozgáshoz is használható területe."""
+def get_buildings_by_type(buildings, building_type):
+    """Egy épülettípus példányait az építési sorrendben adja vissza."""
+    return [
+        building for building in buildings
+        if building.get("type") == building_type
+    ]
+
+
+def get_orchards(buildings):
+    """Visszaadja a később fákkal bővíthető Gyümölcsös-elemeket."""
+    return get_buildings_by_type(buildings, "orchard")
+
+
+def get_building_type_tiles(buildings, building_type):
+    """Egy területszerű épülettípus teljes, összefüggésvizsgálatra kész rácsa."""
     return {
         (building["row"] + row, building["col"] + col)
-        for building in get_animal_pens(buildings)
+        for building in get_buildings_by_type(buildings, building_type)
         for row in range(building["height"])
         for col in range(building["width"])
     }
 
 
-def _animal_pens_are_adjacent(first, second):
-    """A pozitív hosszúságú közös oldallal érintkező karámokat köti össze."""
+def get_orchard_tiles(buildings):
+    """A Gyümölcsösök teljes területe, későbbi faelhelyezéshez is használhatóan."""
+    return get_building_type_tiles(buildings, "orchard")
+
+
+def get_animal_pen_tiles(buildings):
+    """A karámrendszer teljes, későbbi állatmozgáshoz is használható területe."""
+    return get_building_type_tiles(buildings, "animal_pen")
+
+
+def buildings_are_side_adjacent(first, second):
+    """Pozitív hosszúságú közös oldallal érintkező területeket ismer fel."""
     row_overlap = min(
         first["row"] + first["height"],
         second["row"] + second["height"],
@@ -283,9 +319,24 @@ def _animal_pens_are_adjacent(first, second):
     return touch_horizontally or touch_vertically
 
 
+def _animal_pens_are_adjacent(first, second):
+    """Kompatibilitási segéd a Karám csoportosításához."""
+    return buildings_are_side_adjacent(first, second)
+
+
 def get_animal_pen_groups(buildings):
     """Oldalszomszédság alapján összefüggő karámrendszerekre bont."""
-    remaining = get_animal_pens(buildings)
+    return get_connected_building_groups(buildings, "animal_pen")
+
+
+def get_orchard_groups(buildings):
+    """A későbbi fakészlethez összefüggő Gyümölcsös-rendszerekre bont."""
+    return get_connected_building_groups(buildings, "orchard")
+
+
+def get_connected_building_groups(buildings, building_type):
+    """Oldalszomszédság alapján csoportosít egy területszerű épülettípust."""
+    remaining = get_buildings_by_type(buildings, building_type)
     groups = []
     while remaining:
         group = [remaining.pop(0)]
@@ -294,7 +345,7 @@ def get_animal_pen_groups(buildings):
             current = pending.pop()
             neighbors = [
                 pen for pen in remaining
-                if _animal_pens_are_adjacent(current, pen)
+                if buildings_are_side_adjacent(current, pen)
             ]
             for neighbor in neighbors:
                 remaining.remove(neighbor)

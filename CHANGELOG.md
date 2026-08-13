@@ -1,5 +1,9 @@
 # CHANGELOG
 
+- Új építhető objektumként bekerült a Gyümölcsös: 4×4-es, füves terület, $200 építési árral és az egységes, évi 10%-os fenntartási szabállyal.
+- A Gyümölcsös barna kerítése automatikusan összenyílik a közvetlenül csatlakozó Gyümölcsösöknél; az első elem útkapcsolatot igényel, a további elemek közös oldalon keresztül is bővíthetők.
+- Az összefüggő Gyümölcsös-csoportok és területcsempék külön lekérdezhetők, előkészítve a későbbi adatvezérelt gyümölcsfa-rendszert.
+
 - Az állatok mozgása mostantól nem fix 9 másodperces ciklusokban történik: minden állat minden sikeres vagy sikertelen mozgási próbálkozás után saját, új, 6–9 másodperc közötti várakozási időt kap.
 
 - A tutorial Quest-sorozat 21 lépésesre bővült, és frissült az infrastruktúra, a járművek és az állattartás tanulási sorrendje.

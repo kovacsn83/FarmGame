@@ -67,7 +67,8 @@ from ui import (
     draw_notification_bar, draw_tooltip,
 )
 from world import (
-    create_world, draw_animal_pen_fences, draw_grid, draw_preview, draw_world,
+    create_world, draw_animal_pen_fences, draw_grid, draw_orchard_fences,
+    draw_preview, draw_world,
     screen_to_grid,
 )
 
@@ -770,6 +771,7 @@ def main():
         draw_pen_troughs(screen, buildings, animals)
         draw_animals(screen, animals)
         draw_animal_pen_fences(screen, buildings)
+        draw_orchard_fences(screen, buildings)
         vehicles.ensure_idle_positions(world, buildings)
         vehicles.draw(screen)
         draw_grid(
