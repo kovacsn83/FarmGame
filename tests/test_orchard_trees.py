@@ -22,7 +22,11 @@ from inventory import get_marketable_item_ids
 from orchards import (
     ORCHARD_TREE_SLOT_OFFSETS, TREE_TYPES, can_plant_tree, find_tree_at,
     draw_orchard_trees, get_tree_age_years, get_tree_tooltip_lines, plant_tree,
-    run_weekly_orchard_cycle,
+    run_weekly_orchard_cycle, TREE_CANOPY_LIGHT_OFFSET,
+    TREE_GROUND_SHADOW_OFFSET,
+)
+from building_renderers import (
+    PROCEDURAL_LIGHT_DIRECTION, PROCEDURAL_SHADOW_OFFSET,
 )
 from save_system import load_game, save_game
 from screen_layout import set_camera, set_screen_size
@@ -146,6 +150,14 @@ class OrchardTreeTests(unittest.TestCase):
         draw_orchard_trees(surface, self.buildings)
         # A bal felső fahely közepe: (11, 11) csempe, a felső HUD eltolásával.
         self.assertNotEqual((0, 0, 0), surface.get_at((220, 270))[:3])
+        self.assertEqual(
+            TREE_TYPES["apple"]["canopy_light_color"],
+            surface.get_at((216, 274))[:3],
+        )
+        self.assertEqual(
+            TREE_TYPES["apple"]["canopy_color"],
+            surface.get_at((228, 262))[:3],
+        )
 
         tree["age_weeks"] = 2 * 52
         tooltip = get_tree_tooltip_lines(tree)
@@ -156,6 +168,16 @@ class OrchardTreeTests(unittest.TestCase):
         tooltip = get_tree_tooltip_lines(tree)
         self.assertIn("Termő", tooltip)
         self.assertIn("6. életév", tooltip)
+
+    def test_tree_shading_uses_the_shared_lower_left_light_direction(self):
+        self.assertEqual((-1, 1), PROCEDURAL_LIGHT_DIRECTION)
+        self.assertEqual((-4, 4), TREE_CANOPY_LIGHT_OFFSET)
+        self.assertEqual(
+            PROCEDURAL_SHADOW_OFFSET,
+            TREE_GROUND_SHADOW_OFFSET,
+        )
+        self.assertGreater(TREE_GROUND_SHADOW_OFFSET[0], 0)
+        self.assertLess(TREE_GROUND_SHADOW_OFFSET[1], 0)
 
     def test_tree_round_trip_and_old_empty_orchard_compatibility(self):
         tree = plant_tree(

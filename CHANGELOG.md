@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- A Gyümölcsfák lombkorona- és talajárnyékolása mostantól a FarmGame egységes, bal alsó irányból érkező fényét követi.
+
 - Elkészült a Gyümölcsös első működő változata és az adatvezérelt gyümölcsfa-katalógus első faja, az Almafa.
 - Egy 4×4-es Gyümölcsös négy rögzített fahelyet biztosít; az Almafa telepítési ára $100, életkora hetekben, egyedenként tárolódik.
 - Az Almafa 3 éves korától évente egyszer 20 Almát termel a Raktárba, a 30. életévével bezárólag; az Alma egyelőre nem értékesíthető a Piacon.

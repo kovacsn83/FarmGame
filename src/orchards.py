@@ -3,6 +3,9 @@ import math
 import pygame
 
 from buildings import find_building_data, get_orchards, store_item
+from building_renderers import (
+    PROCEDURAL_LIGHT_DIRECTION, PROCEDURAL_SHADOW_OFFSET,
+)
 from game_logger import log
 from inventory import get_inventory_item_name
 from screen_layout import world_to_screen
@@ -29,6 +32,14 @@ TREE_TYPES = {
 
 # Egy 4×4-es Gyümölcsös négy rögzített, 2×2-es fahelyének bal felső eltolása.
 ORCHARD_TREE_SLOT_OFFSETS = ((0, 0), (0, 2), (2, 0), (2, 2))
+
+# A gyümölcsfák is a játék közös, bal alsó fényirányát követik.
+TREE_CANOPY_LIGHT_OFFSET = (
+    PROCEDURAL_LIGHT_DIRECTION[0] * 4,
+    PROCEDURAL_LIGHT_DIRECTION[1] * 4,
+)
+TREE_GROUND_SHADOW_OFFSET = PROCEDURAL_SHADOW_OFFSET
+TREE_GROUND_SHADOW_COLOR = (55, 72, 48)
 
 
 def get_tree_slot_at(buildings, row, col):
@@ -228,9 +239,13 @@ def draw_orchard_trees(screen, buildings):
                 (tree["row"] + 1) * TILE_SIZE,
             )
             center = round(center_x), round(center_y)
+            shadow_center = (
+                center[0] + TREE_GROUND_SHADOW_OFFSET[0],
+                center[1] + TREE_GROUND_SHADOW_OFFSET[1],
+            )
             pygame.draw.ellipse(
-                screen, (55, 72, 48),
-                (center[0] - 13, center[1] + 8, 28, 9),
+                screen, TREE_GROUND_SHADOW_COLOR,
+                (shadow_center[0] - 14, shadow_center[1] - 4, 28, 9),
             )
             pygame.draw.circle(screen, (105, 72, 40), center, 5)
             pygame.draw.circle(
@@ -238,7 +253,11 @@ def draw_orchard_trees(screen, buildings):
             )
             pygame.draw.circle(
                 screen, definition["canopy_light_color"],
-                (center[0] - 4, center[1] - 4), 8,
+                (
+                    center[0] + TREE_CANOPY_LIGHT_OFFSET[0],
+                    center[1] + TREE_CANOPY_LIGHT_OFFSET[1],
+                ),
+                8,
             )
             if (
                 definition["first_yield_age_years"]
