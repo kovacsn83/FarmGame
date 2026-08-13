@@ -68,6 +68,7 @@ class MaintenanceSystemTests(unittest.TestCase):
         manager.vehicles = [
             SimpleNamespace(vehicle_type=VehicleType.TRACTOR),
             SimpleNamespace(vehicle_type=VehicleType.COMBINE),
+            SimpleNamespace(vehicle_type=VehicleType.FRUIT_HARVESTER),
         ]
         manager.implements = [
             SimpleNamespace(vehicle_type=VehicleType.WATER_TANK),

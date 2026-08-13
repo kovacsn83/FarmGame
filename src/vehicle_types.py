@@ -1,7 +1,8 @@
 from enum import Enum
 
 from constants import (
-    COMBINE_PURCHASE_PRICE, TRAILER_PURCHASE_PRICE,
+    COMBINE_PURCHASE_PRICE, FRUIT_HARVESTER_PURCHASE_PRICE,
+    TRAILER_PURCHASE_PRICE,
     TRACTOR_PURCHASE_PRICE, WATER_TANK_PURCHASE_PRICE,
 )
 
@@ -11,6 +12,7 @@ class VehicleType(str, Enum):
 
     TRACTOR = "tractor"
     COMBINE = "combine"
+    FRUIT_HARVESTER = "fruit_harvester"
     WATER_TANK = "water_tank"
     TRAILER = "trailer"
 
@@ -34,6 +36,17 @@ VEHICLE_TYPE_DEFINITIONS = {
         "supported_tasks": ("harvest",),
         "self_propelled": True,
         "towable": False,
+    },
+    VehicleType.FRUIT_HARVESTER: {
+        "name": "Gyümölcs szüretelőgép",
+        "purchase_price": FRUIT_HARVESTER_PURCHASE_PRICE,
+        "accepts_field_tasks": False,
+        "supported_tasks": ("orchard_harvest",),
+        "supported_tree_types": ("apple",),
+        "self_propelled": True,
+        "towable": False,
+        "category": "orchard_vehicle",
+        "renderer_type": "fruit_harvester",
     },
     VehicleType.WATER_TANK: {
         "name": "Locsolótartály",

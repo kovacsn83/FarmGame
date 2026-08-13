@@ -53,6 +53,11 @@ COMBINE_BODY_BORDER_COLOR = (25, 70, 38)
 COMBINE_WHEEL_COLOR = (240, 198, 35)
 COMBINE_CAB_COLOR = (65, 72, 72)
 COMBINE_HEADER_COLOR = (190, 155, 30)
+FRUIT_HARVESTER_BODY_COLOR = (222, 176, 43)
+FRUIT_HARVESTER_BODY_DARK = (154, 111, 28)
+FRUIT_HARVESTER_CAB_COLOR = (70, 78, 78)
+FRUIT_HARVESTER_ARM_COLOR = (195, 145, 35)
+FRUIT_HARVESTER_RIM_COLOR = (172, 176, 174)
 WATER_TANK_BODY_COLOR = (174, 184, 187)
 WATER_TANK_BODY_LIGHT = (211, 218, 219)
 WATER_TANK_BODY_DARK = (105, 116, 120)
@@ -460,9 +465,7 @@ class Vehicle:
             self, world, buildings, current_ticks=None,
             parking_building=None, parking_slot_id=0):
         """Sikeres Garázsépítéskor egyszer megkísérli az automatikus átköltözést."""
-        vehicle_name = (
-            "kombájn" if self.vehicle_type == VehicleType.COMBINE else "traktor"
-        )
+        vehicle_name = VEHICLE_TYPE_DEFINITIONS[self.vehicle_type]["name"].lower()
         log(f"Garázs megépült. A {vehicle_name} átköltözik.", "Vehicle")
         if parking_building is None:
             parking_building, parking_tile = find_preferred_parking(world, buildings)
@@ -521,9 +524,7 @@ class Vehicle:
         return True
 
     def _print_relocation_error(self):
-        vehicle_name = (
-            "kombájn" if self.vehicle_type == VehicleType.COMBINE else "traktor"
-        )
+        vehicle_name = VEHICLE_TYPE_DEFINITIONS[self.vehicle_type]["name"].lower()
         log(
             f"A {vehicle_name} nem tud eljutni a Garázshoz. "
             "Építs összefüggő utat a Garázsig.", "Vehicle",
@@ -1239,9 +1240,7 @@ class Vehicle:
             implement = self.attached_implement
             implement.return_to_parking(world)
             log("A Traktor lecsatolta a Locsolótartályt.", "Watering")
-        vehicle_name = (
-            "kombájn" if self.vehicle_type == VehicleType.COMBINE else "traktor"
-        )
+        vehicle_name = VEHICLE_TYPE_DEFINITIONS[self.vehicle_type]["name"].lower()
         if self._parking_arrival_reason == "relocation":
             log(f"A {vehicle_name} beparkolt a Garázsba.", "Vehicle")
         else:
@@ -1325,7 +1324,11 @@ class Vehicle:
         screen_x, screen_y = world_to_screen(self.world_x, self.world_y)
         center = (round(screen_x), round(screen_y))
         shadow_size = (
-            (18, 8) if self.vehicle_type == VehicleType.COMBINE else (14, 7)
+            (18, 8)
+            if self.vehicle_type in (
+                VehicleType.COMBINE, VehicleType.FRUIT_HARVESTER,
+            )
+            else (14, 7)
         )
         self._draw_vehicle_shadow(screen, center, shadow_size)
 
@@ -1370,6 +1373,8 @@ class Vehicle:
         )
         if self.vehicle_type == VehicleType.COMBINE:
             self._draw_combine(sprite)
+        elif self.vehicle_type == VehicleType.FRUIT_HARVESTER:
+            self._draw_fruit_harvester(sprite)
         else:
             self._draw_tractor(sprite)
         rotated = pygame.transform.rotate(
@@ -1451,6 +1456,39 @@ class Vehicle:
                 (x, header.top), (x, header.bottom - 1), 1,
             )
 
+    @classmethod
+    def _draw_fruit_harvester(cls, surface):
+        """Sárga, felülnézetes gyümölcsszedő gépet rajzol."""
+        rect = surface.get_rect()
+        body = pygame.Rect(0, 0, 10, 15)
+        body.center = (rect.centerx, rect.centery + 1)
+
+        # A négy kerék és a két oldalsó gyűjtőkar adja a jellegzetes sziluettet.
+        for wheel_x in (body.left - 2, body.right + 1):
+            for wheel_y in (body.top + 3, body.bottom - 4):
+                cls._draw_wheel(
+                    surface, (wheel_x, wheel_y), 2,
+                    FRUIT_HARVESTER_RIM_COLOR,
+                )
+
+        pygame.draw.rect(
+            surface, FRUIT_HARVESTER_BODY_COLOR, body, border_radius=2,
+        )
+        pygame.draw.rect(
+            surface, FRUIT_HARVESTER_BODY_DARK, body, 1, border_radius=2,
+        )
+        cabin = pygame.Rect(body.left + 2, body.top + 2, body.width - 4, 5)
+        pygame.draw.rect(
+            surface, FRUIT_HARVESTER_CAB_COLOR, cabin, border_radius=1,
+        )
+
+        for arm_x in (body.left - 5, body.right + 1):
+            arm = pygame.Rect(arm_x, body.top + 6, 4, 7)
+            pygame.draw.rect(
+                surface, FRUIT_HARVESTER_ARM_COLOR, arm, border_radius=1,
+            )
+            pygame.draw.rect(surface, FRUIT_HARVESTER_BODY_DARK, arm, 1)
+
 
 class Tractor(Vehicle):
     """A meglévő mezőmunkák elvégzésére alkalmas jármű."""
@@ -1464,6 +1502,13 @@ class Combine(Vehicle):
 
     def __init__(self, vehicle_id=1):
         super().__init__(vehicle_id, VehicleType.COMBINE)
+
+
+class FruitHarvester(Vehicle):
+    """A Gyümölcsös szüretelésére fenntartott önjáró jármű."""
+
+    def __init__(self, vehicle_id=1):
+        super().__init__(vehicle_id, VehicleType.FRUIT_HARVESTER)
 
 
 class TowableImplement:

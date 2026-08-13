@@ -37,7 +37,7 @@ from tractor import (
     TASK_SUPPLY_FEED, TASK_SUPPLY_WATER, TASK_WATERING,
     TRACTOR_AWAITING_ASSIGNMENT, TRACTOR_SELECTING_NEXT_TASK,
     WATER_FILL_DURATION_MS, WATER_UNLOAD_DURATION_MS,
-    Combine, FieldTask, TowableImplement, Tractor,
+    Combine, FieldTask, FruitHarvester, TowableImplement, Tractor,
     find_building_parking, find_building_route, find_field_route,
     find_road_path,
 )
@@ -170,6 +170,8 @@ class VehicleManager:
             vehicle = Tractor(self.next_vehicle_id)
         elif normalized_type == VehicleType.COMBINE:
             vehicle = Combine(self.next_vehicle_id)
+        elif normalized_type == VehicleType.FRUIT_HARVESTER:
+            vehicle = FruitHarvester(self.next_vehicle_id)
         else:
             return None
         self.next_vehicle_id += 1
@@ -323,6 +325,13 @@ class VehicleManager:
         """Új Kombájnt vásárol a közös Garázs-kapacitás terhére."""
         return self.purchase_vehicle(
             world, buildings, economy, garage, VehicleType.COMBINE,
+        )
+
+    def purchase_fruit_harvester(self, world, buildings, economy, garage):
+        """Gyümölcs szüretelőgépet vásárol a közös Garázskapacitásba."""
+        return self.purchase_vehicle(
+            world, buildings, economy, garage,
+            VehicleType.FRUIT_HARVESTER,
         )
 
     def purchase_water_tank(self, world, buildings, economy, garage):

@@ -1130,7 +1130,7 @@ class InfoPanel(PopupWindow):
         garage_assets = manager.assets_in_garage(self.building)
         self.rect.size = (
             responsive_panel_width(INFO_PANEL_WIDTH),
-            610 + len(garage_assets) * 24,
+            700 + len(garage_assets) * 24,
         )
         self.rect.center = get_screen_center()
         self.draw_frame(screen)
@@ -1151,6 +1151,12 @@ class InfoPanel(PopupWindow):
         self.draw_text(
             screen, font,
             f"Kombájnok: {manager.count_by_type(VehicleType.COMBINE)}", x, y,
+        )
+        y += 28
+        self.draw_text(
+            screen, font,
+            "Gyümölcs szüretelőgépek: "
+            f"{manager.count_by_type(VehicleType.FRUIT_HARVESTER)}", x, y,
         )
         y += 28
         self.draw_text(
@@ -1191,6 +1197,7 @@ class InfoPanel(PopupWindow):
         self.garage_purchase_rects = {}
         for vehicle_type in (
                 VehicleType.TRACTOR, VehicleType.COMBINE,
+                VehicleType.FRUIT_HARVESTER,
                 VehicleType.WATER_TANK, VehicleType.TRAILER):
             definition = VEHICLE_TYPE_DEFINITIONS[vehicle_type]
             purchase_rect = pygame.Rect(

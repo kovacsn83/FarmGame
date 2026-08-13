@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Új, $500 vételárú önjáró jármű került a Garázsba: a Gyümölcs szüretelőgép. Fenntartása az egységes évi 10%-os szabályt követi, feladatkatalógusa pedig előkészíti az Almafa és a későbbi gyümölcsfajok gépi szüretelését.
+
 - A Gyümölcsfák lombkorona- és talajárnyékolása mostantól a FarmGame egységes, bal alsó irányból érkező fényét követi.
 
 - Elkészült a Gyümölcsös első működő változata és az adatvezérelt gyümölcsfa-katalógus első faja, az Almafa.
