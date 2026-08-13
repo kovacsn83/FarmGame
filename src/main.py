@@ -20,7 +20,8 @@ from buildings import (
 from constants import (
     COLOR_GRASS, GRASS, TILE_SIZE,
     TOOL_ANIMAL_HUSBANDRY, TOOL_BUILD, TOOL_BULLDOZER, TOOL_HARVEST,
-    TOOL_FERTILIZE, TOOL_INSPECT, TOOL_PLANT, TOOL_ROAD, TOOL_WATERING,
+    TOOL_FERTILIZE, TOOL_INSPECT, TOOL_ORCHARD, TOOL_PLANT, TOOL_ROAD,
+    TOOL_WATERING,
     WINDOW_HEIGHT, WINDOW_WIDTH,
 )
 from developer_console import DeveloperConsole
@@ -271,7 +272,8 @@ def main():
                     quest_manager.record_event(QUEST_EVENT_FIELD_DEMOLISHED)
             else:
                 world[mouse_row][mouse_col] = GRASS
-        elif selected_tool == TOOL_BUILD and selected_building is not None:
+        elif (selected_tool in (TOOL_BUILD, TOOL_ORCHARD)
+                and selected_building is not None):
             cost = BUILD_OPTIONS[selected_building]["build_cost"]
             option = BUILD_OPTIONS[selected_building]
             if not is_build_option_unlocked(
@@ -645,6 +647,9 @@ def main():
                             building_selection_panel.open(game_state)
                         elif tool == TOOL_ANIMAL_HUSBANDRY:
                             animal_husbandry_panel.open()
+                        elif tool == TOOL_ORCHARD:
+                            selected_building = "orchard"
+                            selected_tool = TOOL_ORCHARD
                         else:
                             selected_tool = tool
                         continue

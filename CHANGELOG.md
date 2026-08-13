@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Új Gyümölcsös ikon került az alsó Toolbarra; az Állattartás után, külön funkciócsoportként jelenik meg, és közvetlenül aktiválja a Gyümölcsös építési módot.
+
 - Új építhető objektumként bekerült a Gyümölcsös: 4×4-es, füves terület, $200 építési árral és az egységes, évi 10%-os fenntartási szabállyal.
 - A Gyümölcsös barna kerítése automatikusan összenyílik a közvetlenül csatlakozó Gyümölcsösöknél; az első elem útkapcsolatot igényel, a további elemek közös oldalon keresztül is bővíthetők.
 - Az összefüggő Gyümölcsös-csoportok és területcsempék külön lekérdezhetők, előkészítve a későbbi adatvezérelt gyümölcsfa-rendszert.

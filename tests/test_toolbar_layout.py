@@ -1,6 +1,10 @@
 from pathlib import Path
+import os
 import sys
 import unittest
+
+os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
+import pygame
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -8,11 +12,12 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from constants import TOOL_BULLDOZER
+from constants import TOOL_ANIMAL_HUSBANDRY, TOOL_BULLDOZER, TOOL_ORCHARD
 from screen_layout import set_screen_size
 from ui import (
-    BUTTON_SIZE, PRIMARY_TOOL_GROUPS, TOOLBAR_UTILITY_MIN_GAP,
-    TOOLBAR_UTILITY_RIGHT_MARGIN, TOOLS, clicked_tool, create_buttons,
+    BUTTON_SIZE, PRIMARY_TOOL_GROUPS, TOOLBAR_GROUP_SPACING,
+    TOOLBAR_UTILITY_MIN_GAP, TOOLBAR_UTILITY_RIGHT_MARGIN, TOOLS,
+    clicked_tool, create_buttons, create_toolbar_icons,
 )
 
 
@@ -65,6 +70,43 @@ class ToolbarLayoutTests(unittest.TestCase):
         )
         self.assertEqual(bulldozer_definition["name"], "Buldózer")
         self.assertEqual(TOOLS[-1]["tool"], TOOL_BULLDOZER)
+
+    def test_orchard_is_a_separate_group_after_animal_husbandry(self):
+        orchard_definition = next(
+            tool for tool in TOOLS if tool["tool"] == TOOL_ORCHARD
+        )
+        self.assertEqual("Gyümölcsös", orchard_definition["name"])
+        self.assertEqual(
+            "fruit_tree_24.png", orchard_definition["icon_path"].name,
+        )
+        self.assertEqual(
+            [TOOL_ORCHARD],
+            [tool["tool"] for tool in PRIMARY_TOOL_GROUPS[-1]],
+        )
+        self.assertEqual(
+            TOOL_ANIMAL_HUSBANDRY,
+            PRIMARY_TOOL_GROUPS[-2][-1]["tool"],
+        )
+
+        set_screen_size(1500, 1000)
+        buttons = create_buttons()
+        self.assertEqual(
+            TOOLBAR_GROUP_SPACING,
+            buttons[TOOL_ORCHARD].left
+            - buttons[TOOL_ANIMAL_HUSBANDRY].right,
+        )
+        self.assertEqual(
+            TOOL_ORCHARD,
+            clicked_tool(buttons, buttons[TOOL_ORCHARD].center),
+        )
+
+    def test_orchard_icon_loads_at_toolbar_size(self):
+        pygame.display.init()
+        if pygame.display.get_surface() is None:
+            pygame.display.set_mode((1, 1))
+        orchard_icon = create_toolbar_icons()[TOOL_ORCHARD]
+        self.assertIsNotNone(orchard_icon)
+        self.assertEqual((24, 24), orchard_icon.get_size())
 
 
 if __name__ == "__main__":

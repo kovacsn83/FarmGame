@@ -6,7 +6,7 @@ from constants import (
     COLOR_PREVIEW_OK, FIELD, FIELD_SIZE, GRASS, GRID_COLS,
     GRID_ROWS, ROAD, TILE_SIZE,
     TOOL_ANIMAL_HUSBANDRY, TOOL_BUILD, TOOL_BULLDOZER, TOOL_HARVEST,
-    TOOL_FERTILIZE, TOOL_INSPECT, TOOL_PLANT, TOOL_ROAD,
+    TOOL_FERTILIZE, TOOL_INSPECT, TOOL_ORCHARD, TOOL_PLANT, TOOL_ROAD,
     TOOL_WATERING,
 )
 from buildings import (
@@ -190,7 +190,8 @@ def draw_grid(screen, world, selected_tool, selected_building, mouse_row, mouse_
         start_row, end_row = mouse_row - 2, mouse_row + 2
         start_col, end_col = mouse_col - 2, mouse_col + 2
 
-        if selected_tool == TOOL_BUILD and selected_building in BUILD_OPTIONS:
+        if (selected_tool in (TOOL_BUILD, TOOL_ORCHARD)
+                and selected_building in BUILD_OPTIONS):
             option = BUILD_OPTIONS[selected_building]
             width, height = option["width"], option["height"]
             end_row = mouse_row + height + 1
@@ -234,7 +235,8 @@ def draw_preview(
             )
             draw_preview_rect(screen, row, col, 1, 1, color)
 
-    if (selected_tool == TOOL_BUILD and selected_building in FIELD_TYPES
+    if (selected_tool in (TOOL_BUILD, TOOL_ORCHARD)
+            and selected_building in FIELD_TYPES
             and mouse_row >= 0):
         field_type = FIELD_TYPES[selected_building]
         color = (COLOR_PREVIEW_OK if can_place_field(
@@ -246,7 +248,7 @@ def draw_preview(
             field_type["width"], field_type["height"], color,
         )
 
-    if (selected_tool == TOOL_BUILD
+    if (selected_tool in (TOOL_BUILD, TOOL_ORCHARD)
             and selected_building in BUILDING_TYPES
             and mouse_row >= 0):
         building_type = selected_building
