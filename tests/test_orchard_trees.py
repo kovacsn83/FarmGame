@@ -23,7 +23,7 @@ from orchards import (
     ORCHARD_TREE_SLOT_OFFSETS, TREE_TYPES, can_plant_tree, find_tree_at,
     draw_orchard_trees, get_tree_age_years, get_tree_tooltip_lines, plant_tree,
     run_weekly_orchard_cycle, TREE_CANOPY_LIGHT_OFFSET,
-    TREE_GROUND_SHADOW_OFFSET,
+    TREE_GROUND_SHADOW_COLOR, TREE_GROUND_SHADOW_OFFSET,
 )
 from building_renderers import (
     PROCEDURAL_LIGHT_DIRECTION, PROCEDURAL_SHADOW_OFFSET,
@@ -158,6 +158,10 @@ class OrchardTreeTests(unittest.TestCase):
             TREE_TYPES["apple"]["canopy_color"],
             surface.get_at((228, 262))[:3],
         )
+        self.assertEqual(
+            TREE_GROUND_SHADOW_COLOR,
+            surface.get_at((238, 264))[:3],
+        )
 
         tree["age_weeks"] = 2 * 52
         tooltip = get_tree_tooltip_lines(tree)
@@ -173,9 +177,13 @@ class OrchardTreeTests(unittest.TestCase):
         self.assertEqual((-1, 1), PROCEDURAL_LIGHT_DIRECTION)
         self.assertEqual((-4, 4), TREE_CANOPY_LIGHT_OFFSET)
         self.assertEqual(
-            PROCEDURAL_SHADOW_OFFSET,
+            (
+                PROCEDURAL_SHADOW_OFFSET[0] + 2,
+                PROCEDURAL_SHADOW_OFFSET[1] - 2,
+            ),
             TREE_GROUND_SHADOW_OFFSET,
         )
+        self.assertEqual((6, -6), TREE_GROUND_SHADOW_OFFSET)
         self.assertGreater(TREE_GROUND_SHADOW_OFFSET[0], 0)
         self.assertLess(TREE_GROUND_SHADOW_OFFSET[1], 0)
 
