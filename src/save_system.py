@@ -23,6 +23,7 @@ from crops import CROPS, get_crop_growth_weeks, get_crop_harvest_stages
 from game_rules import FIELD_TYPES, UPGRADES
 from game_logger import log
 from inventory import get_inventory_item_ids
+from orchards import is_valid_tree_record
 from time_system import TIME_FAST, TIME_NORMAL, TIME_WEEK_LENGTHS_MS
 from vehicle_types import (
     VEHICLE_TYPE_DEFINITIONS, VehicleType, normalize_vehicle_type,
@@ -144,6 +145,9 @@ def _migrate_legacy_crop_data(data):
             elif building.get("type") == "animal_pen":
                 building.setdefault(FOOD_STOCK_KEY, 0)
                 building.setdefault(WATER_STOCK_KEY, 0)
+            elif building.get("type") == "orchard":
+                # A Gyümölcsös bevezetése előtti mentések üres területtel indulnak.
+                building.setdefault("trees", [])
 
     data.setdefault("purchased_upgrades", [])
     tractors = data.setdefault("tractors", [])
@@ -489,6 +493,16 @@ def _validate_buildings(data):
             for stock_key in (FOOD_STOCK_KEY, WATER_STOCK_KEY)
         ):
             return False
+        if building_type == "orchard":
+            trees = building.get("trees")
+            if (
+                not isinstance(trees, list)
+                or len(trees) > 4
+                or not all(isinstance(tree, dict) for tree in trees)
+                or len({tree.get("slot") for tree in trees}) != len(trees)
+                or not all(is_valid_tree_record(tree, building) for tree in trees)
+            ):
+                return False
     world_tiles = {
         (row, col)
         for row, world_row in enumerate(world)

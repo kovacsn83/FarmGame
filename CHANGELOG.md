@@ -1,5 +1,10 @@
 # CHANGELOG
 
+- Elkészült a Gyümölcsös első működő változata és az adatvezérelt gyümölcsfa-katalógus első faja, az Almafa.
+- Egy 4×4-es Gyümölcsös négy rögzített fahelyet biztosít; az Almafa telepítési ára $100, életkora hetekben, egyedenként tárolódik.
+- Az Almafa 3 éves korától évente egyszer 20 Almát termel a Raktárba, a 30. életévével bezárólag; az Alma egyelőre nem értékesíthető a Piacon.
+- A Gyümölcsös Toolbar gomb új, adatvezérelt fafajválasztó ablakot nyit, a fák pedig procedurális grafikát és életkorfüggő tooltipet kaptak.
+
 - Új Gyümölcsös ikon került az alsó Toolbarra; az Állattartás után, külön funkciócsoportként jelenik meg, és közvetlenül aktiválja a Gyümölcsös építési módot.
 
 - Új építhető objektumként bekerült a Gyümölcsös: 4×4-es, füves terület, $200 építési árral és az egységes, évi 10%-os fenntartási szabállyal.

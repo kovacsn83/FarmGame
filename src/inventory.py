@@ -3,6 +3,10 @@ from crops import CROPS
 
 # Az állati termékek a közös raktárkapacitást és az adatvezérelt piaci szabályt használják.
 PRODUCTS = {
+    "apple": {
+        "name": "Alma",
+        "marketable": False,
+    },
     "milk": {
         "name": "Tej",
         "marketable": True,

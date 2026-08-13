@@ -25,6 +25,7 @@ from game_rules import (
 from inventory import get_inventory_item_name, get_marketable_item_ids
 from maintenance import format_annual_maintenance_rate
 from money_format import format_money
+from orchards import TREE_TYPES
 from time_system import (
     SEASON_PERIODS, TIME_NORMAL, WEEKS_PER_YEAR, Season, format_game_time,
     get_season_for_week, get_time_speed_indicator, get_year_and_week,
@@ -144,6 +145,7 @@ POPUP_TITLES = {
     "garage": "Garázs",
     "pond": "Tó",
     "animal_husbandry": "Állattartás",
+    "orchard_selection": "Gyümölcsös",
 }
 
 PRIMARY_TOOL_GROUPS = [
@@ -1575,6 +1577,65 @@ class CropSelectionPanel(SelectionPanel):
                 text_y + 104,
             )
         screen.set_clip(previous_clip)
+
+
+class OrchardSelectionPanel(SelectionPanel):
+    """Az adatvezérelt gyümölcsfajták közös kiválasztóablaka."""
+
+    def __init__(self):
+        super().__init__(520, 220)
+
+    def _update_layout(self):
+        self.rect.width = responsive_panel_width(520)
+        self.rect.height = 220
+        self.rect.center = get_screen_center()
+        self.card_rects = {}
+        card_y = self.rect.y + 58
+        for tree_type in TREE_TYPES:
+            self.card_rects[tree_type] = pygame.Rect(
+                self.rect.x + INFO_PANEL_PADDING,
+                card_y,
+                self.rect.width - INFO_PANEL_PADDING * 2,
+                140,
+            )
+            card_y += 152
+
+    def draw(self, screen, font):
+        if not self.visible:
+            return
+        self._update_layout()
+        self.draw_frame(screen)
+        self.draw_text(
+            screen, font, POPUP_TITLES["orchard_selection"],
+            self.rect.x + INFO_PANEL_PADDING,
+            self.rect.y + INFO_PANEL_PADDING,
+        )
+        mouse_position = pygame.mouse.get_pos()
+        for tree_type, definition in TREE_TYPES.items():
+            card_rect = self.card_rects[tree_type]
+            card_color = (
+                CROP_CARD_HOVER
+                if card_rect.collidepoint(mouse_position)
+                else CROP_CARD_BACKGROUND
+            )
+            pygame.draw.rect(screen, card_color, card_rect)
+            pygame.draw.rect(screen, INFO_PANEL_BORDER, card_rect, 1)
+            text_x = card_rect.x + 14
+            text_y = card_rect.y + 10
+            lines = (
+                definition["name"],
+                f"Ültetési ár: {format_money(definition['planting_cost'])}",
+                f"Első termés: {definition['first_yield_age_years']} év után",
+                f"Éves termés: {definition['annual_yield']} db "
+                f"{definition['name'].lower()}",
+                "Termő időszak: "
+                f"{definition['first_yield_age_years']}–"
+                f"{definition['last_yield_age_years']} éves kor",
+            )
+            for index, line in enumerate(lines):
+                self.draw_text(
+                    screen, font, line, text_x, text_y + index * 25,
+                )
 
 
 class BuildingSelectionPanel(SelectionPanel):

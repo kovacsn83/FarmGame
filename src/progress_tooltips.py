@@ -7,6 +7,7 @@ from crops import (
     get_crop_lifespan_weeks, get_current_growth_weeks,
     LATE_HARVEST_DURATION_WEEKS, LATE_HARVEST_YIELD_MULTIPLIER,
 )
+from orchards import find_tree_at, get_tree_tooltip_lines
 
 
 def format_progress(
@@ -203,6 +204,12 @@ def find_timed_object_tooltip(
                 *lines,
                 *get_animal_supply_status_lines(animal, animals, buildings),
             ]
+
+    if buildings:
+        orchard_tree = find_tree_at(buildings, row, col)
+        if orchard_tree is not None:
+            _orchard, tree = orchard_tree
+            return get_tree_tooltip_lines(tree)
 
     field = next(
         (

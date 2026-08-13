@@ -20,6 +20,7 @@ from fields import can_place_field, find_field_data, is_field
 from field_renderer import draw_field
 from road_renderer import draw_road_tile
 from road_building import is_valid_road_tile
+from orchards import can_plant_tree, get_tree_slot_at
 from game_rules import FIELD_TYPES
 from screen_layout import get_play_area_rect, screen_to_world, world_to_screen
 
@@ -223,7 +224,7 @@ def draw_preview_rect(screen, row, col, width, height, color):
 
 def draw_preview(
         screen, world, fields, buildings, animals, selected_tool,
-        selected_building, selected_animal, mouse_row, mouse_col,
+        selected_building, selected_animal, selected_tree, mouse_row, mouse_col,
         road_preview_tiles=None):
     if selected_tool == TOOL_ROAD and mouse_row >= 0:
         preview_tiles = road_preview_tiles or [(mouse_row, mouse_col)]
@@ -271,6 +272,20 @@ def draw_preview(
             else COLOR_PREVIEW_ERROR
         )
         draw_preview_rect(screen, mouse_row, mouse_col, 1, 1, color)
+
+    if selected_tool == TOOL_ORCHARD and selected_tree and mouse_row >= 0:
+        slot = get_tree_slot_at(buildings, mouse_row, mouse_col)
+        if slot is not None:
+            color = (
+                COLOR_PREVIEW_OK
+                if can_plant_tree(
+                    buildings, mouse_row, mouse_col, selected_tree,
+                )
+                else COLOR_PREVIEW_ERROR
+            )
+            draw_preview_rect(
+                screen, slot["row"], slot["col"], 2, 2, color,
+            )
 
     if selected_tool == TOOL_BULLDOZER and mouse_row >= 0:
         building = find_building_data(buildings, mouse_row, mouse_col)

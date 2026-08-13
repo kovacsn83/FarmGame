@@ -231,6 +231,9 @@ def place_building(world, buildings, row, col, building_type):
         # A csoportosítás után csak a bal felső Karámelem tartja meg ezeket.
         data["trough_food_stock"] = 0
         data["trough_water_stock"] = 0
+    elif building_type == "orchard":
+        # A fák a saját Gyümölcsösükhöz tartoznak, így együtt mentődnek vele.
+        data["trees"] = []
     elif building_type == "farmhouse":
         data["farmhouse_level"] = FARMHOUSE_DEFAULT_LEVEL
 
@@ -510,10 +513,10 @@ def print_building_info(building):
         print("=== Raktár ===")
         print(f"Pozíció: ({building['row']}, {building['col']})")
         print(f"Méret: {building['width']}x{building['height']}")
-        for crop_id, crop_data in CROPS.items():
-            amount = building["inventory"].get(crop_id, 0)
+        for item_id in get_inventory_item_ids():
+            amount = building["inventory"].get(item_id, 0)
             if amount > 0:
-                print(f"{crop_data['name']}: {amount}")
+                print(f"{get_inventory_item_name(item_id)}: {amount}")
         print(f"Szabad hely: {free_capacity}")
         print(f"Építési ár: {format_money(building_type['build_cost'])}")
         print(f"Éves költség: {format_annual_maintenance_rate()}")

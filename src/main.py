@@ -36,6 +36,7 @@ from game_rules import FIELD_TYPES, is_build_option_unlocked
 from game_menu import GameMenu
 from game_logger import get_logger
 from notification_system import NotificationManager
+from orchards import draw_orchard_trees, plant_tree, run_weekly_orchard_cycle
 from quest_system import (
     QUEST_EVENT_ANIMAL_PEN_BUILT, QUEST_EVENT_CALENDAR_OPENED,
     QUEST_EVENT_CATTLE_COUNT_CHANGED, QUEST_EVENT_FARMHOUSE_BUILT,
@@ -61,7 +62,7 @@ from time_system import (
 from vehicle_manager import VehicleManager
 from ui import (
     AnimalHusbandryPanel, BankPanel, BuildingSelectionPanel, CalendarPanel,
-    CropSelectionPanel, InfoPanel, QuestPanel, clicked_tool,
+    CropSelectionPanel, InfoPanel, OrchardSelectionPanel, QuestPanel, clicked_tool,
     create_buttons, create_calendar_button, create_calendar_icon,
     create_menu_button, create_menu_icon, create_quest_icon,
     create_time_speed_icons, create_toolbar_icons, draw_ui,
@@ -96,31 +97,34 @@ def main():
     world = fields = buildings = animals = None
     animal_movement = None
     selected_tool = selected_crop = selected_building = selected_animal = None
+    selected_tree = None
     buttons = toolbar_icons = time_speed_icons = None
     menu_button = menu_icon = calendar_button = calendar_icon = None
     grass_tiles = game_time = developer_console = notification_manager = None
     economy = bank_system = vehicles = game_state = None
     info_panel = crop_selection_panel = building_selection_panel = None
-    animal_husbandry_panel = calendar_panel = bank_panel = None
+    animal_husbandry_panel = orchard_selection_panel = calendar_panel = bank_panel = None
     game_menu = save_slots_menu = quest_manager = quest_panel = road_drag = None
 
     def initialize_game_session(start_quest):
         """Egyetlen helyen hozza létre az új vagy betöltendő farm teljes állapotát."""
         nonlocal world, fields, buildings, animals, animal_movement
         nonlocal selected_tool, selected_crop, selected_building, selected_animal
+        nonlocal selected_tree
         nonlocal buttons, toolbar_icons, time_speed_icons
         nonlocal menu_button, menu_icon, calendar_button, calendar_icon
         nonlocal grass_tiles, game_time, developer_console, notification_manager
         nonlocal economy, bank_system, vehicles, game_state
         nonlocal info_panel, crop_selection_panel, building_selection_panel
-        nonlocal animal_husbandry_panel, calendar_panel, bank_panel
+        nonlocal animal_husbandry_panel, orchard_selection_panel
+        nonlocal calendar_panel, bank_panel
         nonlocal game_menu, save_slots_menu, quest_manager, quest_panel, road_drag
 
         world = create_world()
         fields, buildings, animals = [], [], []
         animal_movement = AnimalMovementSystem()
         selected_tool = TOOL_INSPECT
-        selected_crop = selected_building = selected_animal = None
+        selected_crop = selected_building = selected_animal = selected_tree = None
         buttons = create_buttons()
         toolbar_icons = create_toolbar_icons()
         time_speed_icons = create_time_speed_icons()
@@ -151,6 +155,7 @@ def main():
         crop_selection_panel = CropSelectionPanel()
         building_selection_panel = BuildingSelectionPanel()
         animal_husbandry_panel = AnimalHusbandryPanel()
+        orchard_selection_panel = OrchardSelectionPanel()
         calendar_panel = CalendarPanel()
         bank_panel = BankPanel()
         game_menu = GameMenu()
@@ -272,8 +277,11 @@ def main():
                     quest_manager.record_event(QUEST_EVENT_FIELD_DEMOLISHED)
             else:
                 world[mouse_row][mouse_col] = GRASS
-        elif (selected_tool in (TOOL_BUILD, TOOL_ORCHARD)
-                and selected_building is not None):
+        elif selected_tool == TOOL_ORCHARD and selected_tree is not None:
+            plant_tree(
+                buildings, economy, mouse_row, mouse_col, selected_tree,
+            )
+        elif selected_tool == TOOL_BUILD and selected_building is not None:
             cost = BUILD_OPTIONS[selected_building]["build_cost"]
             option = BUILD_OPTIONS[selected_building]
             if not is_build_option_unlocked(
@@ -533,6 +541,7 @@ def main():
                 crop_selection_panel.close()
                 building_selection_panel.close()
                 animal_husbandry_panel.close()
+                orchard_selection_panel.close()
                 calendar_panel.open()
                 quest_manager.record_event(QUEST_EVENT_CALENDAR_OPENED)
                 continue
@@ -554,6 +563,7 @@ def main():
                     crop_selection_panel.close()
                     building_selection_panel.close()
                     animal_husbandry_panel.close()
+                    orchard_selection_panel.close()
                     calendar_panel.close()
                 continue
     
@@ -590,6 +600,15 @@ def main():
                     road_drag.cancel()
                     selected_animal = animal_selection
                     selected_tool = TOOL_ANIMAL_HUSBANDRY
+                continue
+
+            if orchard_selection_panel.handle_event(event):
+                tree_selection = orchard_selection_panel.take_selection()
+                if tree_selection is not None:
+                    road_drag.cancel()
+                    selected_tree = tree_selection
+                    selected_building = None
+                    selected_tool = TOOL_ORCHARD
                 continue
     
             if crop_selection_panel.handle_event(event):
@@ -648,8 +667,7 @@ def main():
                         elif tool == TOOL_ANIMAL_HUSBANDRY:
                             animal_husbandry_panel.open()
                         elif tool == TOOL_ORCHARD:
-                            selected_building = "orchard"
-                            selected_tool = TOOL_ORCHARD
+                            orchard_selection_panel.open()
                         else:
                             selected_tool = tool
                         continue
@@ -725,6 +743,7 @@ def main():
                 run_weekly_animal_cycle(
                     animals, buildings, economy, notification_manager,
                 )
+                run_weekly_orchard_cycle(buildings)
                 run_weekly_animal_supply_automation(
                     world, buildings, economy, animals, vehicles,
                     game_state.purchased_upgrades,
@@ -751,6 +770,7 @@ def main():
             crop_selection_panel.close()
             building_selection_panel.close()
             animal_husbandry_panel.close()
+            orchard_selection_panel.close()
             calendar_panel.close()
             game_menu.close()
             bank_panel.open(previous_time_speed)
@@ -776,6 +796,7 @@ def main():
         draw_pen_troughs(screen, buildings, animals)
         draw_animals(screen, animals)
         draw_animal_pen_fences(screen, buildings)
+        draw_orchard_trees(screen, buildings)
         draw_orchard_fences(screen, buildings)
         vehicles.ensure_idle_positions(world, buildings)
         vehicles.draw(screen)
@@ -784,7 +805,8 @@ def main():
         )
         draw_preview(
             screen, world, fields, buildings, animals, selected_tool,
-            selected_building, selected_animal, mouse_row, mouse_col,
+            selected_building, selected_animal, selected_tree,
+            mouse_row, mouse_col,
             road_preview_tiles=road_drag.tiles,
         )
         developer_console.draw(screen)
@@ -833,6 +855,7 @@ def main():
         crop_selection_panel.draw(screen, font)
         building_selection_panel.draw(screen, font, game_state)
         animal_husbandry_panel.draw(screen, font)
+        orchard_selection_panel.draw(screen, font)
         calendar_panel.draw(screen, font, game_time.elapsed_weeks)
         game_menu.draw(screen, font)
         save_slots_menu.draw(screen, font)
