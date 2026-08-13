@@ -1,0 +1,57 @@
+# Python gyorsítótárak és fordított fájlok
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Tesztelés, típusellenőrzés és lefedettség
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Virtuális környezetek
+.venv/
+venv/
+env/
+ENV/
+
+# Fejlesztői környezetek
+.idea/
+.vscode/
+.agents/
+.codex/
+
+# Build és csomagolási kimenetek
+build/
+dist/
+*.egg-info/
+
+# Naplók és ideiglenes fájlok
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+tmp/
+temp/
+
+# Helyi játékadatok és generált riportok
+saves/
+savegames/
+reports/
+backup/
+
+# Környezeti változók és helyi titkok
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Operációs rendszer fájljai
+.DS_Store
+Thumbs.db
+Desktop.ini
