@@ -132,43 +132,54 @@ def get_tree_age_years(tree):
     return max(0, int(tree.get("age_weeks", 0))) // WEEKS_PER_TREE_YEAR
 
 
+def is_tree_harvestable(tree):
+    """Jelzi, hogy a fa aktuális évi termése géppel leszüretelhető-e."""
+    definition = TREE_TYPES.get(tree.get("type"))
+    if definition is None:
+        return False
+    age_years = get_tree_age_years(tree)
+    return (
+        definition["first_yield_age_years"]
+        <= age_years
+        <= definition["last_yield_age_years"]
+        and tree.get("last_produced_year") != age_years
+    )
+
+
+def complete_tree_harvest(buildings, orchard, tree_slot):
+    """A konkrét fa esedékes termését veszteség nélkül betárolja."""
+    if orchard not in get_orchards(buildings):
+        return False
+    tree = get_tree_in_slot(orchard, tree_slot)
+    if tree is None or not is_tree_harvestable(tree):
+        return False
+    definition = TREE_TYPES[tree["type"]]
+    amount = definition["annual_yield"]
+    if not store_item(buildings, definition["product_id"], amount):
+        log(
+            f"Nincs elegendő hely a Raktárban a(z) "
+            f"{definition['tree_name']} terméséhez.",
+            "Orchard",
+        )
+        return False
+    tree["last_produced_year"] = get_tree_age_years(tree)
+    log(
+        f"{definition['tree_name']} leszüretelve: {amount} db "
+        f"{get_inventory_item_name(definition['product_id'])} került a Raktárba.",
+        "Orchard",
+    )
+    return True
+
+
 def run_weekly_orchard_cycle(buildings):
-    """Hetente öregíti a fákat, és esedékességkor egyszer betárolja a termést."""
-    produced = {}
+    """Hetente öregíti a fákat; a termést a szüretelőgép gyűjti be."""
     for orchard in get_orchards(buildings):
         for tree in orchard.get("trees", []):
             definition = TREE_TYPES.get(tree.get("type"))
             if definition is None:
                 continue
             tree["age_weeks"] = max(0, int(tree.get("age_weeks", 0))) + 1
-            age_years = get_tree_age_years(tree)
-            if not (
-                definition["first_yield_age_years"]
-                <= age_years
-                <= definition["last_yield_age_years"]
-            ):
-                continue
-            if tree.get("last_produced_year") == age_years:
-                continue
-            amount = definition["annual_yield"]
-            product_id = definition["product_id"]
-            if not store_item(buildings, product_id, amount):
-                log(
-                    f"A(z) {definition['tree_name']} termése nem fért el "
-                    "a Raktárban.",
-                    "Orchard",
-                )
-                continue
-            tree["last_produced_year"] = age_years
-            produced[product_id] = produced.get(product_id, 0) + amount
-
-    for product_id, amount in produced.items():
-        log(
-            f"Gyümölcsös termése: {amount} db "
-            f"{get_inventory_item_name(product_id)} került a Raktárba.",
-            "Orchard",
-        )
-    return produced
+    return {}
 
 
 def get_tree_tooltip_lines(tree):
@@ -189,13 +200,17 @@ def get_tree_tooltip_lines(tree):
             "Első termés:", f"{remaining_years} év múlva",
         ))
     elif age_years <= last:
-        lines.extend(("Állapot:", "Termő"))
-        if tree.get("last_produced_year") == age_years:
-            next_age = age_years + 1
-            if next_age <= last:
-                lines.extend(("Következő termés:", f"{next_age}. életév"))
+        if is_tree_harvestable(tree):
+            lines.extend((
+                "Állapot:", "Szüretelhető",
+                "Éves termés:",
+                f"{definition['annual_yield']} db "
+                f"{get_inventory_item_name(definition['product_id'])}",
+            ))
         else:
-            lines.extend(("Következő termés:", "Ebben az évben"))
+            lines.extend((
+                "Állapot:", "Ebben az évben már leszüretelve",
+            ))
     else:
         lines.extend(("Állapot:", "Már nem termő"))
     return lines
@@ -262,11 +277,7 @@ def draw_orchard_trees(screen, buildings):
                 ),
                 8,
             )
-            if (
-                definition["first_yield_age_years"]
-                <= get_tree_age_years(tree)
-                <= definition["last_yield_age_years"]
-            ):
+            if is_tree_harvestable(tree):
                 for offset_x, offset_y in ((-6, 3), (5, -3), (4, 6)):
                     pygame.draw.circle(
                         screen, definition["fruit_color"],

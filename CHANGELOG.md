@@ -1,12 +1,16 @@
 # CHANGELOG
 
+- Az Aratás eszköz mostantól az érett gyümölcsfákat is felismeri: az általános `orchard_harvest` Dispatcher-feladatot kizárólag a Gyümölcs szüretelőgép végzi el.
+- A sikeres Almafa-szüret 20 Almát helyez a Raktárba, ugyanabban az életévben nem ismételhető meg, a következő életévben pedig a fa ismét szüretelhetővé válik.
+- A menthető gyümölcsszüretelési feladat konkrét Gyümölcsöst, fahelyet és fafajt tárol; az adatvezérelt kialakítás további gyümölcsfajokat is előkészít.
+
 - Új, $500 vételárú önjáró jármű került a Garázsba: a Gyümölcs szüretelőgép. Fenntartása az egységes évi 10%-os szabályt követi, feladatkatalógusa pedig előkészíti az Almafa és a későbbi gyümölcsfajok gépi szüretelését.
 
 - A Gyümölcsfák lombkorona- és talajárnyékolása mostantól a FarmGame egységes, bal alsó irányból érkező fényét követi.
 
 - Elkészült a Gyümölcsös első működő változata és az adatvezérelt gyümölcsfa-katalógus első faja, az Almafa.
 - Egy 4×4-es Gyümölcsös négy rögzített fahelyet biztosít; az Almafa telepítési ára $100, életkora hetekben, egyedenként tárolódik.
-- Az Almafa 3 éves korától évente egyszer 20 Almát termel a Raktárba, a 30. életévével bezárólag; az Alma egyelőre nem értékesíthető a Piacon.
+- Az Almafa 3 éves korától évente egyszer 20 Almát szüreteltethet a Raktárba, a 30. életévével bezárólag; az Alma egyelőre nem értékesíthető a Piacon.
 - A Gyümölcsös Toolbar gomb új, adatvezérelt fafajválasztó ablakot nyit, a fák pedig procedurális grafikát és életkorfüggő tooltipet kaptak.
 
 - Új Gyümölcsös ikon került az alsó Toolbarra; az Állattartás után, külön funkciócsoportként jelenik meg, és közvetlenül aktiválja a Gyümölcsös építési módot.

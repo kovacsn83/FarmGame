@@ -36,7 +36,9 @@ from game_rules import FIELD_TYPES, is_build_option_unlocked
 from game_menu import GameMenu
 from game_logger import get_logger
 from notification_system import NotificationManager
-from orchards import draw_orchard_trees, plant_tree, run_weekly_orchard_cycle
+from orchards import (
+    draw_orchard_trees, find_tree_at, plant_tree, run_weekly_orchard_cycle,
+)
 from quest_system import (
     QUEST_EVENT_ANIMAL_PEN_BUILT, QUEST_EVENT_CALENDAR_OPENED,
     QUEST_EVENT_CATTLE_COUNT_CHANGED, QUEST_EVENT_FARMHOUSE_BUILT,
@@ -344,13 +346,20 @@ def main():
                     current_week=game_time.week,
                 )
         elif selected_tool == TOOL_HARVEST:
-            field = find_field_data(fields, mouse_row, mouse_col)
-            if field:
-                vehicles.start_harvesting(
-                    world, buildings, economy, field,
-                    current_week=game_time.week,
-                    current_elapsed_week=game_time.elapsed_weeks,
+            orchard_target = find_tree_at(buildings, mouse_row, mouse_col)
+            if orchard_target is not None:
+                orchard, tree = orchard_target
+                vehicles.start_orchard_harvest(
+                    world, buildings, economy, orchard, tree,
                 )
+            else:
+                field = find_field_data(fields, mouse_row, mouse_col)
+                if field:
+                    vehicles.start_harvesting(
+                        world, buildings, economy, field,
+                        current_week=game_time.week,
+                        current_elapsed_week=game_time.elapsed_weeks,
+                    )
         elif selected_tool == TOOL_FERTILIZE:
             field = find_field_data(fields, mouse_row, mouse_col)
             if field:

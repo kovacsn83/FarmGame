@@ -21,7 +21,8 @@ from game_state import GameState
 from inventory import get_marketable_item_ids
 from orchards import (
     ORCHARD_TREE_SLOT_OFFSETS, TREE_TYPES, can_plant_tree, find_tree_at,
-    draw_orchard_trees, get_tree_age_years, get_tree_tooltip_lines, plant_tree,
+    complete_tree_harvest, draw_orchard_trees, get_tree_age_years,
+    get_tree_tooltip_lines, is_tree_harvestable, plant_tree,
     run_weekly_orchard_cycle, TREE_CANOPY_LIGHT_OFFSET,
     TREE_GROUND_SHADOW_COLOR, TREE_GROUND_SHADOW_OFFSET,
 )
@@ -98,7 +99,7 @@ class OrchardTreeTests(unittest.TestCase):
         ))
         self.assertEqual(1000, self.economy.money)
 
-    def test_apple_tree_first_produces_at_three_years_then_once_per_year(self):
+    def test_apple_tree_becomes_harvestable_at_three_years_once_per_year(self):
         tree = plant_tree(
             self.buildings, self.economy, 10, 10, "apple",
         )
@@ -106,16 +107,27 @@ class OrchardTreeTests(unittest.TestCase):
             self.assertEqual({}, run_weekly_orchard_cycle(self.buildings))
         self.assertEqual(0, get_total_inventory(self.buildings)["apple"])
 
-        self.assertEqual(
-            {"apple": 20}, run_weekly_orchard_cycle(self.buildings),
-        )
+        self.assertEqual({}, run_weekly_orchard_cycle(self.buildings))
         self.assertEqual(3, get_tree_age_years(tree))
+        self.assertTrue(is_tree_harvestable(tree))
+        self.assertEqual(0, get_total_inventory(self.buildings)["apple"])
+        self.assertTrue(complete_tree_harvest(
+            self.buildings, self.orchard, tree["slot"],
+        ))
         self.assertEqual(20, get_total_inventory(self.buildings)["apple"])
+        self.assertFalse(is_tree_harvestable(tree))
+        self.assertFalse(complete_tree_harvest(
+            self.buildings, self.orchard, tree["slot"],
+        ))
         self.assertEqual({}, run_weekly_orchard_cycle(self.buildings))
         self.assertEqual(20, get_total_inventory(self.buildings)["apple"])
 
         for _ in range(51):
             run_weekly_orchard_cycle(self.buildings)
+        self.assertTrue(is_tree_harvestable(tree))
+        self.assertTrue(complete_tree_harvest(
+            self.buildings, self.orchard, tree["slot"],
+        ))
         self.assertEqual(40, get_total_inventory(self.buildings)["apple"])
 
     def test_thirtieth_year_is_last_productive_year(self):
@@ -123,9 +135,10 @@ class OrchardTreeTests(unittest.TestCase):
             self.buildings, self.economy, 10, 10, "apple",
         )
         tree["age_weeks"] = 30 * 52 - 1
-        self.assertEqual(
-            {"apple": 20}, run_weekly_orchard_cycle(self.buildings),
-        )
+        self.assertEqual({}, run_weekly_orchard_cycle(self.buildings))
+        self.assertTrue(complete_tree_harvest(
+            self.buildings, self.orchard, tree["slot"],
+        ))
         for _ in range(52):
             self.assertEqual({}, run_weekly_orchard_cycle(self.buildings))
         self.assertEqual(31, get_tree_age_years(tree))
@@ -139,6 +152,7 @@ class OrchardTreeTests(unittest.TestCase):
         )
         tree["age_weeks"] = 3 * 52 - 1
         run_weekly_orchard_cycle(self.buildings)
+        complete_tree_harvest(self.buildings, self.orchard, tree["slot"])
         self.assertEqual(20, self.warehouse["inventory"]["apple"])
 
     def test_tree_has_procedural_graphic_and_age_tooltip(self):
@@ -170,8 +184,7 @@ class OrchardTreeTests(unittest.TestCase):
         tree["age_weeks"] = 5 * 52
         tree["last_produced_year"] = 5
         tooltip = get_tree_tooltip_lines(tree)
-        self.assertIn("Termő", tooltip)
-        self.assertIn("6. életév", tooltip)
+        self.assertIn("Ebben az évben már leszüretelve", tooltip)
 
     def test_tree_shading_uses_the_shared_lower_left_light_direction(self):
         self.assertEqual((-1, 1), PROCEDURAL_LIGHT_DIRECTION)

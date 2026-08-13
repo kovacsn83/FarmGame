@@ -8,7 +8,7 @@ from animal_troughs import (
 )
 from buildings import (
     GARAGE_PARKING_SLOTS, get_animal_pen_groups, get_free_capacity,
-    get_total_inventory, get_warehouses, store_item,
+    get_orchard_groups, get_total_inventory, get_warehouses, store_item,
 )
 from constants import FIELD
 from crops import (
@@ -22,6 +22,9 @@ from fields import (
 from game_rules import get_field_fertilizer_cost
 from game_logger import log
 from maintenance import calculate_weekly_maintenance
+from orchards import (
+    TREE_TYPES, get_tree_age_years, get_tree_in_slot, is_tree_harvestable,
+)
 from quest_system import (
     QUEST_EVENT_ALFALFA_HARVESTED, QUEST_EVENT_ALFALFA_PLANTED,
     QUEST_EVENT_COMBINE_PURCHASED,
@@ -34,7 +37,7 @@ from quest_system import (
 from tractor import (
     FEED_LOAD_DURATION_MS, FEED_UNLOAD_DURATION_MS,
     TASK_FERTILIZING, TASK_HARVESTING, TASK_PLANTING,
-    TASK_SUPPLY_FEED, TASK_SUPPLY_WATER, TASK_WATERING,
+    TASK_ORCHARD_HARVEST, TASK_SUPPLY_FEED, TASK_SUPPLY_WATER, TASK_WATERING,
     TRACTOR_AWAITING_ASSIGNMENT, TRACTOR_SELECTING_NEXT_TASK,
     WATER_FILL_DURATION_MS, WATER_UNLOAD_DURATION_MS,
     Combine, FieldTask, FruitHarvester, TowableImplement, Tractor,
@@ -65,6 +68,7 @@ TASK_VEHICLE_TYPES = {
     TASK_PLANTING: VehicleType.TRACTOR,
     TASK_FERTILIZING: VehicleType.TRACTOR,
     TASK_HARVESTING: VehicleType.COMBINE,
+    TASK_ORCHARD_HARVEST: VehicleType.FRUIT_HARVESTER,
     TASK_WATERING: VehicleType.TRACTOR,
     TASK_SUPPLY_FEED: VehicleType.TRACTOR,
     TASK_SUPPLY_WATER: VehicleType.TRACTOR,
@@ -74,6 +78,7 @@ TASK_NAMES = {
     TASK_PLANTING: "ültetési",
     TASK_FERTILIZING: "trágyázási",
     TASK_HARVESTING: "aratási",
+    TASK_ORCHARD_HARVEST: "gyümölcsszüretelési",
     TASK_WATERING: "locsolási",
     TASK_SUPPLY_FEED: "etetési ellátási",
     TASK_SUPPLY_WATER: "itatási ellátási",
@@ -83,6 +88,7 @@ TASK_LOG_CATEGORIES = {
     TASK_PLANTING: "Planting",
     TASK_FERTILIZING: "Fertilizing",
     TASK_HARVESTING: "Harvest",
+    TASK_ORCHARD_HARVEST: "Orchard",
     TASK_WATERING: "Watering",
     TASK_SUPPLY_FEED: "Supply",
     TASK_SUPPLY_WATER: "Supply",
@@ -150,7 +156,8 @@ class VehicleManager:
         ]
         return sum(
             task.resource_amount for task in tasks
-            if task.task_type == TASK_HARVESTING and task.resource_reserved
+            if task.task_type in (TASK_HARVESTING, TASK_ORCHARD_HARVEST)
+            and task.resource_reserved
         )
 
     @property
@@ -698,6 +705,136 @@ class VehicleManager:
             )
         return True
 
+    def start_orchard_harvest(
+            self, world, buildings, economy, orchard, tree,
+            current_ticks=None):
+        """Egy konkrét gyümölcsfa szüretét a közös FIFO sorba teszi."""
+        reason = self.get_orchard_harvest_block_reason(
+            world, buildings, orchard, tree,
+        )
+        if reason is not None:
+            log(self.get_orchard_harvest_block_message(reason), "Orchard")
+            return False
+        definition = TREE_TYPES[tree["type"]]
+        self.task_queue.append(FieldTask(
+            field=orchard,
+            crop=definition["product_id"],
+            task_type=TASK_ORCHARD_HARVEST,
+            buildings=buildings,
+            resource_reserved=True,
+            resource_amount=definition["annual_yield"],
+            tree_slot=tree["slot"],
+            tree_type=tree["type"],
+            creation_order=self._take_task_order(),
+        ))
+        self._set_waiting_statuses()
+        self._dispatch_tasks(
+            world, buildings, economy, current_ticks=current_ticks,
+        )
+        tree_name = definition["tree_name"]
+        if orchard.get("vehicle_task_status") == "active":
+            log(f"{tree_name} szüretelési feladat elindítva.", "Orchard")
+        else:
+            log(
+                f"{tree_name} szüretelési feladat várólistára került.",
+                "Orchard",
+            )
+        return True
+
+    def get_orchard_harvest_block_reason(
+            self, world, buildings, orchard, tree):
+        """Mellékhatás nélkül ellenőrzi a konkrét fa szüretelhetőségét."""
+        if orchard not in buildings or orchard.get("type") != "orchard":
+            return "missing_tree"
+        stored_tree = get_tree_in_slot(orchard, tree.get("slot")) if tree else None
+        if stored_tree is not tree:
+            return "missing_tree"
+        definition = TREE_TYPES.get(tree.get("type"))
+        if definition is None:
+            return "missing_tree"
+        age_years = get_tree_age_years(tree)
+        if age_years < definition["first_yield_age_years"]:
+            return "immature"
+        if age_years > definition["last_yield_age_years"]:
+            return "expired"
+        if tree.get("last_produced_year") == age_years:
+            return "already_harvested"
+        if any(
+            task.task_type == TASK_ORCHARD_HARVEST
+            and task.field is orchard
+            and task.tree_slot == tree["slot"]
+            for task in self._all_tasks()
+        ):
+            return "duplicate"
+        vehicles = [
+            vehicle
+            for vehicle in self.vehicles_for_task(TASK_ORCHARD_HARVEST)
+            if tree["type"] in VEHICLE_TYPE_DEFINITIONS[
+                vehicle.vehicle_type
+            ].get("supported_tree_types", ())
+        ]
+        if not vehicles:
+            return "no_fruit_harvester"
+        has_connection = False
+        for vehicle in vehicles:
+            _, parking_tile = vehicle.get_parking(world, buildings)
+            if parking_tile is None:
+                continue
+            route, connected = self._find_orchard_group_route(
+                world, buildings, parking_tile, orchard,
+            )
+            has_connection = has_connection or connected
+            if route is not None:
+                break
+        else:
+            return "no_route" if has_connection else "no_road"
+        if not get_warehouses(buildings):
+            return "no_warehouse"
+        if (
+            get_free_capacity(buildings) - self.reserved_harvest_capacity
+            < definition["annual_yield"]
+        ):
+            return "no_capacity"
+        return None
+
+    @staticmethod
+    def _find_orchard_group_route(world, buildings, start, target_orchard):
+        """A célfa összefüggő Gyümölcsösének legjobb közúti útját adja."""
+        group = next(
+            (items for items in get_orchard_groups(buildings)
+             if target_orchard in items),
+            None,
+        )
+        if group is None:
+            return None, False
+        routes = []
+        connected = False
+        for orchard in group:
+            route, _ = find_building_route(world, start, orchard)
+            if route is not None:
+                routes.append(route)
+                connected = True
+            else:
+                connected = connected or (
+                    find_building_parking(world, orchard) is not None
+                )
+        return (min(routes, key=len), True) if routes else (None, connected)
+
+    @staticmethod
+    def get_orchard_harvest_block_message(reason):
+        return {
+            "missing_tree": "A kijelölt gyümölcsfa nem található.",
+            "immature": "A gyümölcsfa még nem érett.",
+            "expired": "Ez a gyümölcsfa már nem szüretelhető.",
+            "already_harvested": "Ez a gyümölcsfa ebben az évben már le lett szüretelve.",
+            "duplicate": "Ehhez a fához már tartozik szüretelési feladat.",
+            "no_fruit_harvester": "A szürethez Gyümölcs szüretelőgép szükséges.",
+            "no_road": "A Gyümölcsös-rendszer nem érhető el útról.",
+            "no_route": "A Gyümölcs szüretelőgép nem talál útvonalat.",
+            "no_warehouse": "A szürethez legalább egy Raktár szükséges.",
+            "no_capacity": "Nincs elegendő hely a Raktárban.",
+        }.get(reason, "A gyümölcsszüret jelenleg nem indítható.")
+
     def get_harvest_block_reason(
             self, world, buildings, field, current_week=None,
             current_elapsed_week=None):
@@ -960,6 +1097,11 @@ class VehicleManager:
         return any(
             other is not task
             and other.field is task.field
+            and not (
+                task.task_type == TASK_ORCHARD_HARVEST
+                and other.task_type == TASK_ORCHARD_HARVEST
+                and other.tree_slot != task.tree_slot
+            )
             and other.creation_order < task.creation_order
             and other.status in ("waiting", "active")
             for other in self._all_tasks()
@@ -1007,6 +1149,15 @@ class VehicleManager:
         return trough_supply_is_needed(group, task.animals, task.trough_type)
 
     def _task_is_valid(self, task, world, buildings):
+        if task.task_type == TASK_ORCHARD_HARVEST:
+            tree = get_tree_in_slot(task.field, task.tree_slot)
+            return (
+                task.field in buildings
+                and task.field.get("type") == "orchard"
+                and tree is not None
+                and tree.get("type") == task.tree_type
+                and is_tree_harvestable(tree)
+            )
         if task.task_type == TASK_WATERING:
             return (
                 any(b.get("type") == "pond" for b in buildings)
@@ -1050,7 +1201,8 @@ class VehicleManager:
         for task in tuple(self.task_queue):
             if task.task_type not in (
                     TASK_WATERING, TASK_FERTILIZING,
-                    TASK_SUPPLY_FEED, TASK_SUPPLY_WATER):
+                    TASK_SUPPLY_FEED, TASK_SUPPLY_WATER,
+                    TASK_ORCHARD_HARVEST):
                 continue
             if self._task_is_valid(task, world, buildings):
                 continue

@@ -5,13 +5,16 @@ import pygame
 
 from animal_troughs import fill_group_trough
 from constants import GRID_COLS, GRID_ROWS, ROAD, TILE_SIZE
-from buildings import BUILDING_TYPES, get_garage_parking_position
+from buildings import (
+    BUILDING_TYPES, get_garage_parking_position, get_orchard_groups,
+)
 from crops import CROPS
 from fields import complete_harvest, fertilize_crop, plant_crop, water_crop
 from feed_supply import (
     deliver_feed_cargo, prepare_feed_supply, return_feed_cargo,
 )
 from game_logger import log
+from orchards import complete_tree_harvest
 from world import tile_to_world_center
 from screen_layout import world_to_screen
 from vehicle_types import VEHICLE_TYPE_DEFINITIONS, VehicleType
@@ -37,6 +40,7 @@ TRACTOR_MOVING_TO_TROUGH = "moving_to_trough"
 TRACTOR_UNLOADING_SUPPLY = "unloading_supply"
 TRACTOR_SELECTING_NEXT_TASK = "selecting_next_task"
 TRACTOR_RETURNING_FEED_CARGO = "returning_feed_cargo"
+TRACTOR_WORKING_ORCHARD = "working_orchard"
 
 TRACTOR_STEP_INTERVAL_MS = 80
 MAX_TRACTOR_STEPS_PER_UPDATE = 100
@@ -44,6 +48,7 @@ WATER_FILL_DURATION_MS = 800
 FEED_LOAD_DURATION_MS = 1000
 FEED_UNLOAD_DURATION_MS = 1000
 WATER_UNLOAD_DURATION_MS = 800
+ORCHARD_HARVEST_DURATION_MS = 1000
 TRACTOR_COLOR = (220, 35, 35)
 TRACTOR_BORDER_COLOR = (120, 20, 20)
 TRACTOR_CAB_COLOR = (62, 68, 72)
@@ -91,6 +96,7 @@ TASK_HARVESTING = "harvest"
 TASK_WATERING = "watering"
 TASK_SUPPLY_FEED = "supply_feed"
 TASK_SUPPLY_WATER = "supply_water"
+TASK_ORCHARD_HARVEST = "orchard_harvest"
 
 
 @dataclass
@@ -137,6 +143,8 @@ class FieldTask:
     warehouse_amount: int = 0
     purchased_amount: int = 0
     purchase_cost: float = 0.0
+    tree_slot: int | None = None
+    tree_type: str | None = None
 
 
 # Régi külső kiegészítések kompatibilitási típusa; az új kód FieldTaskot használ.
@@ -665,6 +673,10 @@ class Vehicle:
             return self._activate_watering_task(
                 task, start_road, now, first,
             )
+        if task.task_type == TASK_ORCHARD_HARVEST:
+            return self._activate_orchard_task(
+                world, task, start_road, now, first,
+            )
         route, entry_tile, has_connection = find_field_route(
             world, start_road, task.field,
         )
@@ -694,6 +706,58 @@ class Vehicle:
             self._state_after_parking_exit = travel_state
         else:
             self.state = travel_state
+            self._state_after_parking_exit = None
+        if first:
+            self.movement_accumulator_ms = 0.0
+            self.last_update_ticks = now
+            self._last_time_speed = None
+        self.protected_road_tiles = set(route) | set(return_route)
+        if self.parking_tile is not None:
+            self.protected_road_tiles.add(self.parking_tile)
+        return True
+
+    def _activate_orchard_task(self, world, task, start_road, now, first):
+        """Az összefüggő Gyümölcsös bármely közúti kapcsolatához irányít."""
+        group = next(
+            (items for items in get_orchard_groups(task.buildings)
+             if task.field in items),
+            None,
+        )
+        if group is None:
+            return False
+        candidates = []
+        for orchard in group:
+            route, connection_road = find_building_route(
+                world, start_road, orchard,
+            )
+            if route is None:
+                continue
+            return_route = find_road_path(
+                world, connection_road, self.parking_tile,
+            )
+            if return_route is not None:
+                candidates.append((len(route), route, connection_road, return_route))
+        if not candidates:
+            return False
+        _, route, connection_road, return_route = min(
+            candidates, key=lambda item: item[0],
+        )
+        self.current_task = task
+        task.status = "active"
+        task.connection_road = connection_road
+        task.return_route = return_route
+        task.field["vehicle_task_status"] = "active"
+        task.field["vehicle_task_type"] = task.task_type
+        task.field.pop("vehicle_queue_position", None)
+        self.path = route
+        self.next_path_index = 1
+        road_world_position = tile_to_world_center(*start_road)
+        if not self._positions_match(
+                (self.world_x, self.world_y), road_world_position):
+            self.state = TRACTOR_LEAVING_PARKING
+            self._state_after_parking_exit = TRACTOR_MOVING_TO_FIELD
+        else:
+            self.state = TRACTOR_MOVING_TO_FIELD
             self._state_after_parking_exit = None
         if first:
             self.movement_accumulator_ms = 0.0
@@ -865,6 +929,11 @@ class Vehicle:
                         "Watering",
                     )
                 continue
+            if self.state == TRACTOR_WORKING_ORCHARD:
+                self.current_task.remaining_wait_ms -= TRACTOR_STEP_INTERVAL_MS
+                if self.current_task.remaining_wait_ms <= 0:
+                    completed_work = self._complete_orchard_work()
+                continue
             if self.state in (TRACTOR_LOADING_SUPPLY, TRACTOR_UNLOADING_SUPPLY):
                 self.current_task.remaining_wait_ms -= TRACTOR_STEP_INTERVAL_MS
                 if self.current_task.remaining_wait_ms > 0:
@@ -995,6 +1064,10 @@ class Vehicle:
             if self.state in (
                     TRACTOR_MOVING_TO_FIELD,
                     TRACTOR_MOVING_TO_NEXT_FIELD):
+                if self.current_task.task_type == TASK_ORCHARD_HARVEST:
+                    self.state = TRACTOR_WORKING_ORCHARD
+                    self.current_task.remaining_wait_ms = ORCHARD_HARVEST_DURATION_MS
+                    continue
                 self.path = create_field_work_path(
                     self.current_task.field, self.current_task.entry_tile,
                 )
@@ -1032,6 +1105,24 @@ class Vehicle:
             if self.state == TRACTOR_SELECTING_NEXT_TASK:
                 continue
         return completed_work
+
+    def _complete_orchard_work(self):
+        """Betárolja a konkrét fa termését, majd új feladatra vár."""
+        task = self.current_task
+        completed = complete_tree_harvest(
+            task.buildings, task.field, task.tree_slot,
+        )
+        task.resource_reserved = False
+        task.field.pop("vehicle_task_status", None)
+        task.field.pop("vehicle_queue_position", None)
+        task.field.pop("vehicle_task_type", None)
+        task.status = "completed" if completed else "cancelled"
+        self.current_task = None
+        self.path = []
+        self.next_path_index = 0
+        self.state = TRACTOR_AWAITING_ASSIGNMENT
+        self.protected_road_tiles = {(self.row, self.col)}
+        return completed
 
     def _route_feed_cargo_back(self, world):
         """A célon maradt rakományt fizikailag visszaviszi a Raktárhoz."""
