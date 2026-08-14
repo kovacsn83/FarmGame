@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Minden automatikus piaci beszerzés egységesen $5/db szállítási költséget számol fel. A vetőanyag, a gyümölcsfa és a hiányzó takarmány ugyanazt a központi áruérték-, szállítási díj- és végösszegszámítást használja, amely a későbbi automatikus beszerzésekhez is újrahasznosítható.
+
 - Ültetéskor a hiányzó növény mostantól a központi katalógus normál piaci árán vásárolható meg; meglévő raktárkészletből továbbra is 1 db fogy. Az Ültetés ablak külön költségsora megszűnt.
 
 - Az Alma mostantól eladható a Piacon, központilag meghatározott $10/db áron; az értékesítése a gazdasági riportban gyümölcseladásként jelenik meg.

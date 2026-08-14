@@ -10,6 +10,9 @@ from game_rules import FIELD_TYPES, UPGRADES
 from game_logger import log
 from inventory import get_inventory_item_data, get_inventory_item_name
 from maintenance import calculate_weekly_maintenance
+from market_procurement import (
+    get_automatic_purchase_quote, purchase_automatically,
+)
 from money_format import format_money
 
 
@@ -74,14 +77,11 @@ class Economy:
                     "buildings": buildings,
                 }
 
-        purchase_price = crop_data["price"]
-        if self.spend(purchase_price):
-            log(
-                f"{crop_name} vetőmag vásárolva piaci áron: "
-                f"{format_money(purchase_price)}",
-                "Economy",
-            )
-            return {"source": "money", "amount": purchase_price}
+        receipt = purchase_automatically(
+            self, crop_name, crop_data["price"], 1,
+        )
+        if receipt is not None:
+            return {"source": "money", "amount": receipt.total_cost}
 
         log(
             f"Nincs {crop_name.lower()} a raktárban, és nincs elegendő pénz "
@@ -118,7 +118,9 @@ class Economy:
             return False
         return (
             get_total_crop_amount(buildings, crop) >= 1
-            or self.can_afford(crop_data["price"])
+            or self.can_afford(
+                get_automatic_purchase_quote(crop_data["price"], 1).total_cost
+            )
         )
 
     def report_seed_unavailable(self, buildings, crop):

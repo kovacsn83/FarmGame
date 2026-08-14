@@ -7,6 +7,7 @@ from building_renderers import (
     PROCEDURAL_LIGHT_DIRECTION, PROCEDURAL_SHADOW_OFFSET,
 )
 from game_logger import log
+from market_procurement import purchase_automatically
 from inventory import get_inventory_item_name
 from screen_layout import world_to_screen
 from constants import TILE_SIZE
@@ -106,7 +107,10 @@ def plant_tree(buildings, economy, row, col, tree_type):
     if get_tree_in_slot(orchard, slot["slot"]) is not None:
         log("Ezen a fahelyen már áll egy fa.", "Orchard")
         return None
-    if not economy.spend(definition["planting_cost"]):
+    purchase = purchase_automatically(
+        economy, definition["tree_name"], definition["planting_cost"], 1,
+    )
+    if purchase is None:
         log("Nincs elegendő pénz a gyümölcsfa ültetéséhez.", "Economy")
         return None
 

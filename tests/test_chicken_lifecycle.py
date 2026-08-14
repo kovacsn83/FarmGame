@@ -157,14 +157,14 @@ class ChickenLifecycleTests(unittest.TestCase):
         self.assertEqual(feed_type, "corn")
         self.assertEqual(amount, 8)
 
-        economy = Economy(starting_money=100)
+        economy = Economy(starting_money=200)
         transaction = prepare_feed_supply(
             self.buildings, economy, [self.pen], [self.chicken],
         )
         self.assertTrue(transaction.success)
         self.assertEqual(transaction.feed_type, "corn")
         self.assertEqual(transaction.purchased_amount, 8)
-        self.assertLess(economy.money, 100)
+        self.assertEqual(economy.money, 64)
 
     def test_egg_and_chicken_meat_are_marketable_at_catalog_prices(self):
         self.assertEqual(get_inventory_item_data("egg")["price"], 6.00)

@@ -55,6 +55,7 @@ COMBINE_PURCHASE_PRICE = 500.00
 FRUIT_HARVESTER_PURCHASE_PRICE = 500.00
 WATER_TANK_PURCHASE_PRICE = 300.00
 TRAILER_PURCHASE_PRICE = 300.00
+AUTO_PURCHASE_DELIVERY_COST_PER_UNIT = 5.00
 
 # Régi külső hivatkozások kompatibilitási értékei; mind ugyanabból a
 # központi, vételár-alapú szabályból származnak.

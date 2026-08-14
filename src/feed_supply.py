@@ -9,8 +9,10 @@ from buildings import (
 )
 from crops import CROPS
 from game_logger import log
-from money_format import format_money
 from inventory import get_inventory_item_name
+from market_procurement import (
+    get_automatic_purchase_quote, purchase_automatically,
+)
 
 
 @dataclass(frozen=True)
@@ -22,6 +24,8 @@ class FeedSupplyTransaction:
     required_amount: int = 0
     warehouse_amount: int = 0
     purchased_amount: int = 0
+    goods_cost: float = 0.0
+    delivery_cost: float = 0.0
     purchase_cost: float = 0.0
     error_message: str | None = None
 
@@ -59,8 +63,10 @@ def prepare_feed_supply(buildings, economy, group, animals):
     available = get_total_inventory(buildings).get(feed_type, 0)
     warehouse_amount = min(required, available)
     purchased_amount = required - warehouse_amount
-    unit_price = CROPS[feed_type]["seed_cost"]
-    purchase_cost = purchased_amount * unit_price
+    purchase_quote = get_automatic_purchase_quote(
+        CROPS[feed_type]["price"], purchased_amount,
+    )
+    purchase_cost = purchase_quote.total_cost
     feed_name = get_inventory_item_name(feed_type)
     log(
         f"Az etetéshez szükséges takarmány: {required} {feed_name}.",
@@ -89,7 +95,12 @@ def prepare_feed_supply(buildings, economy, group, animals):
         message = "A Raktár takarmánykészlete időközben megváltozott."
         log(message, "Inventory")
         return FeedSupplyTransaction(False, error_message=message)
-    if purchased_amount and not economy.spend(purchase_cost):
+    receipt = None
+    if purchased_amount:
+        receipt = purchase_automatically(
+            economy, feed_name, CROPS[feed_type]["price"], purchased_amount,
+        )
+    if purchased_amount and receipt is None:
         if warehouse_amount:
             store_item(buildings, feed_type, warehouse_amount)
         message = "A takarmányvásárlás a pénzegyenleg változása miatt meghiúsult."
@@ -101,15 +112,10 @@ def prepare_feed_supply(buildings, economy, group, animals):
             f"{warehouse_amount} {feed_name} levonva a Raktárból.",
             "Inventory",
         )
-    if purchased_amount:
-        log(
-            f"{purchased_amount} {feed_name} automatikusan megvásárolva: "
-            f"{format_money(purchase_cost)}.",
-            "Market",
-        )
     return FeedSupplyTransaction(
         True, feed_type, required, warehouse_amount,
-        purchased_amount, purchase_cost,
+        purchased_amount, purchase_quote.goods_cost,
+        purchase_quote.delivery_cost, purchase_cost,
     )
 
 

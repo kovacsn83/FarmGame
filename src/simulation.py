@@ -40,6 +40,7 @@ from fields import (
 from game_rules import FIELD_TYPES, UPGRADES
 from game_state import GameState
 from inventory import PRODUCTS, get_marketable_item_ids
+from market_procurement import get_automatic_purchase_unit_cost
 from maintenance import calculate_weekly_maintenance
 from money_format import format_money
 from simulation_report import write_simulation_reports
@@ -414,7 +415,11 @@ class SimulationBot:
                         )[0]["type"]
                         feed = "alfalfa" if animal_type == "cattle" else "corn"
                         cost = max(0.0, before_money - self.economy.money)
-                        bought = round(cost / CROPS[feed]["seed_cost"])
+                        bought = round(
+                            cost / get_automatic_purchase_unit_cost(
+                                CROPS[feed]["price"],
+                            )
+                        )
                         self.feed_bought[self.year][feed] += bought
                         self.feed_cost[self.year] += cost
                         self._record_money_change(

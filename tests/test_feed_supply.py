@@ -11,6 +11,7 @@ from economy import Economy
 from feed_supply import (
     deliver_feed_cargo, get_feed_requirement, prepare_feed_supply,
 )
+from game_logger import get_logger
 
 
 class FeedSupplyTransactionTests(unittest.TestCase):
@@ -42,7 +43,8 @@ class FeedSupplyTransactionTests(unittest.TestCase):
     def test_partial_inventory_buys_only_missing_alfalfa(self):
         self.pen[FOOD_STOCK_KEY] = 2
         self.warehouse["inventory"]["alfalfa"] = 3
-        economy = Economy(starting_money=100)
+        economy = Economy(starting_money=200)
+        get_logger().reset()
         result = prepare_feed_supply(
             [self.warehouse, self.market], economy,
             [self.pen], self.cattle,
@@ -52,13 +54,23 @@ class FeedSupplyTransactionTests(unittest.TestCase):
         self.assertEqual(result.required_amount, 14)
         self.assertEqual(result.warehouse_amount, 3)
         self.assertEqual(result.purchased_amount, 11)
-        self.assertEqual(result.purchase_cost, 44.0)
+        self.assertEqual(result.goods_cost, 77.0)
+        self.assertEqual(result.delivery_cost, 55.0)
+        self.assertEqual(result.purchase_cost, 132.0)
         self.assertEqual(self.warehouse["inventory"]["alfalfa"], 0)
-        self.assertEqual(economy.money, 56.0)
+        self.assertEqual(economy.money, 68.0)
+        self.assertTrue(any(
+            entry.category == "Market"
+            and "11 db Lucerna vásárolva" in entry.message
+            and "Ár: $77" in entry.message
+            and "Szállítás: $55" in entry.message
+            and "Összesen: $132" in entry.message
+            for entry in get_logger().entries
+        ))
 
     def test_pig_feed_uses_corn_catalog_price(self):
         pigs = [{"type": "pig", "pen_row": 10, "pen_col": 10}]
-        economy = Economy(starting_money=100)
+        economy = Economy(starting_money=200)
         result = prepare_feed_supply(
             [self.warehouse, self.market], economy,
             [self.pen], pigs,
@@ -66,8 +78,10 @@ class FeedSupplyTransactionTests(unittest.TestCase):
         self.assertTrue(result.success)
         self.assertEqual(result.feed_type, "corn")
         self.assertEqual(result.required_amount, 8)
-        self.assertEqual(result.purchase_cost, 48.0)
-        self.assertEqual(economy.money, 52.0)
+        self.assertEqual(result.goods_cost, 96.0)
+        self.assertEqual(result.delivery_cost, 40.0)
+        self.assertEqual(result.purchase_cost, 136.0)
+        self.assertEqual(economy.money, 64.0)
 
     def test_sufficient_inventory_works_without_market(self):
         self.warehouse["inventory"]["alfalfa"] = 16
