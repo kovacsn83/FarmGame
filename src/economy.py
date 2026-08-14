@@ -74,13 +74,14 @@ class Economy:
                     "buildings": buildings,
                 }
 
-        seed_price = crop_data["seed_cost"]
-        if self.spend(seed_price):
+        purchase_price = crop_data["price"]
+        if self.spend(purchase_price):
             log(
-                f"{crop_name} vetőmag vásárolva: {format_money(seed_price)}",
+                f"{crop_name} vetőmag vásárolva piaci áron: "
+                f"{format_money(purchase_price)}",
                 "Economy",
             )
-            return {"source": "money", "amount": seed_price}
+            return {"source": "money", "amount": purchase_price}
 
         log(
             f"Nincs {crop_name.lower()} a raktárban, és nincs elegendő pénz "
@@ -107,7 +108,7 @@ class Economy:
             return True
 
         # Ha időközben minden raktár megszűnt, az erőforrás értéke sem vész el.
-        self.earn(CROPS[crop]["seed_cost"] * payment["amount"])
+        self.earn(CROPS[crop]["price"] * payment["amount"])
         return True
 
     def can_acquire_seed(self, buildings, crop):
@@ -117,7 +118,7 @@ class Economy:
             return False
         return (
             get_total_crop_amount(buildings, crop) >= 1
-            or self.can_afford(crop_data["seed_cost"])
+            or self.can_afford(crop_data["price"])
         )
 
     def report_seed_unavailable(self, buildings, crop):

@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Ültetéskor a hiányzó növény mostantól a központi katalógus normál piaci árán vásárolható meg; meglévő raktárkészletből továbbra is 1 db fogy. Az Ültetés ablak külön költségsora megszűnt.
+
 - Az Alma mostantól eladható a Piacon, központilag meghatározott $10/db áron; az értékesítése a gazdasági riportban gyümölcseladásként jelenik meg.
 
 - Az Aratás eszköz mostantól az érett gyümölcsfákat is felismeri: az általános `orchard_harvest` Dispatcher-feladatot kizárólag a Gyümölcs szüretelőgép végzi el.

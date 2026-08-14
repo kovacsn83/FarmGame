@@ -111,7 +111,7 @@ INFO_PANEL_BORDER = (60, 60, 60)
 INFO_PANEL_SEPARATOR = (140, 140, 140)
 
 CROP_PANEL_WIDTH = 440
-CROP_CARD_HEIGHT = 140
+CROP_CARD_HEIGHT = 114
 CROP_CARD_GAP = 12
 CROP_CARD_BACKGROUND = (232, 232, 225)
 CROP_CARD_HOVER = (220, 230, 210)
@@ -1572,16 +1572,9 @@ class CropSelectionPanel(SelectionPanel):
             self.draw_text(
                 screen,
                 font,
-                f"Ültetés költsége: {format_money(crop_data['seed_cost'])}",
-                text_x,
-                text_y + 78,
-            )
-            self.draw_text(
-                screen,
-                font,
                 f"Eladási ár: {format_money(crop_data['price'])} / db",
                 text_x,
-                text_y + 104,
+                text_y + 78,
             )
         screen.set_clip(previous_clip)
 

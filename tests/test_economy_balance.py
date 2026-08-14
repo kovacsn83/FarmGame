@@ -20,6 +20,39 @@ class EconomyBalanceTests(unittest.TestCase):
         self.assertEqual(STARTING_MONEY, 10000.00)
         self.assertEqual(Economy().money, 10000.00)
 
+    def test_planting_uses_one_stored_crop_without_spending_money(self):
+        world = [[GRASS for _ in range(20)] for _ in range(20)]
+        buildings = []
+        warehouse = place_building(world, buildings, 1, 1, "warehouse")
+        warehouse["inventory"]["wheat"] = 1
+        economy = Economy(starting_money=0)
+
+        payment = economy.reserve_seed(buildings, "wheat")
+
+        self.assertEqual(payment["source"], "inventory")
+        self.assertEqual(warehouse["inventory"]["wheat"], 0)
+        self.assertEqual(economy.money, 0)
+
+    def test_planting_buys_missing_crop_at_normal_market_price(self):
+        world = [[GRASS for _ in range(20)] for _ in range(20)]
+        buildings = []
+        place_building(world, buildings, 1, 1, "warehouse")
+        economy = Economy(starting_money=10)
+
+        payment = economy.reserve_seed(buildings, "wheat")
+
+        self.assertEqual(payment, {"source": "money", "amount": 10.00})
+        self.assertEqual(economy.money, 0)
+        economy.refund_seed(payment, "wheat")
+        self.assertEqual(economy.money, 10.00)
+
+    def test_missing_crop_cannot_be_bought_below_market_price(self):
+        economy = Economy(starting_money=9)
+
+        self.assertFalse(economy.can_acquire_seed([], "wheat"))
+        self.assertIsNone(economy.reserve_seed([], "wheat"))
+        self.assertEqual(economy.money, 9)
+
     def test_milk_sale_uses_eight_dollar_catalog_price(self):
         self.assertEqual(get_inventory_item_data("milk")["price"], 8.00)
         world = [[GRASS for _ in range(20)] for _ in range(20)]
