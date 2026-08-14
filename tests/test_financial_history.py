@@ -43,7 +43,7 @@ class FinancialHistoryTests(unittest.TestCase):
         )
         summary = self.economy.get_financial_summary()
         self.assertEqual(summary["expense"][EXPENSE_ANIMAL_FEED]["total"], 14)
-        self.assertEqual(summary["expense"][EXPENSE_SHIPPING]["total"], 10)
+        self.assertEqual(summary["expense"][EXPENSE_SHIPPING]["total"], 6)
 
     def test_history_round_trip_and_old_save_default(self):
         self.economy.record_income(INCOME_CROP_SALES, 50, "wheat")

@@ -55,16 +55,16 @@ class FeedSupplyTransactionTests(unittest.TestCase):
         self.assertEqual(result.warehouse_amount, 3)
         self.assertEqual(result.purchased_amount, 11)
         self.assertEqual(result.goods_cost, 77.0)
-        self.assertEqual(result.delivery_cost, 55.0)
-        self.assertEqual(result.purchase_cost, 132.0)
+        self.assertEqual(result.delivery_cost, 33.0)
+        self.assertEqual(result.purchase_cost, 110.0)
         self.assertEqual(self.warehouse["inventory"]["alfalfa"], 0)
-        self.assertEqual(economy.money, 68.0)
+        self.assertEqual(economy.money, 90.0)
         self.assertTrue(any(
             entry.category == "Market"
             and "11 db Lucerna vásárolva" in entry.message
             and "Ár: $77" in entry.message
-            and "Szállítás: $55" in entry.message
-            and "Összesen: $132" in entry.message
+            and "Szállítás: $33" in entry.message
+            and "Összesen: $110" in entry.message
             for entry in get_logger().entries
         ))
 
@@ -79,9 +79,9 @@ class FeedSupplyTransactionTests(unittest.TestCase):
         self.assertEqual(result.feed_type, "corn")
         self.assertEqual(result.required_amount, 8)
         self.assertEqual(result.goods_cost, 96.0)
-        self.assertEqual(result.delivery_cost, 40.0)
-        self.assertEqual(result.purchase_cost, 136.0)
-        self.assertEqual(economy.money, 64.0)
+        self.assertEqual(result.delivery_cost, 24.0)
+        self.assertEqual(result.purchase_cost, 120.0)
+        self.assertEqual(economy.money, 80.0)
 
     def test_sufficient_inventory_works_without_market(self):
         self.warehouse["inventory"]["alfalfa"] = 16

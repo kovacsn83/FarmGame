@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Az automatikus piaci beszerzések szállítási díja $5/db-ról $3/db-ra csökkent.
+
 - A HUD pénzegyenlege kattinthatóvá vált, és egy görgethető Pénzügyi összesítőt nyit meg az utolsó 52 hét kategorizált bevételeivel, kiadásaival és nettó egyenlegével.
 - A menthető központi tranzakciós napló külön kezeli többek között az értékesítéseket, építést, jármű- és állatvásárlást, fenntartást, hitelt, termelési beszerzést és szállítási díjat; a régi mentések üres előzménnyel kompatibilisek.
 

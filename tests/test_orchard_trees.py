@@ -82,7 +82,7 @@ class OrchardTreeTests(unittest.TestCase):
             self.assertIsNotNone(tree)
             self.assertEqual(expected_slot, tree["slot"])
         self.assertEqual(4, len(self.orchard["trees"]))
-        self.assertEqual(580, self.economy.money)
+        self.assertEqual(588, self.economy.money)
 
         self.assertFalse(can_plant_tree(
             self.buildings, 11, 11, "apple",
@@ -90,7 +90,7 @@ class OrchardTreeTests(unittest.TestCase):
         self.assertIsNone(plant_tree(
             self.buildings, self.economy, 11, 11, "apple",
         ))
-        self.assertEqual(580, self.economy.money)
+        self.assertEqual(588, self.economy.money)
 
     def test_tree_is_only_plantable_inside_orchard(self):
         self.assertFalse(can_plant_tree(self.buildings, 1, 1, "apple"))

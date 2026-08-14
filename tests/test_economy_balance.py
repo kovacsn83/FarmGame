@@ -37,21 +37,21 @@ class EconomyBalanceTests(unittest.TestCase):
         world = [[GRASS for _ in range(20)] for _ in range(20)]
         buildings = []
         place_building(world, buildings, 1, 1, "warehouse")
-        economy = Economy(starting_money=15)
+        economy = Economy(starting_money=13)
 
         payment = economy.reserve_seed(buildings, "wheat")
 
-        self.assertEqual(payment, {"source": "money", "amount": 15.00})
+        self.assertEqual(payment, {"source": "money", "amount": 13.00})
         self.assertEqual(economy.money, 0)
         economy.refund_seed(payment, "wheat")
-        self.assertEqual(economy.money, 15.00)
+        self.assertEqual(economy.money, 13.00)
 
     def test_missing_crop_cannot_be_bought_below_market_price(self):
-        economy = Economy(starting_money=14)
+        economy = Economy(starting_money=12)
 
         self.assertFalse(economy.can_acquire_seed([], "wheat"))
         self.assertIsNone(economy.reserve_seed([], "wheat"))
-        self.assertEqual(economy.money, 14)
+        self.assertEqual(economy.money, 12)
 
     def test_milk_sale_uses_eight_dollar_catalog_price(self):
         self.assertEqual(get_inventory_item_data("milk")["price"], 8.00)
