@@ -183,6 +183,8 @@ class SimulationBot:
     def _sale_income_category(item_id):
         if item_id in CROPS:
             return "crop_sales"
+        if item_id == "apple":
+            return "fruit_sales"
         if item_id == "milk":
             return "milk_sales"
         if item_id == "pork":

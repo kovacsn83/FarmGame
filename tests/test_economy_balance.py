@@ -32,6 +32,30 @@ class EconomyBalanceTests(unittest.TestCase):
         self.assertEqual(economy.money, 24.00)
         self.assertEqual(warehouse["inventory"]["milk"], 0)
 
+    def test_apple_sale_uses_ten_dollar_catalog_price(self):
+        apple_data = get_inventory_item_data("apple")
+        self.assertTrue(apple_data["marketable"])
+        self.assertEqual(apple_data["price"], 10.00)
+        self.assertIn("apple", get_marketable_item_ids())
+
+        world = [[GRASS for _ in range(20)] for _ in range(20)]
+        buildings = []
+        warehouse = place_building(world, buildings, 1, 1, "warehouse")
+        place_building(world, buildings, 8, 1, "market")
+        warehouse["inventory"]["apple"] = 20
+        economy = Economy(starting_money=0)
+        get_logger().reset()
+
+        self.assertTrue(economy.sell_item(buildings, "apple"))
+        self.assertEqual(economy.money, 200.00)
+        self.assertEqual(warehouse["inventory"]["apple"], 0)
+        self.assertTrue(any(
+            entry.category == "Economy"
+            and "20 db alma" in entry.message
+            and "$200" in entry.message
+            for entry in get_logger().entries
+        ))
+
     def test_pork_sale_uses_hundred_dollar_catalog_price(self):
         pork_data = get_inventory_item_data("pork")
         self.assertTrue(pork_data["marketable"])

@@ -145,8 +145,8 @@ class OrchardTreeTests(unittest.TestCase):
         self.assertEqual(20, get_total_inventory(self.buildings)["apple"])
         self.assertIn("Már nem termő", get_tree_tooltip_lines(tree))
 
-    def test_apple_is_stored_but_not_marketable(self):
-        self.assertNotIn("apple", get_marketable_item_ids())
+    def test_apple_is_stored_and_marketable(self):
+        self.assertIn("apple", get_marketable_item_ids())
         tree = plant_tree(
             self.buildings, self.economy, 10, 10, "apple",
         )

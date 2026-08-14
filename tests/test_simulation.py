@@ -15,6 +15,11 @@ from simulation_report import build_economic_summary
 
 
 class FiveYearSimulationTests(unittest.TestCase):
+    def test_apple_sales_use_fruit_report_category(self):
+        self.assertEqual(
+            SimulationBot._sale_income_category("apple"), "fruit_sales",
+        )
+
     def test_bot_builds_and_demolishes_through_game_rules(self):
         bot = SimulationBot(3)
         bot.bootstrap()

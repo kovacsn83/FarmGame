@@ -5,7 +5,8 @@ from crops import CROPS
 PRODUCTS = {
     "apple": {
         "name": "Alma",
-        "marketable": False,
+        "marketable": True,
+        "price": 10.00,
     },
     "milk": {
         "name": "Tej",

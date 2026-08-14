@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Az Alma mostantól eladható a Piacon, központilag meghatározott $10/db áron; az értékesítése a gazdasági riportban gyümölcseladásként jelenik meg.
+
 - Az Aratás eszköz mostantól az érett gyümölcsfákat is felismeri: az általános `orchard_harvest` Dispatcher-feladatot kizárólag a Gyümölcs szüretelőgép végzi el.
 - A sikeres Almafa-szüret 20 Almát helyez a Raktárba, ugyanabban az életévben nem ismételhető meg, a következő életévben pedig a fa ismét szüretelhetővé válik.
 - A menthető gyümölcsszüretelési feladat konkrét Gyümölcsöst, fahelyet és fafajt tárol; az adatvezérelt kialakítás további gyümölcsfajokat is előkészít.
