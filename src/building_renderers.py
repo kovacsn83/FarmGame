@@ -72,6 +72,20 @@ GARAGE_POST = (75, 73, 66)
 GARAGE_POST_LIGHT = (111, 105, 91)
 GARAGE_PARKING_MARK = (157, 151, 137)
 
+PROCESSING_FOUNDATION = (191, 181, 158)
+PROCESSING_WALL = (202, 193, 171)
+PROCESSING_ROOF = (103, 108, 107)
+PROCESSING_ROOF_LIGHT = (126, 130, 126)
+PROCESSING_ROOF_DARK = (77, 82, 82)
+PROCESSING_OUTLINE = (66, 62, 55)
+PROCESSING_PANEL_LINE = (87, 91, 90)
+PROCESSING_GATE = (83, 88, 88)
+PROCESSING_GATE_LINE = (52, 56, 56)
+PROCESSING_WINDOW = (106, 153, 163)
+PROCESSING_WINDOW_LIGHT = (157, 192, 193)
+PROCESSING_VENT = (76, 80, 78)
+PROCESSING_VENT_LIGHT = (142, 143, 132)
+
 POND_SHORE = (111, 101, 73)
 POND_SHORE_DARK = (80, 76, 59)
 POND_SHORE_LIGHT = (137, 124, 86)
@@ -641,6 +655,88 @@ def draw_garage(screen, building):
     )
 
 
+def draw_processing_plant(screen, building):
+    """Kompakt, felülnézetes ipari üzemet rajzol Pygame primitívekből."""
+    footprint = _building_rect(building)
+    _draw_building_shadow(screen, footprint, PROCEDURAL_SHADOW_COLOR)
+    pygame.draw.rect(
+        screen, PROCESSING_FOUNDATION, footprint, border_radius=2,
+    )
+
+    body = footprint.inflate(-6, -6)
+    pygame.draw.rect(screen, PROCESSING_WALL, body, border_radius=2)
+    roof = pygame.Rect(
+        body.left + 3, body.top + 3, body.width - 6, body.height - 25,
+    )
+    pygame.draw.rect(screen, PROCESSING_ROOF, roof)
+
+    # A bal alsó fényforrás a tető alsó és bal peremét világosítja,
+    # a felső és jobb oldalt pedig finoman sötétíti.
+    pygame.draw.line(
+        screen, PROCESSING_ROOF_LIGHT,
+        (roof.left + 1, roof.bottom - 1),
+        (roof.right - 1, roof.bottom - 1), 3,
+    )
+    pygame.draw.line(
+        screen, PROCESSING_ROOF_LIGHT,
+        (roof.left + 1, roof.top + 1),
+        (roof.left + 1, roof.bottom - 1), 2,
+    )
+    pygame.draw.line(
+        screen, PROCESSING_ROOF_DARK, roof.topleft, roof.topright, 3,
+    )
+    pygame.draw.line(
+        screen, PROCESSING_ROOF_DARK, roof.topright, roof.bottomright, 3,
+    )
+    for panel_x in range(roof.left + 18, roof.right, 18):
+        pygame.draw.line(
+            screen, PROCESSING_PANEL_LINE,
+            (panel_x, roof.top + 4), (panel_x, roof.bottom - 4), 1,
+        )
+
+    # A déli oldali nagy kapu és rakodóperon kis méretben is ipari jelleget ad.
+    gate = pygame.Rect(0, 0, min(46, body.width // 2), 17)
+    gate.midbottom = (body.centerx, body.bottom - 2)
+    pygame.draw.rect(screen, PROCESSING_GATE, gate)
+    pygame.draw.rect(screen, PROCESSING_GATE_LINE, gate, 2)
+    for gate_y in range(gate.top + 5, gate.bottom, 5):
+        pygame.draw.line(
+            screen, PROCESSING_GATE_LINE,
+            (gate.left + 2, gate_y), (gate.right - 2, gate_y), 1,
+        )
+    apron = pygame.Rect(gate.left - 5, gate.bottom, gate.width + 10, 4)
+    pygame.draw.rect(screen, PROCESSING_ROOF_LIGHT, apron)
+    pygame.draw.rect(screen, PROCESSING_OUTLINE, apron, 1)
+
+    for window_x in (body.left + 10, body.right - 18):
+        window = pygame.Rect(window_x, body.bottom - 17, 8, 6)
+        pygame.draw.rect(screen, PROCESSING_WINDOW, window)
+        pygame.draw.line(
+            screen, PROCESSING_WINDOW_LIGHT,
+            window.bottomleft, window.bottomright, 1,
+        )
+        pygame.draw.rect(screen, PROCESSING_OUTLINE, window, 1)
+
+    # Egyszerű tetőszellőző és kémény, erős részletezés nélkül.
+    vent = pygame.Rect(roof.right - 22, roof.top + 11, 13, 11)
+    pygame.draw.rect(screen, PROCESSING_VENT, vent)
+    pygame.draw.line(
+        screen, PROCESSING_VENT_LIGHT,
+        vent.bottomleft, vent.bottomright, 2,
+    )
+    pygame.draw.rect(screen, PROCESSING_OUTLINE, vent, 1)
+    for vent_x in range(vent.left + 3, vent.right - 1, 4):
+        pygame.draw.line(
+            screen, PROCESSING_OUTLINE,
+            (vent_x, vent.top + 2), (vent_x, vent.bottom - 2), 1,
+        )
+    chimney = pygame.Rect(roof.left + 12, roof.top + 9, 9, 9)
+    pygame.draw.rect(screen, PROCESSING_VENT_LIGHT, chimney)
+    pygame.draw.rect(screen, PROCESSING_OUTLINE, chimney, 2)
+
+    _draw_building_outline(screen, footprint, PROCESSING_OUTLINE)
+
+
 def _pond_variant(building):
     """A Tó pozíciójából stabil, villogásmentes grafikai változatot képez."""
     return (
@@ -742,6 +838,7 @@ BUILDING_RENDERERS = {
     "market": draw_market,
     "garage": draw_garage,
     "pond": draw_pond,
+    "processing_plant": draw_processing_plant,
 }
 
 

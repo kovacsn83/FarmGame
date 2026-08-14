@@ -146,6 +146,7 @@ POPUP_TITLES = {
     "pond": "Tó",
     "animal_husbandry": "Állattartás",
     "orchard_selection": "Gyümölcsös",
+    "processing_plant": "Feldolgozó üzem",
 }
 
 PRIMARY_TOOL_GROUPS = [
@@ -1007,7 +1008,8 @@ class InfoPanel(PopupWindow):
     def open_for_building(self, building):
         """Megnyitja a panelt, ha az épülettípushoz már tartozik nézet."""
         if building["type"] not in (
-                "warehouse", "market", "farmhouse", "garage", "pond"):
+                "warehouse", "market", "farmhouse", "garage", "pond",
+                "processing_plant"):
             return False
         self.building_type = building["type"]
         self.building = building
@@ -1088,6 +1090,32 @@ class InfoPanel(PopupWindow):
             self._draw_garage(screen, font, game_state)
         elif self.building_type == "pond":
             self._draw_pond(screen, font)
+        elif self.building_type == "processing_plant":
+            self._draw_processing_plant(screen, font)
+
+    def _draw_processing_plant(self, screen, font):
+        """A későbbi gyártási rendszerhez előkészített statikus adatlap."""
+        definition = BUILDING_TYPES["processing_plant"]
+        self.rect.size = (responsive_panel_width(INFO_PANEL_WIDTH), 220)
+        self.rect.center = get_screen_center()
+        self.draw_frame(screen)
+        x = self.rect.x + INFO_PANEL_PADDING
+        y = self.rect.y + INFO_PANEL_PADDING
+        self.draw_text(screen, font, POPUP_TITLES["processing_plant"], x, y)
+        y += 38
+        self.draw_text(
+            screen, font,
+            f"Méret: {definition['width']}x{definition['height']}", x, y,
+        )
+        y += 28
+        self.draw_text(
+            screen, font,
+            f"Éves költség: {format_annual_maintenance_rate()}", x, y,
+        )
+        y += 34
+        self.draw_text(screen, font, "Termelés:", x, y)
+        y += 26
+        self.draw_text(screen, font, definition["description"], x, y)
 
     def _draw_pond(self, screen, font):
         """A későbbi öntözéshez előkészített Tó statikus adatlapja."""

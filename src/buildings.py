@@ -3,7 +3,7 @@ from constants import (
     FARMHOUSE_BUILD_COST, FARMHOUSE_LEVEL_2_MAINTENANCE_BASE,
     FARMHOUSE_LEVEL_2_UPGRADE_PRICE, GARAGE_BUILD_COST, GRASS,
     MARKET_BUILD_COST, ORCHARD_BUILD_COST, ROAD, TILE_SIZE, POND_BUILD_COST,
-    WAREHOUSE_BUILD_COST,
+    PROCESSING_PLANT_BUILD_COST, WAREHOUSE_BUILD_COST,
 )
 from crops import CROPS
 from game_rules import FIELD_TYPES, can_build_more
@@ -112,6 +112,19 @@ BUILDING_TYPES = {
         "draw_grass_underlay": True,
         "future_role": "fruit_tree_area",
         "description": "Előkészített terület a későbbi gyümölcsfák számára.",
+    },
+    "processing_plant": {
+        "name": "Feldolgozó üzem",
+        "width": 6,
+        "height": 5,
+        "color": (171, 165, 150),
+        "build_cost": PROCESSING_PLANT_BUILD_COST,
+        "placement_rule": "road",
+        "renderer_type": "processing_plant",
+        "future_role": "processing_industry",
+        "description": "Még nincs funkció.",
+        # A későbbi receptek egyetlen, adatvezérelt katalógusba kerülhetnek.
+        "recipes": (),
     },
 }
 

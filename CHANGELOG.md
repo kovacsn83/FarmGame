@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Új épületként bekerült a Feldolgozó üzem: 6x5 csempés, $3 000 építési árú, az egységes évi 10%-os fenntartás alá tartozó ipari épület. Procedurális grafikája, útkapcsolata, információs nézete és mentése elkészült; az adatmodell előkészíti a későbbi receptalapú feldolgozást.
+
 - Minden automatikus piaci beszerzés egységesen $5/db szállítási költséget számol fel. A vetőanyag, a gyümölcsfa és a hiányzó takarmány ugyanazt a központi áruérték-, szállítási díj- és végösszegszámítást használja, amely a későbbi automatikus beszerzésekhez is újrahasznosítható.
 
 - Ültetéskor a hiányzó növény mostantól a központi katalógus normál piaci árán vásárolható meg; meglévő raktárkészletből továbbra is 1 db fogy. Az Ültetés ablak külön költségsora megszűnt.
