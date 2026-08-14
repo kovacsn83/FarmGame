@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from constants import GRASS, ROAD, ROAD_BUILD_COST
 from game_logger import log
 from money_format import format_money
+from financial_history import EXPENSE_CONSTRUCTION
 
 
 ROAD_DRAG_AXIS_HORIZONTAL = "horizontal"
@@ -66,6 +67,11 @@ def build_road_segment(world, tiles, economy, road_built_handler=None):
         return True, 0, 0.0
     if not economy.spend(total_cost):
         return False, 0, total_cost
+    if hasattr(economy, "record_expense"):
+        economy.record_expense(
+            EXPENSE_CONSTRUCTION, total_cost, "road",
+            f"{len(new_tiles)} út csempe",
+        )
 
     for row, col in new_tiles:
         world[row][col] = ROAD

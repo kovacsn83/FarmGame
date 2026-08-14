@@ -4,6 +4,7 @@ from dataclasses import asdict, dataclass
 
 from game_logger import log
 from money_format import format_money
+from financial_history import INCOME_LOAN, EXPENSE_LOAN_REPAYMENT
 
 
 LOAN_PRINCIPAL_CENTS = 1_000_000
@@ -85,6 +86,10 @@ class BankSystem:
         if self.loan.active_loan or not self.offer_pending:
             return False
         self.economy.earn(cents_to_dollars(LOAN_PRINCIPAL_CENTS))
+        self.economy.record_income(
+            INCOME_LOAN, cents_to_dollars(LOAN_PRINCIPAL_CENTS),
+            description="Bankhitel",
+        )
         self.loan.active_loan = True
         self.loan.remaining_balance_cents = LOAN_TOTAL_REPAYMENT_CENTS
         self.loan.remaining_weeks = LOAN_TERM_WEEKS
@@ -126,6 +131,9 @@ class BankSystem:
         )
         payment = cents_to_dollars(payment_cents)
         self.economy.charge(payment)
+        self.economy.record_expense(
+            EXPENSE_LOAN_REPAYMENT, payment, description="Heti hiteltörlesztés",
+        )
         self.loan.remaining_balance_cents -= payment_cents
         self.loan.remaining_weeks = max(0, self.loan.remaining_weeks - 1)
         self.loan.total_repaid_cents += payment_cents

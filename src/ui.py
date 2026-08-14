@@ -22,9 +22,18 @@ from crops import CROPS, get_crop_growth_weeks, get_crop_week_intervals
 from game_rules import (
     UPGRADES, get_upgrade_status, is_build_option_unlocked,
 )
-from inventory import get_inventory_item_name, get_marketable_item_ids
+from inventory import (
+    get_inventory_item_ids, get_inventory_item_name, get_marketable_item_ids,
+)
 from maintenance import format_annual_maintenance_rate
 from money_format import format_money
+from financial_history import (
+    EXPENSE_ANIMAL_FEED, EXPENSE_ANIMAL_PURCHASE, EXPENSE_CONSTRUCTION,
+    EXPENSE_FRUIT_TREE, EXPENSE_LOAN_REPAYMENT, EXPENSE_MAINTENANCE,
+    EXPENSE_PLANTING, EXPENSE_SHIPPING, EXPENSE_UPGRADE, EXPENSE_VEHICLE,
+    INCOME_CROP_SALES, INCOME_LIVESTOCK_SALES, INCOME_LOAN,
+    INCOME_ORCHARD_SALES,
+)
 from orchards import TREE_TYPES
 from time_system import (
     SEASON_PERIODS, TIME_NORMAL, WEEKS_PER_YEAR, Season, format_game_time,
@@ -57,6 +66,16 @@ HUD_MENU_GAP = 12
 HUD_CALENDAR_BUTTON_SIZE = 30
 HUD_CALENDAR_ICON_SIZE = 20
 HUD_CALENDAR_GAP = 8
+
+FINANCE_PANEL_WIDTH = 680
+FINANCE_PANEL_HEIGHT = 760
+FINANCE_PANEL_PADDING = 24
+FINANCE_ROW_HEIGHT = 24
+FINANCE_SECTION_GAP = 10
+FINANCE_SCROLL_STEP = 48
+FINANCE_INCOME_COLOR = (45, 125, 70)
+FINANCE_EXPENSE_COLOR = (160, 70, 55)
+FINANCE_SEPARATOR_COLOR = (150, 150, 140)
 
 NEWS_BAR_LEFT_MARGIN = 12
 NEWS_BAR_BOTTOM_MARGIN = 10
@@ -619,8 +638,28 @@ def draw_economy_hud(screen, font, buildings, economy):
     text_rect = text.get_rect(
         midright=(screen_width - HUD_RIGHT_MARGIN, TOP_BAR_HEIGHT // 2),
     )
+    money_rect = get_money_hud_rect(font, buildings, economy)
+    if money_rect.collidepoint(pygame.mouse.get_pos()):
+        hover_rect = money_rect.inflate(8, 6)
+        pygame.draw.rect(screen, COLOR_BUTTON, hover_rect)
+        pygame.draw.rect(screen, COLOR_BUTTON_BORDER, hover_rect, 1)
     screen.blit(text, text_rect)
     return text_rect
+
+
+def get_money_hud_rect(font, buildings, economy):
+    """A kombinált jobb oldali HUD-on belül csak a pénz felirat hitboxa."""
+    screen_width, _ = get_screen_size()
+    money = economy.money if economy is not None else 0.0
+    stored_amount = sum(get_total_inventory(buildings).values())
+    capacity = get_total_capacity(buildings)
+    money_text = font.render(f"Pénz: {format_money(money)}", True, COLOR_TEXT)
+    suffix_width = font.size(
+        f" | Raktár: {stored_amount} / {capacity}"
+    )[0]
+    return money_text.get_rect(
+        midright=(screen_width - HUD_RIGHT_MARGIN, TOP_BAR_HEIGHT // 2),
+    ).move(-suffix_width, 0)
 
 
 def draw_hud(
@@ -797,6 +836,131 @@ class BankPanel(PopupWindow):
         self._draw_button(
             screen, font, self.button_rects["decline"], "Elutasítás",
         )
+
+
+class FinancialSummaryPanel(PopupWindow):
+    """Az utolsó 52 hét mentett tranzakcióiból készített kimutatás."""
+
+    INCOME_LABELS = (
+        (INCOME_CROP_SALES, "Növényértékesítés"),
+        (INCOME_LIVESTOCK_SALES, "Állati termékek értékesítése"),
+        (INCOME_ORCHARD_SALES, "Gyümölcsértékesítés"),
+        (INCOME_LOAN, "Felvett hitel"),
+    )
+    EXPENSE_LABELS = (
+        (EXPENSE_MAINTENANCE, "Fenntartási költségek"),
+        (EXPENSE_SHIPPING, "Szállítási költségek"),
+        (EXPENSE_PLANTING, "Vetési költségek"),
+        (EXPENSE_ANIMAL_FEED, "Takarmánybeszerzés"),
+        (EXPENSE_ANIMAL_PURCHASE, "Állatvásárlás"),
+        (EXPENSE_FRUIT_TREE, "Gyümölcsfa-vásárlás"),
+        (EXPENSE_CONSTRUCTION, "Építés"),
+        (EXPENSE_VEHICLE, "Járművásárlás"),
+        (EXPENSE_UPGRADE, "Fejlesztések"),
+        (EXPENSE_LOAN_REPAYMENT, "Hiteltörlesztés"),
+    )
+
+    def __init__(self):
+        super().__init__(FINANCE_PANEL_WIDTH, FINANCE_PANEL_HEIGHT)
+        self.scroll_offset = 0
+        self.max_scroll = 0
+
+    def open(self):
+        screen_width, screen_height = get_screen_size()
+        self.rect.width = min(FINANCE_PANEL_WIDTH, screen_width - 40)
+        self.rect.height = min(FINANCE_PANEL_HEIGHT, screen_height - 80)
+        self.rect.center = get_screen_center()
+        self.scroll_offset = 0
+        super().open()
+
+    def handle_event(self, event):
+        if not self.visible:
+            return False
+        if event.type == pygame.MOUSEWHEEL:
+            if self.rect.collidepoint(pygame.mouse.get_pos()):
+                self.scroll_offset = max(
+                    0, min(self.max_scroll,
+                           self.scroll_offset - event.y * FINANCE_SCROLL_STEP),
+                )
+                return True
+        return super().handle_event(event)
+
+    @staticmethod
+    def _subcategory_name(item_id):
+        if item_id in get_inventory_item_ids():
+            return get_inventory_item_name(item_id)
+        if item_id in ANIMAL_TYPES:
+            return ANIMAL_TYPES[item_id]["name"]
+        if item_id in TREE_TYPES:
+            return TREE_TYPES[item_id]["tree_name"]
+        definition = next((
+            data for vehicle_type, data in VEHICLE_TYPE_DEFINITIONS.items()
+            if vehicle_type.value == item_id
+        ), None)
+        if definition is not None:
+            return definition["name"]
+        option = BUILD_OPTIONS.get(item_id)
+        return option["name"] if option is not None else item_id.replace("_", " ").capitalize()
+
+    def _rows(self, economy):
+        summary = economy.get_financial_summary(52)
+        rows = [("title", "Pénzügyi összesítő", None),
+                ("muted", "Utolsó 52 hét", None), ("gap", "", None),
+                ("heading", "BEVÉTELEK", None)]
+        for category_id, label in self.INCOME_LABELS:
+            data = summary["income"].get(category_id, {"total": 0, "items": {}})
+            rows.append(("income", label, data["total"]))
+            for item_id, amount in data["items"].items():
+                rows.append(("detail", f"  {self._subcategory_name(item_id)}", amount))
+        rows.extend((("total_income", "Összes bevétel", summary["income_total"]),
+                     ("gap", "", None), ("heading", "KIADÁSOK", None)))
+        for category_id, label in self.EXPENSE_LABELS:
+            data = summary["expense"].get(category_id, {"total": 0, "items": {}})
+            rows.append(("expense", label, data["total"]))
+            for item_id, amount in data["items"].items():
+                rows.append(("detail", f"  {self._subcategory_name(item_id)}", amount))
+        rows.extend((("total_expense", "Összes kiadás", summary["expense_total"]),
+                     ("separator", "", None), ("net", "Egyenleg", summary["net"])))
+        return rows
+
+    def draw(self, screen, font, economy):
+        if not self.visible:
+            return
+        self.rect.center = get_screen_center()
+        self.draw_frame(screen)
+        rows = self._rows(economy)
+        content_height = len(rows) * FINANCE_ROW_HEIGHT + FINANCE_PANEL_PADDING * 2
+        self.max_scroll = max(0, content_height - self.rect.height)
+        self.scroll_offset = min(self.scroll_offset, self.max_scroll)
+        old_clip = screen.get_clip()
+        screen.set_clip(self.rect.inflate(-4, -4))
+        x = self.rect.left + FINANCE_PANEL_PADDING
+        value_right = self.rect.right - FINANCE_PANEL_PADDING
+        y = self.rect.top + FINANCE_PANEL_PADDING - self.scroll_offset
+        for kind, label, value in rows:
+            if kind == "separator":
+                pygame.draw.line(screen, FINANCE_SEPARATOR_COLOR,
+                                 (x, y + 8), (value_right, y + 8), 1)
+            elif kind != "gap":
+                color = COLOR_TEXT
+                if kind in ("income", "total_income"):
+                    color = FINANCE_INCOME_COLOR
+                elif kind in ("expense", "total_expense"):
+                    color = FINANCE_EXPENSE_COLOR
+                elif kind == "net":
+                    color = FINANCE_INCOME_COLOR if value >= 0 else FINANCE_EXPENSE_COLOR
+                rendered = font.render(label, True, color)
+                screen.blit(rendered, (x, y))
+                if value is not None:
+                    value_text = format_money(value)
+                    if kind == "net" and value > 0:
+                        value_text = "+" + value_text
+                    rendered_value = font.render(value_text, True, color)
+                    screen.blit(rendered_value, rendered_value.get_rect(
+                        top=y, right=value_right,
+                    ))
+            y += FINANCE_ROW_HEIGHT
+        screen.set_clip(old_clip)
 
 
 class CalendarPanel(PopupWindow):
@@ -1828,7 +1992,7 @@ def draw_ui(
                 HUD_BUTTON_TOOLTIPS["calendar"], calendar_button,
             )
         time_start_x = calendar_button.right + HUD_MENU_GAP
-    draw_hud(
+    hud_layout = draw_hud(
         screen, font, buildings or [], elapsed_weeks, economy, time_speed,
         time_speed_icons, time_start_x,
     )
@@ -1836,3 +2000,4 @@ def draw_ui(
     if hovered_tooltip is not None:
         tooltip_text, tooltip_button = hovered_tooltip
         draw_tooltip(screen, font, tooltip_text, tooltip_button)
+    return hud_layout

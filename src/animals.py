@@ -2,6 +2,8 @@ import random
 
 import pygame
 
+from financial_history import EXPENSE_ANIMAL_PURCHASE
+
 from buildings import (
     find_building_data, get_animal_pen_groups, store_items,
 )
@@ -436,6 +438,10 @@ def purchase_and_place_animal(
 
     pen = find_building_data(buildings, row, col)
     economy.spend(price)
+    economy.record_expense(
+        EXPENSE_ANIMAL_PURCHASE, price, animal_type,
+        animal_definition["name"],
+    )
     animal = {
         "type": animal_type,
         "row": row,

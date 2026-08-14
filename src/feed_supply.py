@@ -13,6 +13,7 @@ from inventory import get_inventory_item_name
 from market_procurement import (
     get_automatic_purchase_quote, purchase_automatically,
 )
+from financial_history import EXPENSE_ANIMAL_FEED
 
 
 @dataclass(frozen=True)
@@ -99,6 +100,7 @@ def prepare_feed_supply(buildings, economy, group, animals):
     if purchased_amount:
         receipt = purchase_automatically(
             economy, feed_name, CROPS[feed_type]["price"], purchased_amount,
+            EXPENSE_ANIMAL_FEED, feed_type,
         )
     if purchased_amount and receipt is None:
         if warehouse_amount:

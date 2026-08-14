@@ -14,6 +14,12 @@ from market_procurement import (
     get_automatic_purchase_quote, purchase_automatically,
 )
 from money_format import format_money
+from financial_history import (
+    EXPENSE, INCOME, EXPENSE_CONSTRUCTION, EXPENSE_MAINTENANCE,
+    EXPENSE_PLANTING, EXPENSE_SHIPPING, EXPENSE_UPGRADE,
+    FINANCIAL_HISTORY_RETENTION_WEEKS,
+    FINANCIAL_SUMMARY_WEEKS, is_valid_transaction,
+)
 
 
 class Economy:
@@ -21,6 +27,115 @@ class Economy:
 
     def __init__(self, starting_money=STARTING_MONEY):
         self.money = float(starting_money)
+        self.financial_history = []
+        self._next_transaction_id = 1
+        self._game_time = None
+        self._seed_purchase_transactions = {}
+
+    def bind_game_time(self, game_time):
+        self._game_time = game_time
+
+    def _current_week(self):
+        return max(0, int(getattr(self._game_time, "elapsed_weeks", 0)))
+
+    def record_transaction(
+            self, transaction_type, category, amount,
+            subcategory=None, description=None, week=None):
+        amount = float(amount)
+        if amount <= 0:
+            return None
+        record = {
+            "id": self._next_transaction_id,
+            "week": self._current_week() if week is None else max(0, int(week)),
+            "type": transaction_type,
+            "category": category,
+            "subcategory": subcategory,
+            "amount": amount,
+            "description": description,
+        }
+        self._next_transaction_id += 1
+        self.financial_history.append(record)
+        self._prune_financial_history(record["week"])
+        return record["id"]
+
+    def record_income(self, category, amount, subcategory=None, description=None):
+        return self.record_transaction(
+            INCOME, category, amount, subcategory, description,
+        )
+
+    def record_expense(self, category, amount, subcategory=None, description=None):
+        return self.record_transaction(
+            EXPENSE, category, amount, subcategory, description,
+        )
+
+    def remove_transactions(self, transaction_ids):
+        transaction_ids = {item for item in transaction_ids if item is not None}
+        self.financial_history[:] = [
+            item for item in self.financial_history
+            if item.get("id") not in transaction_ids
+        ]
+
+    def _remove_latest_seed_purchase(self, crop):
+        """Betöltés után is visszavonja egy megszakított vetés két tételét."""
+        planting_record = None
+        for record in reversed(self.financial_history):
+            if (record.get("subcategory") == crop
+                    and record.get("category") == EXPENSE_PLANTING):
+                planting_record = record
+                break
+        if planting_record is None:
+            return
+        removable = [planting_record.get("id")]
+        shipping_id = planting_record.get("id", 0) + 1
+        if any(
+                record.get("id") == shipping_id
+                and record.get("category") == EXPENSE_SHIPPING
+                and record.get("subcategory") == crop
+                for record in self.financial_history):
+            removable.append(shipping_id)
+        self.remove_transactions(removable)
+
+    def _prune_financial_history(self, current_week=None):
+        current_week = self._current_week() if current_week is None else current_week
+        oldest_week = max(0, current_week - FINANCIAL_HISTORY_RETENTION_WEEKS + 1)
+        self.financial_history[:] = [
+            item for item in self.financial_history
+            if item["week"] >= oldest_week
+        ]
+
+    def get_financial_summary(self, weeks=FINANCIAL_SUMMARY_WEEKS):
+        current_week = self._current_week()
+        oldest_week = max(0, current_week - max(1, int(weeks)) + 1)
+        summary = {INCOME: {}, EXPENSE: {}, "income_total": 0.0,
+                   "expense_total": 0.0, "net": 0.0,
+                   "start_week": oldest_week, "end_week": current_week}
+        for item in self.financial_history:
+            if not oldest_week <= item["week"] <= current_week:
+                continue
+            bucket = summary[item["type"]]
+            category = bucket.setdefault(item["category"], {"total": 0.0, "items": {}})
+            category["total"] += item["amount"]
+            if item.get("subcategory"):
+                category["items"][item["subcategory"]] = (
+                    category["items"].get(item["subcategory"], 0.0)
+                    + item["amount"]
+                )
+            summary[f"{item['type']}_total"] += item["amount"]
+        summary["net"] = summary["income_total"] - summary["expense_total"]
+        return summary
+
+    def financial_history_save_record(self):
+        self._prune_financial_history()
+        return [dict(item) for item in self.financial_history]
+
+    def load_financial_history(self, records):
+        self.financial_history = [
+            dict(item) for item in (records or ()) if is_valid_transaction(item)
+        ]
+        self._next_transaction_id = max(
+            ((item.get("id") or 0) for item in self.financial_history), default=0,
+        ) + 1
+        self._prune_financial_history()
 
     def can_afford(self, amount):
         return self.money >= amount
@@ -79,8 +194,12 @@ class Economy:
 
         receipt = purchase_automatically(
             self, crop_name, crop_data["price"], 1,
+            EXPENSE_PLANTING, crop,
         )
         if receipt is not None:
+            self._seed_purchase_transactions.setdefault(crop, []).append(
+                getattr(receipt, "transaction_ids", ()),
+            )
             return {"source": "money", "amount": receipt.total_cost}
 
         log(
@@ -93,6 +212,11 @@ class Economy:
         """A feladatfelvételkor készült bizonylat alapján visszatérít."""
         if payment["source"] == "money":
             self.earn(payment["amount"])
+            pending = self._seed_purchase_transactions.get(crop, [])
+            if pending:
+                self.remove_transactions(pending.pop(0))
+            else:
+                self._remove_latest_seed_purchase(crop)
             return True
 
         buildings = payment["buildings"]
@@ -163,6 +287,7 @@ class Economy:
                 return False
             # A pénzlevonás után egyetlen objektummező-váltás teszi atomivá.
             farmhouse["farmhouse_level"] = target_level
+            self.record_expense(EXPENSE_UPGRADE, upgrade["price"], upgrade_id)
             log(f"Fejlesztés megvásárolva: {upgrade['name']}", "Economy")
             return True
         required = upgrade.get("requires")
@@ -173,6 +298,7 @@ class Economy:
             log("Nincs elegendő pénz.", "Economy")
             return False
         game_state.purchased_upgrades.add(upgrade_id)
+        self.record_expense(EXPENSE_UPGRADE, upgrade["price"], upgrade_id)
         log(f"Fejlesztés megvásárolva: {upgrade['name']}", "Economy")
         return True
 
@@ -211,6 +337,7 @@ class Economy:
             world, buildings, fields, vehicle_count, vehicle_weekly_cost,
         )
         self.charge(weekly_cost)
+        self.record_expense(EXPENSE_MAINTENANCE, weekly_cost)
         if weekly_cost > 0:
             log(f"Heti fenntartási költség: {format_money(weekly_cost)}", "Economy")
             log(f"Aktuális egyenleg: {format_money(self.money)}", "Economy")
@@ -252,6 +379,10 @@ class Economy:
         if not remove_item(buildings, item_id, amount):
             return False
         self.earn(revenue)
+        self.record_income(
+            item_data["income_category"], revenue, item_id,
+            f"{amount} db {item_name}",
+        )
         log(
             f"Eladás sikeres: {amount} db {item_name.lower()}, "
             f"bevétel: {format_money(revenue)}", "Economy",

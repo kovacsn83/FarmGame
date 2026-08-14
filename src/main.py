@@ -26,6 +26,7 @@ from constants import (
 )
 from developer_console import DeveloperConsole
 from economy import Economy
+from financial_history import EXPENSE_CONSTRUCTION
 from fields import (
     can_place_field, find_field_data, grow_crops,
     is_field, place_field, print_field_info,
@@ -65,10 +66,11 @@ from vehicle_manager import VehicleManager
 from ui import (
     AnimalHusbandryPanel, BankPanel, BuildingSelectionPanel, CalendarPanel,
     CropSelectionPanel, InfoPanel, OrchardSelectionPanel, QuestPanel, clicked_tool,
+    FinancialSummaryPanel,
     create_buttons, create_calendar_button, create_calendar_icon,
     create_menu_button, create_menu_icon, create_quest_icon,
     create_time_speed_icons, create_toolbar_icons, draw_ui,
-    draw_notification_bar, draw_tooltip,
+    draw_notification_bar, draw_tooltip, get_money_hud_rect,
 )
 from world import (
     create_world, draw_animal_pen_fences, draw_grid, draw_orchard_fences,
@@ -106,6 +108,7 @@ def main():
     economy = bank_system = vehicles = game_state = None
     info_panel = crop_selection_panel = building_selection_panel = None
     animal_husbandry_panel = orchard_selection_panel = calendar_panel = bank_panel = None
+    financial_summary_panel = economy_hud_rect = None
     game_menu = save_slots_menu = quest_manager = quest_panel = road_drag = None
 
     def initialize_game_session(start_quest):
@@ -120,6 +123,7 @@ def main():
         nonlocal info_panel, crop_selection_panel, building_selection_panel
         nonlocal animal_husbandry_panel, orchard_selection_panel
         nonlocal calendar_panel, bank_panel
+        nonlocal financial_summary_panel, economy_hud_rect
         nonlocal game_menu, save_slots_menu, quest_manager, quest_panel, road_drag
 
         world = create_world()
@@ -160,6 +164,8 @@ def main():
         orchard_selection_panel = OrchardSelectionPanel()
         calendar_panel = CalendarPanel()
         bank_panel = BankPanel()
+        financial_summary_panel = FinancialSummaryPanel()
+        economy_hud_rect = None
         game_menu = GameMenu()
         save_slots_menu = SaveSlotsMenu()
         if start_quest:
@@ -299,6 +305,10 @@ def main():
                             selected_building,
                         )
                         economy.spend(cost)
+                        economy.record_expense(
+                            EXPENSE_CONSTRUCTION, cost, selected_building,
+                            option["name"],
+                        )
                         quest_manager.record_event(
                             QUEST_EVENT_FIELD_COUNT_CHANGED,
                             current_value=len(fields),
@@ -313,6 +323,10 @@ def main():
                     selected_building,
                 )
                 economy.spend(cost)
+                economy.record_expense(
+                    EXPENSE_CONSTRUCTION, cost, selected_building,
+                    option["name"],
+                )
                 logger.log(
                     f"{option['name']} megépült: ({mouse_row}, {mouse_col}).",
                     "Building",
@@ -538,6 +552,26 @@ def main():
             if calendar_panel.handle_event(event):
                 continue
 
+            if financial_summary_panel.handle_event(event):
+                continue
+
+            economy_clicked = (
+                event.type == pygame.MOUSEBUTTONDOWN
+                and event.button == 1
+                and get_money_hud_rect(font, buildings, economy).collidepoint(event.pos)
+            )
+            if economy_clicked:
+                camera.cancel_drag()
+                road_drag.cancel()
+                info_panel.close()
+                crop_selection_panel.close()
+                building_selection_panel.close()
+                animal_husbandry_panel.close()
+                orchard_selection_panel.close()
+                calendar_panel.close()
+                financial_summary_panel.open()
+                continue
+
             calendar_button_clicked = (
                 event.type == pygame.MOUSEBUTTONDOWN
                 and event.button == 1
@@ -551,6 +585,7 @@ def main():
                 building_selection_panel.close()
                 animal_husbandry_panel.close()
                 orchard_selection_panel.close()
+                financial_summary_panel.close()
                 calendar_panel.open()
                 quest_manager.record_event(QUEST_EVENT_CALENDAR_OPENED)
                 continue
@@ -574,6 +609,7 @@ def main():
                     animal_husbandry_panel.close()
                     orchard_selection_panel.close()
                     calendar_panel.close()
+                    financial_summary_panel.close()
                 continue
     
             if game_menu.visible:
@@ -781,6 +817,7 @@ def main():
             animal_husbandry_panel.close()
             orchard_selection_panel.close()
             calendar_panel.close()
+            financial_summary_panel.close()
             game_menu.close()
             bank_panel.open(previous_time_speed)
     
@@ -823,7 +860,7 @@ def main():
             screen, font, notification_manager,
             developer_console.rect.top,
         )
-        draw_ui(
+        _, economy_hud_rect, _ = draw_ui(
             screen, font, buttons, selected_tool, buildings,
             game_time.elapsed_weeks, economy,
             game_time.current_time_speed, toolbar_icons,
@@ -866,6 +903,7 @@ def main():
         animal_husbandry_panel.draw(screen, font)
         orchard_selection_panel.draw(screen, font)
         calendar_panel.draw(screen, font, game_time.elapsed_weeks)
+        financial_summary_panel.draw(screen, font, economy)
         game_menu.draw(screen, font)
         save_slots_menu.draw(screen, font)
         load_slots_menu.draw(screen, font)

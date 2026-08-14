@@ -1,5 +1,8 @@
 # CHANGELOG
 
+- A HUD pénzegyenlege kattinthatóvá vált, és egy görgethető Pénzügyi összesítőt nyit meg az utolsó 52 hét kategorizált bevételeivel, kiadásaival és nettó egyenlegével.
+- A menthető központi tranzakciós napló külön kezeli többek között az értékesítéseket, építést, jármű- és állatvásárlást, fenntartást, hitelt, termelési beszerzést és szállítási díjat; a régi mentések üres előzménnyel kompatibilisek.
+
 - Új épületként bekerült a Feldolgozó üzem: 6x5 csempés, $3 000 építési árú, az egységes évi 10%-os fenntartás alá tartozó ipari épület. Procedurális grafikája, útkapcsolata, információs nézete és mentése elkészült; az adatmodell előkészíti a későbbi receptalapú feldolgozást.
 
 - Minden automatikus piaci beszerzés egységesen $5/db szállítási költséget számol fel. A vetőanyag, a gyümölcsfa és a hiányzó takarmány ugyanazt a központi áruérték-, szállítási díj- és végösszegszámítást használja, amely a későbbi automatikus beszerzésekhez is újrahasznosítható.

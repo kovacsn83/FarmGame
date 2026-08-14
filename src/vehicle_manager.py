@@ -47,6 +47,7 @@ from tractor import (
 from vehicle_types import (
     VEHICLE_TYPE_DEFINITIONS, VehicleType, normalize_vehicle_type,
 )
+from financial_history import EXPENSE_VEHICLE
 
 
 DEBUG_TRACTOR_DISPATCH = False
@@ -305,6 +306,10 @@ class VehicleManager:
             )
             return False
         economy.spend(definition["purchase_price"])
+        economy.record_expense(
+            EXPENSE_VEHICLE, definition["purchase_price"],
+            normalized_type.value, definition["name"],
+        )
         vehicle = self._create_managed_asset(normalized_type, garage, slot_id)
         vehicle.ensure_idle_position(world, buildings)
         log(

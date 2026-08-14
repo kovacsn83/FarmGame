@@ -23,6 +23,7 @@ from crops import CROPS, get_crop_growth_weeks, get_crop_harvest_stages
 from game_rules import FIELD_TYPES, UPGRADES
 from game_logger import log
 from inventory import get_inventory_item_ids
+from financial_history import is_valid_transaction
 from orchards import is_valid_tree_record
 from time_system import TIME_FAST, TIME_NORMAL, TIME_WEEK_LENGTHS_MS
 from vehicle_types import (
@@ -183,12 +184,14 @@ def _migrate_save_schema(data):
     version = data.get("save_version")
     if version == SAVE_VERSION:
         data.setdefault("vehicle_runtime", None)
+        data.setdefault("financial_history", [])
         return True
     if version in LEGACY_SAVE_VERSIONS:
         _migrate_farmhouse_footprints(data)
         _migrate_farmhouse_levels(data)
         data["save_version"] = SAVE_VERSION
         data.setdefault("vehicle_runtime", None)
+        data.setdefault("financial_history", [])
         return True
     return False
 
@@ -322,6 +325,7 @@ def _create_save_data(game_state):
         "day": game_state.game_time.day,
         "time_speed": game_state.game_time.current_time_speed,
         "money": game_state.economy.money,
+        "financial_history": game_state.economy.financial_history_save_record(),
         "world": game_state.world,
         "world_width_tiles": len(game_state.world[0]) if game_state.world else 0,
         "world_height_tiles": len(game_state.world),
@@ -356,6 +360,10 @@ def _is_valid_save_data(data):
     if not isinstance(data["money"], (int, float)) or isinstance(data["money"], bool):
         return False
     if not math.isfinite(data["money"]):
+        return False
+    history = data.get("financial_history", [])
+    if not isinstance(history, list) or not all(
+            is_valid_transaction(item) for item in history):
         return False
     if not _validate_tiles(data):
         return False
@@ -888,6 +896,7 @@ def _apply_game_data(game_state, data):
             game_state.buildings, game_state.animals,
         )
     game_state.economy.money = float(data["money"])
+    game_state.economy.load_financial_history(data.get("financial_history", []))
     bank_system = getattr(game_state, "bank_system", None)
     if bank_system is not None:
         bank_system.load_save_record(data.get("bank"))

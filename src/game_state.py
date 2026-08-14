@@ -11,6 +11,8 @@ class GameState:
         self.buildings = buildings
         self.economy = economy
         self.game_time = game_time
+        if hasattr(self.economy, "bind_game_time"):
+            self.economy.bind_game_time(game_time)
         self.purchased_upgrades = set(purchased_upgrades or ())
         self.tractor = tractor
         self.vehicles = vehicles

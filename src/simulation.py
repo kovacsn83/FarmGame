@@ -34,6 +34,7 @@ from crops import (
     can_plant_crop_in_week,
 )
 from economy import Economy
+from financial_history import EXPENSE_CONSTRUCTION
 from fields import (
     can_place_field, grow_crops, place_field, remove_field, remove_field_data,
 )
@@ -200,6 +201,9 @@ class SimulationBot:
         before = self.economy.money
         if not self.economy.spend(ROAD_BUILD_COST):
             return False
+        self.economy.record_expense(
+            EXPENSE_CONSTRUCTION, ROAD_BUILD_COST, "road", "1 út csempe",
+        )
         self.world[row][col] = ROAD
         self._record_money_change(self.year, before, "road_construction")
         self.investments[self.year]["road"] += 1
@@ -214,6 +218,10 @@ class SimulationBot:
         before = self.economy.money
         if not self.economy.spend(definition["build_cost"]):
             return None
+        self.economy.record_expense(
+            EXPENSE_CONSTRUCTION, definition["build_cost"], building_type,
+            definition["name"],
+        )
         building = place_building(
             self.world, self.buildings, row, col, building_type,
         )
@@ -236,6 +244,10 @@ class SimulationBot:
         before = self.economy.money
         if not self.economy.spend(definition["build_cost"]):
             return None
+        self.economy.record_expense(
+            EXPENSE_CONSTRUCTION, definition["build_cost"], field_type,
+            definition["name"],
+        )
         place_field(self.world, self.fields, row, col, field_type)
         self._record_money_change(self.year, before, "field_construction")
         self.investments[self.year][field_type] += 1

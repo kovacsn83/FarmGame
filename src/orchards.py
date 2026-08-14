@@ -8,6 +8,7 @@ from building_renderers import (
 )
 from game_logger import log
 from market_procurement import purchase_automatically
+from financial_history import EXPENSE_FRUIT_TREE
 from inventory import get_inventory_item_name
 from screen_layout import world_to_screen
 from constants import TILE_SIZE
@@ -109,6 +110,7 @@ def plant_tree(buildings, economy, row, col, tree_type):
         return None
     purchase = purchase_automatically(
         economy, definition["tree_name"], definition["planting_cost"], 1,
+        EXPENSE_FRUIT_TREE, tree_type,
     )
     if purchase is None:
         log("Nincs elegendő pénz a gyümölcsfa ültetéséhez.", "Economy")
