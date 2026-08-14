@@ -67,11 +67,14 @@ HUD_CALENDAR_BUTTON_SIZE = 30
 HUD_CALENDAR_ICON_SIZE = 20
 HUD_CALENDAR_GAP = 8
 
-FINANCE_PANEL_WIDTH = 680
-FINANCE_PANEL_HEIGHT = 760
+FINANCE_PANEL_WIDTH = 980
+FINANCE_PANEL_HEIGHT = 700
 FINANCE_PANEL_PADDING = 24
 FINANCE_ROW_HEIGHT = 24
 FINANCE_SECTION_GAP = 10
+FINANCE_COLUMN_GAP = 28
+FINANCE_HEADER_HEIGHT = 72
+FINANCE_NET_HEIGHT = 52
 FINANCE_SCROLL_STEP = 48
 FINANCE_INCOME_COLOR = (45, 125, 70)
 FINANCE_EXPENSE_COLOR = (160, 70, 55)
@@ -902,65 +905,124 @@ class FinancialSummaryPanel(PopupWindow):
         option = BUILD_OPTIONS.get(item_id)
         return option["name"] if option is not None else item_id.replace("_", " ").capitalize()
 
-    def _rows(self, economy):
-        summary = economy.get_financial_summary(52)
-        rows = [("title", "Pénzügyi összesítő", None),
-                ("muted", "Utolsó 52 hét", None), ("gap", "", None),
-                ("heading", "BEVÉTELEK", None)]
-        for category_id, label in self.INCOME_LABELS:
-            data = summary["income"].get(category_id, {"total": 0, "items": {}})
-            rows.append(("income", label, data["total"]))
+    def _column_rows(self, summary, transaction_type):
+        """Egy bevételi vagy kiadási oszlop sorait állítja össze."""
+        if transaction_type == "income":
+            labels = self.INCOME_LABELS
+            total_kind, total_label = "total_income", "Összes bevétel"
+        else:
+            labels = self.EXPENSE_LABELS
+            total_kind, total_label = "total_expense", "Összes kiadás"
+        rows = []
+        for category_id, label in labels:
+            data = summary[transaction_type].get(
+                category_id, {"total": 0, "items": {}},
+            )
+            rows.append((transaction_type, label, data["total"]))
             for item_id, amount in data["items"].items():
-                rows.append(("detail", f"  {self._subcategory_name(item_id)}", amount))
-        rows.extend((("total_income", "Összes bevétel", summary["income_total"]),
-                     ("gap", "", None), ("heading", "KIADÁSOK", None)))
-        for category_id, label in self.EXPENSE_LABELS:
-            data = summary["expense"].get(category_id, {"total": 0, "items": {}})
-            rows.append(("expense", label, data["total"]))
-            for item_id, amount in data["items"].items():
-                rows.append(("detail", f"  {self._subcategory_name(item_id)}", amount))
-        rows.extend((("total_expense", "Összes kiadás", summary["expense_total"]),
-                     ("separator", "", None), ("net", "Egyenleg", summary["net"])))
+                rows.append((
+                    "detail", f"  {self._subcategory_name(item_id)}", amount,
+                ))
+        rows.append((total_kind, total_label, summary[f"{transaction_type}_total"]))
         return rows
+
+    def _layout_rects(self):
+        """A reszponzív fejléc-, oszlop- és fix egyenlegsáv geometriája."""
+        content_left = self.rect.left + FINANCE_PANEL_PADDING
+        content_width = self.rect.width - FINANCE_PANEL_PADDING * 2
+        column_width = max(1, (content_width - FINANCE_COLUMN_GAP) // 2)
+        columns_top = self.rect.top + FINANCE_HEADER_HEIGHT
+        net_rect = pygame.Rect(
+            content_left,
+            self.rect.bottom - FINANCE_PANEL_PADDING - FINANCE_NET_HEIGHT,
+            content_width,
+            FINANCE_NET_HEIGHT,
+        )
+        columns_height = max(1, net_rect.top - FINANCE_SECTION_GAP - columns_top)
+        income_rect = pygame.Rect(
+            content_left, columns_top, column_width, columns_height,
+        )
+        expense_rect = pygame.Rect(
+            income_rect.right + FINANCE_COLUMN_GAP,
+            columns_top, column_width, columns_height,
+        )
+        return income_rect, expense_rect, net_rect
+
+    @staticmethod
+    def _row_color(kind):
+        if kind in ("income", "total_income"):
+            return FINANCE_INCOME_COLOR
+        if kind in ("expense", "total_expense"):
+            return FINANCE_EXPENSE_COLOR
+        return COLOR_TEXT
+
+    def _draw_column(self, screen, font, rect, heading, rows):
+        x = rect.left
+        value_right = rect.right
+        y = rect.top - self.scroll_offset
+        rendered_heading = font.render(heading, True, COLOR_TEXT)
+        screen.blit(rendered_heading, (x, y))
+        y += FINANCE_ROW_HEIGHT
+        for kind, label, value in rows:
+            color = self._row_color(kind)
+            rendered = font.render(label, True, color)
+            screen.blit(rendered, (x, y))
+            rendered_value = font.render(format_money(value), True, color)
+            screen.blit(rendered_value, rendered_value.get_rect(
+                top=y, right=value_right,
+            ))
+            y += FINANCE_ROW_HEIGHT
 
     def draw(self, screen, font, economy):
         if not self.visible:
             return
         self.rect.center = get_screen_center()
         self.draw_frame(screen)
-        rows = self._rows(economy)
-        content_height = len(rows) * FINANCE_ROW_HEIGHT + FINANCE_PANEL_PADDING * 2
-        self.max_scroll = max(0, content_height - self.rect.height)
+        summary = economy.get_financial_summary(52)
+        income_rows = self._column_rows(summary, "income")
+        expense_rows = self._column_rows(summary, "expense")
+        income_rect, expense_rect, net_rect = self._layout_rects()
+        longest_column_height = (
+            max(len(income_rows), len(expense_rows)) + 1
+        ) * FINANCE_ROW_HEIGHT
+        self.max_scroll = max(0, longest_column_height - income_rect.height)
         self.scroll_offset = min(self.scroll_offset, self.max_scroll)
+
+        title_x = self.rect.left + FINANCE_PANEL_PADDING
+        title_y = self.rect.top + FINANCE_PANEL_PADDING
+        self.draw_text(screen, font, "Pénzügyi összesítő", title_x, title_y)
+        self.draw_text(screen, font, "Utolsó 52 hét", title_x, title_y + 26)
+
         old_clip = screen.get_clip()
-        screen.set_clip(self.rect.inflate(-4, -4))
-        x = self.rect.left + FINANCE_PANEL_PADDING
-        value_right = self.rect.right - FINANCE_PANEL_PADDING
-        y = self.rect.top + FINANCE_PANEL_PADDING - self.scroll_offset
-        for kind, label, value in rows:
-            if kind == "separator":
-                pygame.draw.line(screen, FINANCE_SEPARATOR_COLOR,
-                                 (x, y + 8), (value_right, y + 8), 1)
-            elif kind != "gap":
-                color = COLOR_TEXT
-                if kind in ("income", "total_income"):
-                    color = FINANCE_INCOME_COLOR
-                elif kind in ("expense", "total_expense"):
-                    color = FINANCE_EXPENSE_COLOR
-                elif kind == "net":
-                    color = FINANCE_INCOME_COLOR if value >= 0 else FINANCE_EXPENSE_COLOR
-                rendered = font.render(label, True, color)
-                screen.blit(rendered, (x, y))
-                if value is not None:
-                    value_text = format_money(value)
-                    if kind == "net" and value > 0:
-                        value_text = "+" + value_text
-                    rendered_value = font.render(value_text, True, color)
-                    screen.blit(rendered_value, rendered_value.get_rect(
-                        top=y, right=value_right,
-                    ))
-            y += FINANCE_ROW_HEIGHT
+        columns_clip = income_rect.union(expense_rect)
+        screen.set_clip(columns_clip)
+        self._draw_column(screen, font, income_rect, "BEVÉTELEK", income_rows)
+        self._draw_column(screen, font, expense_rect, "KIADÁSOK", expense_rows)
         screen.set_clip(old_clip)
+
+        separator_x = income_rect.right + FINANCE_COLUMN_GAP // 2
+        pygame.draw.line(
+            screen, FINANCE_SEPARATOR_COLOR,
+            (separator_x, income_rect.top), (separator_x, income_rect.bottom), 1,
+        )
+        pygame.draw.line(
+            screen, FINANCE_SEPARATOR_COLOR,
+            (net_rect.left, net_rect.top), (net_rect.right, net_rect.top), 1,
+        )
+        net_color = (
+            FINANCE_INCOME_COLOR if summary["net"] >= 0
+            else FINANCE_EXPENSE_COLOR
+        )
+        net_y = net_rect.centery - font.get_height() // 2
+        net_label = font.render("52 hetes egyenleg", True, net_color)
+        screen.blit(net_label, (net_rect.left, net_y))
+        net_value = format_money(summary["net"])
+        if summary["net"] > 0:
+            net_value = "+" + net_value
+        rendered_net = font.render(net_value, True, net_color)
+        screen.blit(rendered_net, rendered_net.get_rect(
+            right=net_rect.right, centery=net_rect.centery,
+        ))
 
 
 class CalendarPanel(PopupWindow):
