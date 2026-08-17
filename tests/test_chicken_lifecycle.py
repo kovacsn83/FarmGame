@@ -150,11 +150,11 @@ class ChickenLifecycleTests(unittest.TestCase):
             "12 csirke levágásra került. 60 db csirkehús került a raktárba.",
         )
 
-    def test_feed_supply_uses_corn_and_can_buy_market_shortage(self):
+    def test_feed_supply_uses_wheat_and_can_buy_market_shortage(self):
         feed_type, amount = get_feed_requirement(
             [self.pen], [self.chicken],
         )
-        self.assertEqual(feed_type, "corn")
+        self.assertEqual(feed_type, "wheat")
         self.assertEqual(amount, 8)
 
         economy = Economy(starting_money=200)
@@ -162,9 +162,12 @@ class ChickenLifecycleTests(unittest.TestCase):
             self.buildings, economy, [self.pen], [self.chicken],
         )
         self.assertTrue(transaction.success)
-        self.assertEqual(transaction.feed_type, "corn")
+        self.assertEqual(transaction.feed_type, "wheat")
         self.assertEqual(transaction.purchased_amount, 8)
-        self.assertEqual(economy.money, 80)
+        self.assertEqual(transaction.goods_cost, 80)
+        self.assertEqual(transaction.delivery_cost, 24)
+        self.assertEqual(transaction.purchase_cost, 104)
+        self.assertEqual(economy.money, 96)
 
     def test_egg_and_chicken_meat_are_marketable_at_catalog_prices(self):
         self.assertEqual(get_inventory_item_data("egg")["price"], 6.00)

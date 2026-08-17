@@ -114,7 +114,7 @@ ANIMAL_TYPES = {
             },
         },
         "weekly_feed": {
-            "item": "corn",
+            "item": "wheat",
             "amount": 1,
         },
     },

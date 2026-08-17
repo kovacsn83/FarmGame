@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- A Csirke heti takarmánya Kukoricáról Búzára változott; az Etetővályú és az automatikus piaci beszerzés is az adatvezérelt új takarmányt használja.
+
 - Az automatikus piaci beszerzések szállítási díja $5/db-ról $3/db-ra csökkent.
 
 - A HUD pénzegyenlege kattinthatóvá vált, és egy görgethető Pénzügyi összesítőt nyit meg az utolsó 52 hét kategorizált bevételeivel, kiadásaival és nettó egyenlegével.
