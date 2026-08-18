@@ -107,6 +107,12 @@ class ProcessingPlantTests(unittest.TestCase):
         plant["processing_inventory"]["canned_tomato"] = 7
         plant["processing_week"] = 12
         plant["processed_this_week"] = 3
+        plant["processing_batch"] = {
+            "recipe_id": "canned_tomato",
+            "started_week": 12,
+            "inputs": {"tomato": 3},
+            "outputs": {"canned_tomato": 3},
+        }
         state = GameState(
             self.world, [], self.buildings, Economy(), GameTime(start_ticks=0),
         )
@@ -125,6 +131,10 @@ class ProcessingPlantTests(unittest.TestCase):
         self.assertEqual(7, loaded["processing_inventory"]["canned_tomato"])
         self.assertEqual(12, loaded["processing_week"])
         self.assertEqual(3, loaded["processed_this_week"])
+        self.assertEqual(12, loaded["processing_batch"]["started_week"])
+        self.assertEqual(
+            3, loaded["processing_batch"]["outputs"]["canned_tomato"],
+        )
 
 
 if __name__ == "__main__":

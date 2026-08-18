@@ -13,8 +13,8 @@ from financial_history import EXPENSE_PROCESSING_INPUT, EXPENSE_SHIPPING
 from inventory import get_marketable_item_ids
 from processing import (
     PROCESSING_STATUS_NO_MONEY, PROCESSING_STORAGE_CAPACITY,
-    get_processing_in_transit,
-    initialize_processing_plant, produce_available,
+    complete_processing_batch, get_processing_in_transit,
+    initialize_processing_plant, start_processing_batch,
     run_weekly_processing_cycle,
 )
 from time_system import GameTime, TIME_SLOW
@@ -43,11 +43,14 @@ class ProcessingProductionTests(unittest.TestCase):
     def test_weekly_capacity_and_partial_production(self):
         plant = self._plant()
         plant["processing_inventory"]["tomato"] = 8
-        self.assertEqual(5, produce_available(plant, 1))
+        self.assertEqual(5, start_processing_batch(plant, 1))
         self.assertEqual(3, plant["processing_inventory"]["tomato"])
-        self.assertEqual(5, plant["processing_inventory"]["canned_tomato"])
-        self.assertEqual(0, produce_available(plant, 1))
-        self.assertEqual(3, produce_available(plant, 2))
+        self.assertEqual(0, plant["processing_inventory"]["canned_tomato"])
+        self.assertEqual(0, start_processing_batch(plant, 1))
+        self.assertEqual(0, complete_processing_batch(plant, 1))
+        self.assertEqual(5, complete_processing_batch(plant, 2))
+        self.assertEqual(3, start_processing_batch(plant, 2))
+        self.assertEqual(3, complete_processing_batch(plant, 3))
         self.assertEqual(8, plant["processing_inventory"]["canned_tomato"])
 
     def test_partial_warehouse_supply_buys_only_market_shortage(self):
@@ -63,7 +66,8 @@ class ProcessingProductionTests(unittest.TestCase):
         )
         self.assertEqual(0, warehouse["inventory"]["tomato"])
         self.assertEqual(3, get_processing_in_transit(plant, "tomato"))
-        self.assertEqual(2, plant["processing_inventory"]["canned_tomato"])
+        self.assertEqual(2, plant["processing_inventory"]["tomato"])
+        self.assertEqual(0, plant["processing_inventory"]["canned_tomato"])
         self.assertEqual(962, economy.money)
         categories = [item["category"] for item in economy.financial_history]
         self.assertEqual([EXPENSE_PROCESSING_INPUT, EXPENSE_SHIPPING], categories)
@@ -76,18 +80,19 @@ class ProcessingProductionTests(unittest.TestCase):
         self.assertEqual(PROCESSING_STORAGE_CAPACITY, sum(
             plant["processing_inventory"].values()
         ))
-        self.assertEqual(5, produce_available(plant, 1))
-        self.assertEqual(PROCESSING_STORAGE_CAPACITY, sum(
-            plant["processing_inventory"].values()
-        ))
+        self.assertEqual(5, start_processing_batch(plant, 1))
+        self.assertEqual(195, sum(plant["processing_inventory"].values()))
+        self.assertEqual(5, complete_processing_batch(plant, 2))
 
     def test_multiple_plants_keep_independent_inventory_and_no_money_waits(self):
         first, second = self._plant(), self._plant()
         second.update({"row": 24, "col": 18})
         first["processing_inventory"]["tomato"] = 5
         second["processing_inventory"]["tomato"] = 3
-        self.assertEqual(5, produce_available(first, 4))
-        self.assertEqual(3, produce_available(second, 4))
+        self.assertEqual(5, start_processing_batch(first, 4))
+        self.assertEqual(3, start_processing_batch(second, 4))
+        self.assertEqual(5, complete_processing_batch(first, 5))
+        self.assertEqual(3, complete_processing_batch(second, 5))
         self.assertEqual(5, first["processing_inventory"]["canned_tomato"])
         self.assertEqual(3, second["processing_inventory"]["canned_tomato"])
 
@@ -98,6 +103,20 @@ class ProcessingProductionTests(unittest.TestCase):
         self.assertEqual(PROCESSING_STATUS_NO_MONEY, empty["processing_status"])
         self.assertEqual(0, empty["processing_inventory"]["canned_tomato"])
         self.assertNotIn("canned_tomato", get_marketable_item_ids())
+
+    def test_after_startup_a_new_batch_starts_on_every_weekly_cycle(self):
+        plant = self._plant()
+        economy = Economy(starting_money=1000)
+        manager = _ReservationManager()
+        run_weekly_processing_cycle([], [plant], economy, manager, 1)
+        self.assertEqual(0, plant["processing_inventory"]["canned_tomato"])
+        self.assertIsNotNone(plant["processing_batch"])
+        run_weekly_processing_cycle([], [plant], economy, manager, 2)
+        self.assertEqual(5, plant["processing_inventory"]["canned_tomato"])
+        self.assertIsNotNone(plant["processing_batch"])
+        run_weekly_processing_cycle([], [plant], economy, manager, 3)
+        self.assertEqual(10, plant["processing_inventory"]["canned_tomato"])
+        self.assertIsNotNone(plant["processing_batch"])
 
     def test_real_tractor_and_trailer_deliver_only_on_arrival(self):
         world = [[ROAD for _ in range(40)] for _ in range(40)]
@@ -131,8 +150,9 @@ class ProcessingProductionTests(unittest.TestCase):
                 break
         else:
             self.fail("A Feldolgozó üzem szállítása nem fejeződött be.")
-        self.assertEqual(3, plant["processing_inventory"]["tomato"])
+        self.assertEqual(0, plant["processing_inventory"]["tomato"])
         self.assertEqual(0, get_processing_in_transit(plant, "tomato"))
+        self.assertEqual(3, plant["processing_batch"]["outputs"]["canned_tomato"])
         self.assertEqual(10000, economy.money)
 
 

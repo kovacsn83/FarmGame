@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- A Feldolgozó üzem mostantól átfedéses, folyamatos heti gyártási ciklust használ: az előző heti adag elkészülte után ugyanabban a heti eseményben elindulhat a következő alapanyag-ellátás és gyártás, így megszűnt a minden második heti üresjárat.
+
 - Elkészült a Feldolgozó üzem első működő, adatvezérelt termelési rendszere: az első recept 1 Paradicsomból 1 Paradicsomkonzervet készít, üzemenként heti legfeljebb 5 darabot.
 - Minden Feldolgozó üzem saját, 200 darabos közös alapanyag- és késztermékraktárt kapott; a Paradicsomkonzerv egyelőre nem értékesíthető.
 - A saját Raktárból Traktor + Pótkocsi szállít költségmentesen, a hiányzó Paradicsom pedig a központi automatikus piaci beszerzéssel és darabonkénti szállítási díjjal érkezik.

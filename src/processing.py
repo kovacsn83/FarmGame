@@ -14,6 +14,7 @@ PROCESSING_STATUS_WAITING = "waiting_input"
 PROCESSING_STATUS_IN_TRANSIT = "in_transit"
 PROCESSING_STATUS_NO_MONEY = "no_money"
 PROCESSING_STATUS_FULL = "storage_full"
+PROCESSING_STATUS_PROCESSING = "processing"
 
 PROCESSING_RECIPES = {
     "canned_tomato": {
@@ -43,6 +44,7 @@ def initialize_processing_plant(plant):
     plant.setdefault("processing_in_transit", {})
     plant.setdefault("processing_week", -1)
     plant.setdefault("processed_this_week", 0)
+    plant.setdefault("processing_batch", None)
     return plant
 
 
@@ -80,6 +82,7 @@ def receive_processing_delivery(plant, item_id, amount):
     pending = get_processing_in_transit(plant, item_id)
     plant["processing_in_transit"][item_id] = max(0, pending - amount)
     plant["processing_status"] = PROCESSING_STATUS_READY
+    start_processing_batch(plant)
     return amount
 
 
@@ -106,51 +109,85 @@ def _max_batches_for_storage(plant, recipe, requested_batches):
         max(0, int(amount))
         for amount in plant["processing_in_transit"].values()
     )
+    pending_output = sum(
+        max(0, int(amount))
+        for amount in (plant.get("processing_batch") or {}).get("outputs", {}).values()
+    )
     batches = max(0, int(requested_batches))
     while batches > 0:
         resulting_occupied = occupied - batches * input_amount + batches * output_amount
-        if resulting_occupied + reserved_in_transit <= capacity:
+        if resulting_occupied + reserved_in_transit + pending_output <= capacity:
             return batches
         batches -= 1
     return 0
 
 
-def produce_available(plant, elapsed_week):
-    """Csak a fizikailag az üzemben lévő inputból termel a heti keretig."""
+def start_processing_batch(plant, elapsed_week=None):
+    """A rendelkezésre álló inputot lefoglalja egy következő heti adaghoz."""
     initialize_processing_plant(plant)
-    recipe = PROCESSING_RECIPES[plant["active_recipe"]]
-    if plant["processing_week"] != elapsed_week:
+    if elapsed_week is not None:
         plant["processing_week"] = elapsed_week
-        plant["processed_this_week"] = 0
-    remaining_output = max(
-        0, recipe["weekly_capacity"] - plant["processed_this_week"],
-    )
-    batches = remaining_output // recipe["output_amount"]
+    if plant.get("processing_batch") is not None:
+        plant["processing_status"] = PROCESSING_STATUS_PROCESSING
+        return 0
+    recipe = PROCESSING_RECIPES[plant["active_recipe"]]
+    batches = recipe["weekly_capacity"] // recipe["output_amount"]
     inventory = plant["processing_inventory"]
-    batches = min(batches, inventory.get(recipe["input_product"], 0) // recipe["input_amount"])
+    batches = min(
+        batches,
+        inventory.get(recipe["input_product"], 0) // recipe["input_amount"],
+    )
     batches = _max_batches_for_storage(plant, recipe, batches)
     if batches <= 0:
         if get_processing_free_capacity(plant) <= 0:
             plant["processing_status"] = PROCESSING_STATUS_FULL
         return 0
     input_used = batches * recipe["input_amount"]
-    output_created = batches * recipe["output_amount"]
+    output_scheduled = batches * recipe["output_amount"]
     inventory[recipe["input_product"]] -= input_used
-    inventory[recipe["output_product"]] = (
-        inventory.get(recipe["output_product"], 0) + output_created
-    )
-    plant["processed_this_week"] += output_created
-    plant["processing_status"] = PROCESSING_STATUS_READY
+    plant["processing_batch"] = {
+        "recipe_id": plant["active_recipe"],
+        "started_week": plant["processing_week"],
+        "inputs": {recipe["input_product"]: input_used},
+        "outputs": {recipe["output_product"]: output_scheduled},
+    }
+    plant["processing_status"] = PROCESSING_STATUS_PROCESSING
     log(
-        f"{output_created} db {get_inventory_item_name(recipe['output_product'])} "
-        "elkészült.", "Processing",
+        f"{output_scheduled} db {get_inventory_item_name(recipe['output_product'])} "
+        "gyártása elindult.", "Processing",
     )
-    return output_created
+    return output_scheduled
 
 
-def _required_input_for_remaining_capacity(plant, recipe):
-    remaining_output = max(0, recipe["weekly_capacity"] - plant["processed_this_week"])
-    batches = remaining_output // recipe["output_amount"]
+def complete_processing_batch(plant, elapsed_week):
+    """A korábbi héten elindított adagot egyszer írja jóvá késztermékként."""
+    initialize_processing_plant(plant)
+    batch = plant.get("processing_batch")
+    if not batch or batch.get("started_week", elapsed_week) >= elapsed_week:
+        return 0
+    outputs = batch.get("outputs", {})
+    output_total = sum(max(0, int(amount)) for amount in outputs.values())
+    if output_total > get_processing_free_capacity(plant):
+        plant["processing_status"] = PROCESSING_STATUS_FULL
+        return 0
+    for item_id, amount in outputs.items():
+        plant["processing_inventory"][item_id] = (
+            plant["processing_inventory"].get(item_id, 0) + amount
+        )
+    plant["processing_batch"] = None
+    plant["processed_this_week"] = output_total
+    plant["processing_status"] = PROCESSING_STATUS_READY
+    if output_total:
+        output_names = ", ".join(
+            f"{amount} db {get_inventory_item_name(item_id)}"
+            for item_id, amount in outputs.items()
+        )
+        log(f"{output_names} elkészült.", "Processing")
+    return output_total
+
+
+def _required_input_for_capacity(recipe):
+    batches = recipe["weekly_capacity"] // recipe["output_amount"]
     return batches * recipe["input_amount"]
 
 
@@ -162,8 +199,13 @@ def run_weekly_processing_cycle(
         recipe = PROCESSING_RECIPES.get(plant.get("active_recipe"))
         if recipe is None:
             continue
-        produce_available(plant, elapsed_week)
-        required = _required_input_for_remaining_capacity(plant, recipe)
+        plant["processing_week"] = elapsed_week
+        plant["processed_this_week"] = 0
+        complete_processing_batch(plant, elapsed_week)
+        start_processing_batch(plant, elapsed_week)
+        if plant.get("processing_batch") is not None:
+            continue
+        required = _required_input_for_capacity(recipe)
         input_id = recipe["input_product"]
         local = plant["processing_inventory"].get(input_id, 0)
         in_transit = get_processing_in_transit(plant, input_id)
@@ -215,9 +257,10 @@ def run_weekly_processing_cycle(
                     "megvásárolva a Piacról.", "Processing",
                 )
                 log(f"Szállítási költség: ${quote.delivery_cost:.0f}.", "Processing")
-                produce_available(plant, elapsed_week)
                 if get_processing_in_transit(plant, input_id):
                     plant["processing_status"] = PROCESSING_STATUS_IN_TRANSIT
+                else:
+                    start_processing_batch(plant, elapsed_week)
         elif transported:
             plant["processing_status"] = PROCESSING_STATUS_IN_TRANSIT
         elif missing:

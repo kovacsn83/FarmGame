@@ -448,6 +448,21 @@ def _validate_inventory(building):
     if building["type"] == "processing_plant":
         inventory = building.get("processing_inventory")
         in_transit = building.get("processing_in_transit")
+        batch = building.get("processing_batch")
+        valid_batch = batch is None or (
+            isinstance(batch, dict)
+            and batch.get("recipe_id") in PROCESSING_RECIPES
+            and _is_plain_int(batch.get("started_week"))
+            and all(
+                isinstance(items, dict)
+                and all(
+                    item_id in get_inventory_item_ids()
+                    and _is_plain_int(amount) and amount >= 0
+                    for item_id, amount in items.items()
+                )
+                for items in (batch.get("inputs"), batch.get("outputs"))
+            )
+        )
         return (
             building.get("processing_capacity") == PROCESSING_STORAGE_CAPACITY
             and building.get("active_recipe") in PROCESSING_RECIPES
@@ -467,6 +482,7 @@ def _validate_inventory(building):
             and _is_plain_int(building.get("processing_week"))
             and _is_plain_int(building.get("processed_this_week"))
             and building.get("processed_this_week") >= 0
+            and valid_batch
         )
     if building["type"] != "warehouse":
         return True

@@ -38,7 +38,8 @@ from financial_history import (
 from orchards import TREE_TYPES
 from processing import (
     PROCESSING_RECIPES, PROCESSING_STATUS_FULL, PROCESSING_STATUS_IN_TRANSIT,
-    PROCESSING_STATUS_NO_MONEY, PROCESSING_STATUS_READY,
+    PROCESSING_STATUS_NO_MONEY, PROCESSING_STATUS_PROCESSING,
+    PROCESSING_STATUS_READY,
     get_processing_inventory_used, initialize_processing_plant,
 )
 from time_system import (
@@ -1340,6 +1341,7 @@ class InfoPanel(PopupWindow):
                 "Nincs elegendő pénz az alapanyag beszerzéséhez"
             ),
             PROCESSING_STATUS_FULL: "Üzemi raktár megtelt",
+            PROCESSING_STATUS_PROCESSING: "Gyártás folyamatban",
             "waiting_input": "Alapanyagra vár",
         }
         self.rect.size = (responsive_panel_width(INFO_PANEL_WIDTH), 350)
