@@ -156,9 +156,15 @@ ANIMAL_HUSBANDRY_PANEL_WIDTH = 440
 ANIMAL_CARD_HEIGHT = 82
 ANIMAL_CARD_GAP = 12
 
-MARKET_PANEL_WIDTH = 440
+MARKET_PANEL_WIDTH = 760
+MARKET_PANEL_MAX_HEIGHT = 700
+MARKET_TWO_COLUMN_MIN_WIDTH = 600
+MARKET_COLUMN_GAP = 14
 MARKET_CARD_HEIGHT = 108
 MARKET_CARD_GAP = 12
+MARKET_LIST_TOP = 58
+MARKET_LIST_BOTTOM_PADDING = 20
+MARKET_SCROLL_STEP = 60
 
 BUILDING_PANEL_WIDTH = 760
 BUILDING_CARD_HEIGHT = 112
@@ -1242,6 +1248,10 @@ class InfoPanel(PopupWindow):
         super().__init__(INFO_PANEL_WIDTH, 200)
         self.building_type = None
         self.market_card_rects = {}
+        self.market_list_rect = pygame.Rect(0, 0, 0, 0)
+        self.market_scroll_offset = 0
+        self.market_max_scroll = 0
+        self.market_column_count = 1
         self.pending_sale_selection = None
         self.upgrade_card_rects = {}
         self.upgrade_info_rects = {}
@@ -1268,10 +1278,27 @@ class InfoPanel(PopupWindow):
         self.garage_purchase_rects = {}
         self.processing_recipe_rects = {}
         self.processing_recipe_scroll = 0
+        self.market_card_rects = {}
+        self.market_scroll_offset = 0
         self.open()
         return True
 
     def handle_event(self, event):
+        if self.visible and self.building_type == "market":
+            if event.type == pygame.MOUSEWHEEL:
+                self._scroll_market(-event.y * MARKET_SCROLL_STEP)
+                return True
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button in (4, 5):
+                    direction = -1 if event.button == 4 else 1
+                    self._scroll_market(direction * MARKET_SCROLL_STEP)
+                    return True
+                if event.button != 1:
+                    return True
+                if is_outside_popup_click(event, self.rect):
+                    self.close()
+                    return True
+                return self._handle_content_click(event.pos)
         if (
             self.visible
             and self.building_type == "processing_plant"
@@ -1290,6 +1317,15 @@ class InfoPanel(PopupWindow):
             )
             return True
         return super().handle_event(event)
+
+    def _scroll_market(self, amount):
+        self.market_scroll_offset = max(
+            0,
+            min(
+                self.market_max_scroll,
+                self.market_scroll_offset + amount,
+            ),
+        )
 
     def take_sale_selection(self):
         selection = self.pending_sale_selection
@@ -1345,6 +1381,10 @@ class InfoPanel(PopupWindow):
         super().close()
         self.building_type = None
         self.market_card_rects = {}
+        self.market_list_rect = pygame.Rect(0, 0, 0, 0)
+        self.market_scroll_offset = 0
+        self.market_max_scroll = 0
+        self.market_column_count = 1
         self.pending_sale_selection = None
         self.upgrade_card_rects = {}
         self.upgrade_info_rects = {}
@@ -1706,24 +1746,63 @@ class InfoPanel(PopupWindow):
             if quote is not None and quote["amount"] > 0:
                 quotes[item_id] = quote
 
+        _, screen_height = get_screen_size()
+        panel_width = responsive_panel_width(MARKET_PANEL_WIDTH)
+        self.market_column_count = (
+            2 if panel_width >= MARKET_TWO_COLUMN_MIN_WIDTH else 1
+        )
         card_count = len(quotes)
-        panel_height = 104
-        if card_count:
-            panel_height += card_count * MARKET_CARD_HEIGHT
-            panel_height += (card_count - 1) * MARKET_CARD_GAP + 20
-        self.rect.size = (responsive_panel_width(MARKET_PANEL_WIDTH), panel_height)
+        row_count = (
+            (card_count + self.market_column_count - 1)
+            // self.market_column_count
+        )
+        content_height = (
+            row_count * MARKET_CARD_HEIGHT
+            + max(0, row_count - 1) * MARKET_CARD_GAP
+        )
+        natural_height = (
+            MARKET_LIST_TOP + content_height + MARKET_LIST_BOTTOM_PADDING
+            if card_count else 104
+        )
+        available_height = max(104, screen_height - 80)
+        panel_height = min(MARKET_PANEL_MAX_HEIGHT, natural_height, available_height)
+        self.rect.size = (panel_width, panel_height)
         self.rect.center = get_screen_center()
 
+        content_left = self.rect.x + INFO_PANEL_PADDING
+        content_width = self.rect.width - INFO_PANEL_PADDING * 2
+        self.market_list_rect = pygame.Rect(
+            content_left,
+            self.rect.y + MARKET_LIST_TOP,
+            content_width,
+            max(0, panel_height - MARKET_LIST_TOP - MARKET_LIST_BOTTOM_PADDING),
+        )
+        self.market_max_scroll = max(
+            0, content_height - self.market_list_rect.height,
+        )
+        self.market_scroll_offset = min(
+            self.market_scroll_offset, self.market_max_scroll,
+        )
+        card_width = (
+            content_width
+            - (self.market_column_count - 1) * MARKET_COLUMN_GAP
+        ) // self.market_column_count
         self.market_card_rects = {}
-        card_y = self.rect.y + 58
-        for item_id in quotes:
-            self.market_card_rects[item_id] = pygame.Rect(
-                self.rect.x + INFO_PANEL_PADDING,
-                card_y,
-                self.rect.width - INFO_PANEL_PADDING * 2,
+        card_layout = {}
+        for index, item_id in enumerate(quotes):
+            row, column = divmod(index, self.market_column_count)
+            card_rect = pygame.Rect(
+                content_left + column * (card_width + MARKET_COLUMN_GAP),
+                self.market_list_rect.top
+                + row * (MARKET_CARD_HEIGHT + MARKET_CARD_GAP)
+                - self.market_scroll_offset,
+                card_width,
                 MARKET_CARD_HEIGHT,
             )
-            card_y += MARKET_CARD_HEIGHT + MARKET_CARD_GAP
+            card_layout[item_id] = card_rect
+            visible_hitbox = card_rect.clip(self.market_list_rect)
+            if visible_hitbox.width > 0 and visible_hitbox.height > 0:
+                self.market_card_rects[item_id] = visible_hitbox
 
         self.draw_frame(screen)
         x = self.rect.x + INFO_PANEL_PADDING
@@ -1738,11 +1817,15 @@ class InfoPanel(PopupWindow):
             return
 
         mouse_position = pygame.mouse.get_pos()
+        previous_clip = screen.get_clip()
+        screen.set_clip(self.market_list_rect)
         for item_id, quote in quotes.items():
-            card_rect = self.market_card_rects[item_id]
+            card_rect = card_layout[item_id]
+            visible_hitbox = self.market_card_rects.get(item_id)
             card_color = (
                 CROP_CARD_HOVER
-                if card_rect.collidepoint(mouse_position)
+                if visible_hitbox is not None
+                and visible_hitbox.collidepoint(mouse_position)
                 else CROP_CARD_BACKGROUND
             )
             pygame.draw.rect(screen, card_color, card_rect)
@@ -1764,6 +1847,7 @@ class InfoPanel(PopupWindow):
                 screen, font, f"Teljes érték: {format_money(quote['total_value'])}",
                 text_x, text_y + 72,
             )
+        screen.set_clip(previous_clip)
 
     def _draw_farmhouse(self, screen, font, game_state):
         farmhouse = self.building

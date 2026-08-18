@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- A Piac dinamikus, kétoszlopos és nagy termékszámnál görgethető kártyaelrendezést kapott; a lista clippinget és clampelt scrollt használ, az egérgörgő, valamint a jobb és középső gomb pedig többé nem indíthat téves értékesítést.
+
 - A Paradicsomkonzerv mostantól $32/db áron eladható a Piacon; több Feldolgozó üzem készlete összeadódik, az eladás közvetlenül az üzemi raktárakból fogyaszt, bevétele pedig az új „Feldolgozott termékek értékesítése” pénzügyi kategóriába kerül.
 
 - A Feldolgozó üzem most már a kijelölt recept ismételt megnyomásával leállítható; recept nélkül nem indít új gyártást, nem rendel alapanyagot és nem küld járművet, miközben a már folyamatban lévő adag még szabályosan elkészül.
