@@ -1,5 +1,10 @@
 # CHANGELOG
 
+- Elkészült a Feldolgozó üzem első működő, adatvezérelt termelési rendszere: az első recept 1 Paradicsomból 1 Paradicsomkonzervet készít, üzemenként heti legfeljebb 5 darabot.
+- Minden Feldolgozó üzem saját, 200 darabos közös alapanyag- és késztermékraktárt kapott; a Paradicsomkonzerv egyelőre nem értékesíthető.
+- A saját Raktárból Traktor + Pótkocsi szállít költségmentesen, a hiányzó Paradicsom pedig a központi automatikus piaci beszerzéssel és darabonkénti szállítási díjjal érkezik.
+- A feldolgozóipari alapanyag-vásárlás külön pénzügyi kategóriában jelenik meg, a szállítási költségektől elkülönítve; az üzemi készlet, heti állapot és folyamatban lévő fuvar menthető.
+
 - A Csirke heti takarmánya Kukoricáról Búzára változott; az Etetővályú és az automatikus piaci beszerzés is az adatvezérelt új takarmányt használja.
 
 - Az automatikus piaci beszerzések szállítási díja $5/db-ról $3/db-ra csökkent.

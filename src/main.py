@@ -40,6 +40,7 @@ from notification_system import NotificationManager
 from orchards import (
     draw_orchard_trees, find_tree_at, plant_tree, run_weekly_orchard_cycle,
 )
+from processing import run_weekly_processing_cycle
 from quest_system import (
     QUEST_EVENT_ANIMAL_PEN_BUILT, QUEST_EVENT_CALENDAR_OPENED,
     QUEST_EVENT_CATTLE_COUNT_CHANGED, QUEST_EVENT_FARMHOUSE_BUILT,
@@ -789,6 +790,10 @@ def main():
                     animals, buildings, economy, notification_manager,
                 )
                 run_weekly_orchard_cycle(buildings)
+                run_weekly_processing_cycle(
+                    world, buildings, economy, vehicles, elapsed_week,
+                    current_ticks=pygame.time.get_ticks(),
+                )
                 run_weekly_animal_supply_automation(
                     world, buildings, economy, animals, vehicles,
                     game_state.purchased_upgrades,

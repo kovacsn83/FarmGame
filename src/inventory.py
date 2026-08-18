@@ -6,6 +6,10 @@ from financial_history import (
 
 # Az állati termékek a közös raktárkapacitást és az adatvezérelt piaci szabályt használják.
 PRODUCTS = {
+    "canned_tomato": {
+        "name": "Paradicsomkonzerv",
+        "marketable": False,
+    },
     "apple": {
         "name": "Alma",
         "marketable": True,

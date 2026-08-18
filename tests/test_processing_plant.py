@@ -53,7 +53,7 @@ class ProcessingPlantTests(unittest.TestCase):
         self.assertEqual(3000.0, definition["build_cost"])
         self.assertEqual(PROCESSING_PLANT_BUILD_COST, definition["build_cost"])
         self.assertEqual(300.0, calculate_annual_maintenance(3000.0))
-        self.assertEqual((), definition["recipes"])
+        self.assertEqual(("canned_tomato",), definition["recipes"])
 
         panel = BuildingSelectionPanel()
         panel.open()
@@ -103,6 +103,10 @@ class ProcessingPlantTests(unittest.TestCase):
         plant = place_building(
             self.world, self.buildings, 8, 8, "processing_plant",
         )
+        plant["processing_inventory"]["tomato"] = 4
+        plant["processing_inventory"]["canned_tomato"] = 7
+        plant["processing_week"] = 12
+        plant["processed_this_week"] = 3
         state = GameState(
             self.world, [], self.buildings, Economy(), GameTime(start_ticks=0),
         )
@@ -117,6 +121,10 @@ class ProcessingPlantTests(unittest.TestCase):
         self.assertEqual((8, 8, 6, 5), (
             loaded["row"], loaded["col"], loaded["width"], loaded["height"],
         ))
+        self.assertEqual(4, loaded["processing_inventory"]["tomato"])
+        self.assertEqual(7, loaded["processing_inventory"]["canned_tomato"])
+        self.assertEqual(12, loaded["processing_week"])
+        self.assertEqual(3, loaded["processed_this_week"])
 
 
 if __name__ == "__main__":

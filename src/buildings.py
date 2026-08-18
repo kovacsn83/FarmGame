@@ -122,9 +122,9 @@ BUILDING_TYPES = {
         "placement_rule": "road",
         "renderer_type": "processing_plant",
         "future_role": "processing_industry",
-        "description": "Még nincs funkció.",
-        # A későbbi receptek egyetlen, adatvezérelt katalógusba kerülhetnek.
-        "recipes": (),
+        "description": "Mezőgazdasági alapanyagok feldolgozása.",
+        # A részletes adatok a központi processing.PROCESSING_RECIPES katalógusban vannak.
+        "recipes": ("canned_tomato",),
     },
 }
 
@@ -249,6 +249,9 @@ def place_building(world, buildings, row, col, building_type):
         data["trees"] = []
     elif building_type == "farmhouse":
         data["farmhouse_level"] = FARMHOUSE_DEFAULT_LEVEL
+    elif building_type == "processing_plant":
+        from processing import initialize_processing_plant
+        initialize_processing_plant(data)
 
     for r in range(data["height"]):
         for c in range(data["width"]):
@@ -511,7 +514,6 @@ def remove_building(world, buildings, building):
             and sum(building["inventory"].values()) > 0):
         print("A raktár nem bontható le, amíg termény van benne.")
         return False
-
     for r in range(building["height"]):
         for c in range(building["width"]):
             world[building["row"] + r][building["col"] + c] = GRASS

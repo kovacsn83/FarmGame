@@ -15,6 +15,7 @@ from feed_supply import (
 )
 from game_logger import log
 from orchards import complete_tree_harvest
+from processing import receive_processing_delivery, refund_processing_delivery
 from world import tile_to_world_center
 from screen_layout import world_to_screen
 from vehicle_types import VEHICLE_TYPE_DEFINITIONS, VehicleType
@@ -97,6 +98,7 @@ TASK_WATERING = "watering"
 TASK_SUPPLY_FEED = "supply_feed"
 TASK_SUPPLY_WATER = "supply_water"
 TASK_ORCHARD_HARVEST = "orchard_harvest"
+TASK_PROCESSING_SUPPLY = "processing_supply"
 
 
 @dataclass
@@ -145,6 +147,7 @@ class FieldTask:
     purchase_cost: float = 0.0
     tree_slot: int | None = None
     tree_type: str | None = None
+    cargo_type: str | None = None
 
 
 # Régi külső kiegészítések kompatibilitási típusa; az új kód FieldTaskot használ.
@@ -667,7 +670,8 @@ class Vehicle:
     def _activate_task(self, world, task, start_road, now, first=False):
         if not self.supports_task(task.task_type):
             return False
-        if task.task_type in (TASK_SUPPLY_FEED, TASK_SUPPLY_WATER):
+        if task.task_type in (
+                TASK_SUPPLY_FEED, TASK_SUPPLY_WATER, TASK_PROCESSING_SUPPLY):
             return self._activate_supply_task(task, start_road, now, first)
         if task.task_type == TASK_WATERING:
             return self._activate_watering_task(
@@ -869,7 +873,11 @@ class Vehicle:
         else:
             self.path = task.route_to_source
             self.state = TRACTOR_MOVING_TO_SUPPLY_SOURCE
-            category = "Supply"
+            category = (
+                "Processing"
+                if task.task_type == TASK_PROCESSING_SUPPLY
+                else "Supply"
+            )
         self.next_path_index = 1
         log(f"A Traktor felcsatolta a {implement_name}t.", category)
 
@@ -940,7 +948,17 @@ class Vehicle:
                     continue
                 task = self.current_task
                 if self.state == TRACTOR_LOADING_SUPPLY:
-                    if task.task_type == TASK_SUPPLY_FEED:
+                    if task.task_type == TASK_PROCESSING_SUPPLY:
+                        trailer = task.implement
+                        trailer.cargo_type = task.cargo_type
+                        trailer.cargo_amount = task.resource_amount
+                        task.remaining_payload = task.resource_amount
+                        log(
+                            f"Pótkocsi megrakodva: {trailer.cargo_amount} "
+                            f"{CROPS[trailer.cargo_type]['name']}.",
+                            "Processing",
+                        )
+                    elif task.task_type == TASK_SUPPLY_FEED:
                         transaction = prepare_feed_supply(
                             task.buildings, economy,
                             task.target_group, task.animals,
@@ -974,14 +992,33 @@ class Vehicle:
                     self.path = task.route_source_to_target
                     self.next_path_index = 1
                     self.state = TRACTOR_MOVING_TO_TROUGH
-                    message = (
-                        "Takarmány felrakodva."
-                        if task.task_type == TASK_SUPPLY_FEED
-                        else "Locsolótartály feltöltve."
-                    )
-                    log(message, "Supply")
+                    if task.task_type == TASK_PROCESSING_SUPPLY:
+                        log("Alapanyag felrakodva.", "Processing")
+                    else:
+                        message = (
+                            "Takarmány felrakodva."
+                            if task.task_type == TASK_SUPPLY_FEED
+                            else "Locsolótartály feltöltve."
+                        )
+                        log(message, "Supply")
                 else:
-                    if task.task_type == TASK_SUPPLY_FEED:
+                    if task.task_type == TASK_PROCESSING_SUPPLY:
+                        delivered = receive_processing_delivery(
+                            task.field, task.cargo_type,
+                            task.implement.cargo_amount,
+                        )
+                        task.implement.cargo_type = "empty"
+                        task.implement.cargo_amount = 0
+                        task.remaining_payload = 0
+                        task.resource_reserved = False
+                        completed_work = delivered == task.resource_amount
+                        if completed_work:
+                            log(
+                                f"{delivered} db {CROPS[task.cargo_type]['name']} "
+                                "megérkezett a Feldolgozó üzembe.",
+                                "Processing",
+                            )
+                    elif task.task_type == TASK_SUPPLY_FEED:
                         completed_work = (
                             task.field in task.buildings
                             and deliver_feed_cargo(
@@ -996,7 +1033,8 @@ class Vehicle:
                     task.field.pop("vehicle_queue_position", None)
                     task.field.pop("vehicle_task_type", None)
                     task.status = "completed" if completed_work else "cancelled"
-                    if completed_work and task.task_type != TASK_SUPPLY_FEED:
+                    if (completed_work and task.task_type not in (
+                            TASK_SUPPLY_FEED, TASK_PROCESSING_SUPPLY)):
                         message = (
                             "Etetővályú feltöltve."
                             if task.task_type == TASK_SUPPLY_FEED
@@ -1043,7 +1081,9 @@ class Vehicle:
                     self.current_task.remaining_wait_ms = (
                         self.current_task.loading_duration_ms
                     )
-                    if self.current_task.task_type == TASK_SUPPLY_FEED:
+                    if self.current_task.task_type == TASK_PROCESSING_SUPPLY:
+                        log("Traktor megérkezett a Raktárhoz.", "Processing")
+                    elif self.current_task.task_type == TASK_SUPPLY_FEED:
                         log("Traktor megérkezett a Raktárhoz.", "Supply")
                     else:
                         log("Traktor megérkezett a Tóhoz.", "Supply")
@@ -1247,6 +1287,7 @@ class Vehicle:
             ]["name"]
             category = (
                 "Supply" if task.task_type in (TASK_SUPPLY_FEED, TASK_SUPPLY_WATER)
+                else "Processing" if task.task_type == TASK_PROCESSING_SUPPLY
                 else "Watering"
             )
             log(f"A Traktor lecsatolta a {implement_name}t.", category)
@@ -1264,8 +1305,18 @@ class Vehicle:
             task.field.pop("vehicle_task_status", None)
             task.field.pop("vehicle_queue_position", None)
             task.field.pop("vehicle_task_type", None)
+            if (
+                task.task_type == TASK_PROCESSING_SUPPLY
+                and task.resource_reserved
+            ):
+                refund_processing_delivery(
+                    task.buildings, task.field, task.cargo_type,
+                    task.resource_amount,
+                )
+                task.resource_reserved = False
         self.current_task = None
-        if task is not None and task.task_type in (TASK_SUPPLY_FEED, TASK_SUPPLY_WATER):
+        if task is not None and task.task_type in (
+                TASK_SUPPLY_FEED, TASK_SUPPLY_WATER, TASK_PROCESSING_SUPPLY):
             log("Az ellátási feladat nem indítható el.", "Supply")
         else:
             log("A locsolási feladat nem indítható el.", "Watering")

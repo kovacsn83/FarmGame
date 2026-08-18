@@ -30,11 +30,17 @@ from money_format import format_money
 from financial_history import (
     EXPENSE_ANIMAL_FEED, EXPENSE_ANIMAL_PURCHASE, EXPENSE_CONSTRUCTION,
     EXPENSE_FRUIT_TREE, EXPENSE_LOAN_REPAYMENT, EXPENSE_MAINTENANCE,
-    EXPENSE_PLANTING, EXPENSE_SHIPPING, EXPENSE_UPGRADE, EXPENSE_VEHICLE,
+    EXPENSE_PLANTING, EXPENSE_PROCESSING_INPUT, EXPENSE_SHIPPING,
+    EXPENSE_UPGRADE, EXPENSE_VEHICLE,
     INCOME_CROP_SALES, INCOME_LIVESTOCK_SALES, INCOME_LOAN,
     INCOME_ORCHARD_SALES,
 )
 from orchards import TREE_TYPES
+from processing import (
+    PROCESSING_RECIPES, PROCESSING_STATUS_FULL, PROCESSING_STATUS_IN_TRANSIT,
+    PROCESSING_STATUS_NO_MONEY, PROCESSING_STATUS_READY,
+    get_processing_inventory_used, initialize_processing_plant,
+)
 from time_system import (
     SEASON_PERIODS, TIME_NORMAL, WEEKS_PER_YEAR, Season, format_game_time,
     get_season_for_week, get_time_speed_indicator, get_year_and_week,
@@ -854,6 +860,7 @@ class FinancialSummaryPanel(PopupWindow):
         (EXPENSE_MAINTENANCE, "Fenntartási költségek"),
         (EXPENSE_SHIPPING, "Szállítási költségek"),
         (EXPENSE_PLANTING, "Vetési költségek"),
+        (EXPENSE_PROCESSING_INPUT, "Feldolgozóipari alapanyag-beszerzés"),
         (EXPENSE_ANIMAL_FEED, "Takarmánybeszerzés"),
         (EXPENSE_ANIMAL_PURCHASE, "Állatvásárlás"),
         (EXPENSE_FRUIT_TREE, "Gyümölcsfa-vásárlás"),
@@ -1320,28 +1327,47 @@ class InfoPanel(PopupWindow):
             self._draw_processing_plant(screen, font)
 
     def _draw_processing_plant(self, screen, font):
-        """A későbbi gyártási rendszerhez előkészített statikus adatlap."""
-        definition = BUILDING_TYPES["processing_plant"]
-        self.rect.size = (responsive_panel_width(INFO_PANEL_WIDTH), 220)
+        """Az üzem receptjét, saját készletét és aktuális állapotát mutatja."""
+        initialize_processing_plant(self.building)
+        recipe = PROCESSING_RECIPES[self.building["active_recipe"]]
+        inventory = self.building["processing_inventory"]
+        input_id = recipe["input_product"]
+        output_id = recipe["output_product"]
+        status_labels = {
+            PROCESSING_STATUS_READY: "Termelésre kész",
+            PROCESSING_STATUS_IN_TRANSIT: "Szállítás folyamatban",
+            PROCESSING_STATUS_NO_MONEY: (
+                "Nincs elegendő pénz az alapanyag beszerzéséhez"
+            ),
+            PROCESSING_STATUS_FULL: "Üzemi raktár megtelt",
+            "waiting_input": "Alapanyagra vár",
+        }
+        self.rect.size = (responsive_panel_width(INFO_PANEL_WIDTH), 350)
         self.rect.center = get_screen_center()
         self.draw_frame(screen)
         x = self.rect.x + INFO_PANEL_PADDING
         y = self.rect.y + INFO_PANEL_PADDING
         self.draw_text(screen, font, POPUP_TITLES["processing_plant"], x, y)
         y += 38
-        self.draw_text(
-            screen, font,
-            f"Méret: {definition['width']}x{definition['height']}", x, y,
+        lines = (
+            f"Heti kapacitás: {recipe['weekly_capacity']} db",
+            (
+                f"Aktív recept: {get_inventory_item_name(input_id)} → "
+                f"{get_inventory_item_name(output_id)}"
+            ),
+            (
+                f"Üzemi raktár: {get_processing_inventory_used(self.building)} / "
+                f"{self.building['processing_capacity']}"
+            ),
+            "Alapanyag:",
+            f"  {get_inventory_item_name(input_id)}: {inventory.get(input_id, 0)} db",
+            "Késztermék:",
+            f"  {get_inventory_item_name(output_id)}: {inventory.get(output_id, 0)} db",
+            f"Állapot: {status_labels.get(self.building['processing_status'], 'Alapanyagra vár')}",
         )
-        y += 28
-        self.draw_text(
-            screen, font,
-            f"Éves költség: {format_annual_maintenance_rate()}", x, y,
-        )
-        y += 34
-        self.draw_text(screen, font, "Termelés:", x, y)
-        y += 26
-        self.draw_text(screen, font, definition["description"], x, y)
+        for line in lines:
+            self.draw_text(screen, font, line, x, y)
+            y += 30
 
     def _draw_pond(self, screen, font):
         """A későbbi öntözéshez előkészített Tó statikus adatlapja."""

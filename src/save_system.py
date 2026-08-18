@@ -25,6 +25,10 @@ from game_logger import log
 from inventory import get_inventory_item_ids
 from financial_history import is_valid_transaction
 from orchards import is_valid_tree_record
+from processing import (
+    PROCESSING_RECIPES, PROCESSING_STORAGE_CAPACITY,
+    initialize_processing_plant,
+)
 from time_system import TIME_FAST, TIME_NORMAL, TIME_WEEK_LENGTHS_MS
 from vehicle_types import (
     VEHICLE_TYPE_DEFINITIONS, VehicleType, normalize_vehicle_type,
@@ -149,6 +153,8 @@ def _migrate_legacy_crop_data(data):
             elif building.get("type") == "orchard":
                 # A Gyümölcsös bevezetése előtti mentések üres területtel indulnak.
                 building.setdefault("trees", [])
+            elif building.get("type") == "processing_plant":
+                initialize_processing_plant(building)
 
     data.setdefault("purchased_upgrades", [])
     tractors = data.setdefault("tractors", [])
@@ -439,6 +445,29 @@ def _area_is_inside(row, col, width, height, world_width, world_height):
 
 
 def _validate_inventory(building):
+    if building["type"] == "processing_plant":
+        inventory = building.get("processing_inventory")
+        in_transit = building.get("processing_in_transit")
+        return (
+            building.get("processing_capacity") == PROCESSING_STORAGE_CAPACITY
+            and building.get("active_recipe") in PROCESSING_RECIPES
+            and isinstance(inventory, dict)
+            and all(
+                item_id in get_inventory_item_ids()
+                and _is_plain_int(amount) and amount >= 0
+                for item_id, amount in inventory.items()
+            )
+            and sum(inventory.values()) <= PROCESSING_STORAGE_CAPACITY
+            and isinstance(in_transit, dict)
+            and all(
+                item_id in get_inventory_item_ids()
+                and _is_plain_int(amount) and amount >= 0
+                for item_id, amount in in_transit.items()
+            )
+            and _is_plain_int(building.get("processing_week"))
+            and _is_plain_int(building.get("processed_this_week"))
+            and building.get("processed_this_week") >= 0
+        )
     if building["type"] != "warehouse":
         return True
     capacity = building.get("capacity")

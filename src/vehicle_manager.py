@@ -8,7 +8,8 @@ from animal_troughs import (
 )
 from buildings import (
     GARAGE_PARKING_SLOTS, get_animal_pen_groups, get_free_capacity,
-    get_orchard_groups, get_total_inventory, get_warehouses, store_item,
+    get_orchard_groups, get_total_inventory, get_warehouses, remove_item,
+    store_item,
 )
 from constants import FIELD
 from crops import (
@@ -25,6 +26,10 @@ from maintenance import calculate_weekly_maintenance
 from orchards import (
     TREE_TYPES, get_tree_age_years, get_tree_in_slot, is_tree_harvestable,
 )
+from processing import (
+    PROCESSING_STATUS_IN_TRANSIT, cancel_processing_delivery,
+    initialize_processing_plant,
+)
 from quest_system import (
     QUEST_EVENT_ALFALFA_HARVESTED, QUEST_EVENT_ALFALFA_PLANTED,
     QUEST_EVENT_COMBINE_PURCHASED,
@@ -38,6 +43,7 @@ from tractor import (
     FEED_LOAD_DURATION_MS, FEED_UNLOAD_DURATION_MS,
     TASK_FERTILIZING, TASK_HARVESTING, TASK_PLANTING,
     TASK_ORCHARD_HARVEST, TASK_SUPPLY_FEED, TASK_SUPPLY_WATER, TASK_WATERING,
+    TASK_PROCESSING_SUPPLY,
     TRACTOR_AWAITING_ASSIGNMENT, TRACTOR_SELECTING_NEXT_TASK,
     WATER_FILL_DURATION_MS, WATER_UNLOAD_DURATION_MS,
     Combine, FieldTask, FruitHarvester, TowableImplement, Tractor,
@@ -73,6 +79,7 @@ TASK_VEHICLE_TYPES = {
     TASK_WATERING: VehicleType.TRACTOR,
     TASK_SUPPLY_FEED: VehicleType.TRACTOR,
     TASK_SUPPLY_WATER: VehicleType.TRACTOR,
+    TASK_PROCESSING_SUPPLY: VehicleType.TRACTOR,
 }
 
 TASK_NAMES = {
@@ -83,6 +90,7 @@ TASK_NAMES = {
     TASK_WATERING: "locsolási",
     TASK_SUPPLY_FEED: "etetési ellátási",
     TASK_SUPPLY_WATER: "itatási ellátási",
+    TASK_PROCESSING_SUPPLY: "feldolgozóipari alapanyag-szállítási",
 }
 
 TASK_LOG_CATEGORIES = {
@@ -93,6 +101,7 @@ TASK_LOG_CATEGORIES = {
     TASK_WATERING: "Watering",
     TASK_SUPPLY_FEED: "Supply",
     TASK_SUPPLY_WATER: "Supply",
+    TASK_PROCESSING_SUPPLY: "Processing",
 }
 
 class VehicleManager:
@@ -998,6 +1007,59 @@ class VehicleManager:
             log(f"{task_name} feladat várólistára helyezve.", "Dispatcher")
         return True
 
+    def start_processing_supply(
+            self, world, buildings, plant, item_id, amount,
+            current_ticks=None):
+        """Saját Raktárból Traktor + Pótkocsi fuvart foglal egy üzemhez."""
+        initialize_processing_plant(plant)
+        amount = max(0, int(amount))
+        if amount <= 0 or plant not in buildings:
+            return 0
+        if self._has_equivalent_task(TASK_PROCESSING_SUPPLY, plant):
+            return 0
+        trailers = [
+            implement for implement in self.implements
+            if implement.vehicle_type == VehicleType.TRAILER
+        ]
+        warehouses = get_warehouses(buildings)
+        if not self.tractors or not trailers or not warehouses:
+            return 0
+        assignment = self._find_supply_assignment(
+            world, buildings, [plant], self.tractors, trailers, warehouses,
+            use_parking_start=True,
+        )
+        if assignment is None or not remove_item(buildings, item_id, amount):
+            return 0
+        task = FieldTask(
+            field=plant,
+            task_type=TASK_PROCESSING_SUPPLY,
+            buildings=buildings,
+            target_group=[plant],
+            required_implement_type=VehicleType.TRAILER,
+            source_type="warehouse",
+            manually_initiated=False,
+            creation_order=self._take_task_order(),
+            loading_duration_ms=FEED_LOAD_DURATION_MS,
+            unloading_duration_ms=FEED_UNLOAD_DURATION_MS,
+            resource_reserved=True,
+            resource_amount=amount,
+            cargo_type=item_id,
+        )
+        plant["processing_in_transit"][item_id] = (
+            plant["processing_in_transit"].get(item_id, 0) + amount
+        )
+        plant["processing_status"] = PROCESSING_STATUS_IN_TRANSIT
+        self.task_queue.append(task)
+        self._set_waiting_statuses()
+        self._dispatch_tasks(
+            world, buildings, None, current_ticks=current_ticks,
+        )
+        log(
+            f"{amount} db alapanyag szállítása elindult a Raktárból.",
+            "Processing",
+        )
+        return amount
+
     @staticmethod
     def _find_supply_assignment(
             world, buildings, group, tractors, implements, sources,
@@ -1183,7 +1245,17 @@ class VehicleManager:
                 and get_total_inventory(buildings).get("manure", 0)
                 >= task.resource_amount
             )
-        if task.task_type in (TASK_SUPPLY_FEED, TASK_SUPPLY_WATER):
+        if task.task_type in (
+                TASK_SUPPLY_FEED, TASK_SUPPLY_WATER, TASK_PROCESSING_SUPPLY):
+            if task.task_type == TASK_PROCESSING_SUPPLY:
+                return (
+                    task.field in buildings
+                    and task.field.get("type") == "processing_plant"
+                    and any(b.get("type") == "warehouse" for b in buildings)
+                    and any(i.vehicle_type == VehicleType.TRAILER for i in self.implements)
+                    and bool(self.tractors)
+                    and task.resource_amount > 0
+                )
             return (
                 any(b.get("type") == task.source_type for b in buildings)
                 and any(
@@ -1207,11 +1279,16 @@ class VehicleManager:
             if task.task_type not in (
                     TASK_WATERING, TASK_FERTILIZING,
                     TASK_SUPPLY_FEED, TASK_SUPPLY_WATER,
-                    TASK_ORCHARD_HARVEST):
+                    TASK_ORCHARD_HARVEST, TASK_PROCESSING_SUPPLY):
                 continue
             if self._task_is_valid(task, world, buildings):
                 continue
             self.task_queue.remove(task)
+            if task.task_type == TASK_PROCESSING_SUPPLY:
+                cancel_processing_delivery(
+                    task.field, task.cargo_type, task.resource_amount,
+                )
+                store_item(buildings, task.cargo_type, task.resource_amount)
             self._clear_task_marker(task)
             log("Egy időközben érvénytelenné vált feladat törölve.", "Dispatcher")
 
@@ -1276,6 +1353,7 @@ class VehicleManager:
         self._discard_invalid_tasks(world, buildings)
         implement_tasks = {
             TASK_WATERING, TASK_SUPPLY_FEED, TASK_SUPPLY_WATER,
+            TASK_PROCESSING_SUPPLY,
         }
         while True:
             assignment = None
@@ -1535,7 +1613,7 @@ class VehicleManager:
         for candidate_type in candidate_types:
             reload_source = (
                 candidate_type != current_type
-                or candidate_type == TASK_SUPPLY_FEED
+                or candidate_type in (TASK_SUPPLY_FEED, TASK_PROCESSING_SUPPLY)
             )
             for task in tuple(self.task_queue):
                 if task.task_type != candidate_type:

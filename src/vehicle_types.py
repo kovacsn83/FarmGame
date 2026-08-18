@@ -24,7 +24,7 @@ VEHICLE_TYPE_DEFINITIONS = {
         "accepts_field_tasks": True,
         "supported_tasks": (
             "plant", "fertilize", "watering",
-            "supply_feed", "supply_water",
+            "supply_feed", "supply_water", "processing_supply",
         ),
         "self_propelled": True,
         "towable": False,
@@ -73,7 +73,7 @@ VEHICLE_TYPE_DEFINITIONS = {
         "category": "towable",
         "renderer_type": "trailer",
         "parking_slots": 1,
-        "cargo_states": ("empty", "alfalfa", "corn"),
+        "cargo_states": ("empty", "alfalfa", "corn", "tomato"),
         # A későbbi Dispatcher-integrációhoz csak leíró előkészítés.
         "future_supported_tasks": (
             "manure_transport", "feed_transport",
