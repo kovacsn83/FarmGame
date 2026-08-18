@@ -1,6 +1,7 @@
 from buildings import (
     BUILDING_TYPES, get_building_maintenance_base, get_total_crop_amount,
-    get_warehouses, remove_item, store_crop,
+    get_marketable_item_amount, get_warehouses, remove_marketable_item,
+    store_crop,
 )
 from constants import (
     ROAD, ROAD_BUILD_COST, STARTING_MONEY, TRACTOR_PURCHASE_PRICE,
@@ -366,7 +367,7 @@ class Economy:
             log("Az eladáshoz legalább egy piac szükséges.", "Economy")
             return False
 
-        amount = get_total_crop_amount(buildings, item_id)
+        amount = get_marketable_item_amount(buildings, item_id)
         item_name = get_inventory_item_name(item_id)
         if amount <= 0:
             log(
@@ -376,7 +377,7 @@ class Economy:
             return False
 
         revenue = amount * item_data["price"]
-        if not remove_item(buildings, item_id, amount):
+        if not remove_marketable_item(buildings, item_id, amount):
             return False
         self.earn(revenue)
         self.record_income(
@@ -384,8 +385,8 @@ class Economy:
             f"{amount} db {item_name}",
         )
         log(
-            f"Eladás sikeres: {amount} db {item_name.lower()}, "
-            f"bevétel: {format_money(revenue)}", "Economy",
+            f"Eladva: {amount} db {item_name}. "
+            f"Bevétel: {format_money(revenue)}.", "Market",
         )
         return True
 
@@ -398,7 +399,7 @@ class Economy:
         item_data = get_inventory_item_data(item_id)
         if item_data is None or not item_data.get("marketable", False):
             return None
-        amount = get_total_crop_amount(buildings, item_id)
+        amount = get_marketable_item_amount(buildings, item_id)
         unit_price = item_data["price"]
         return {
             "amount": amount,

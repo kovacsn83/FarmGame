@@ -1,14 +1,20 @@
 from crops import CROPS
 from financial_history import (
     INCOME_CROP_SALES, INCOME_LIVESTOCK_SALES, INCOME_ORCHARD_SALES,
+    INCOME_PROCESSED_PRODUCT_SALES,
 )
 
 
 # Az állati termékek a közös raktárkapacitást és az adatvezérelt piaci szabályt használják.
 PRODUCTS = {
     "canned_tomato": {
+        "product_id": "canned_tomato",
         "name": "Paradicsomkonzerv",
-        "marketable": False,
+        "price": 32.00,
+        "product_category": "processed_products",
+        "income_category": INCOME_PROCESSED_PRODUCT_SALES,
+        "inventory_source": "processing_plant",
+        "marketable": True,
     },
     "apple": {
         "name": "Alma",

@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- A Paradicsomkonzerv mostantól $32/db áron eladható a Piacon; több Feldolgozó üzem készlete összeadódik, az eladás közvetlenül az üzemi raktárakból fogyaszt, bevétele pedig az új „Feldolgozott termékek értékesítése” pénzügyi kategóriába kerül.
+
 - A Feldolgozó üzem most már a kijelölt recept ismételt megnyomásával leállítható; recept nélkül nem indít új gyártást, nem rendel alapanyagot és nem küld járművet, miközben a már folyamatban lévő adag még szabályosan elkészül.
 
 - Átalakult a Feldolgozó üzem popupja: az új, teljes sorában kattintható „Gyártandó termék” szekció egyszerre egy aktív recept kiválasztását teszi lehetővé, és előkészíti a későbbi többtermékes gyártást a folyamatban lévő adag megszakítása nélkül.

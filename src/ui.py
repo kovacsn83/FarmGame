@@ -33,7 +33,7 @@ from financial_history import (
     EXPENSE_PLANTING, EXPENSE_PROCESSING_INPUT, EXPENSE_SHIPPING,
     EXPENSE_UPGRADE, EXPENSE_VEHICLE,
     INCOME_CROP_SALES, INCOME_LIVESTOCK_SALES, INCOME_LOAN,
-    INCOME_ORCHARD_SALES,
+    INCOME_ORCHARD_SALES, INCOME_PROCESSED_PRODUCT_SALES,
 )
 from orchards import TREE_TYPES
 from processing import (
@@ -862,6 +862,10 @@ class FinancialSummaryPanel(PopupWindow):
         (INCOME_CROP_SALES, "Növényértékesítés"),
         (INCOME_LIVESTOCK_SALES, "Állati termékek értékesítése"),
         (INCOME_ORCHARD_SALES, "Gyümölcsértékesítés"),
+        (
+            INCOME_PROCESSED_PRODUCT_SALES,
+            "Feldolgozott termékek értékesítése",
+        ),
         (INCOME_LOAN, "Felvett hitel"),
     )
     EXPENSE_LABELS = (

@@ -113,7 +113,7 @@ class ProcessingProductionTests(unittest.TestCase):
         )
         self.assertEqual(PROCESSING_STATUS_NO_MONEY, empty["processing_status"])
         self.assertEqual(0, empty["processing_inventory"]["canned_tomato"])
-        self.assertNotIn("canned_tomato", get_marketable_item_ids())
+        self.assertIn("canned_tomato", get_marketable_item_ids())
 
     def test_after_startup_a_new_batch_starts_on_every_weekly_cycle(self):
         plant = self._plant()

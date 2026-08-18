@@ -20,6 +20,12 @@ class FiveYearSimulationTests(unittest.TestCase):
             SimulationBot._sale_income_category("apple"), "fruit_sales",
         )
 
+    def test_processed_products_use_their_own_report_category(self):
+        self.assertEqual(
+            SimulationBot._sale_income_category("canned_tomato"),
+            "processed_product_sales",
+        )
+
     def test_bot_builds_and_demolishes_through_game_rules(self):
         bot = SimulationBot(3)
         bot.bootstrap()

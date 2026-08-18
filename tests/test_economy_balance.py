@@ -83,8 +83,8 @@ class EconomyBalanceTests(unittest.TestCase):
         self.assertEqual(economy.money, 200.00)
         self.assertEqual(warehouse["inventory"]["apple"], 0)
         self.assertTrue(any(
-            entry.category == "Economy"
-            and "20 db alma" in entry.message
+            entry.category == "Market"
+            and "20 db alma" in entry.message.lower()
             and "$200" in entry.message
             for entry in get_logger().entries
         ))
@@ -107,8 +107,8 @@ class EconomyBalanceTests(unittest.TestCase):
         self.assertEqual(economy.money, 1000.00)
         self.assertEqual(warehouse["inventory"]["pork"], 0)
         self.assertTrue(any(
-            entry.category == "Economy"
-            and "10 db sertéshús" in entry.message
+            entry.category == "Market"
+            and "10 db sertéshús" in entry.message.lower()
             and "$1 000" in entry.message
             for entry in get_logger().entries
         ))
@@ -148,8 +148,8 @@ class EconomyBalanceTests(unittest.TestCase):
         self.assertEqual(economy.money, 45.00)
         self.assertEqual(warehouse["inventory"]["manure"], 0)
         self.assertTrue(any(
-            entry.category == "Economy"
-            and "15 db trágya" in entry.message
+            entry.category == "Market"
+            and "15 db trágya" in entry.message.lower()
             and "$45" in entry.message
             for entry in get_logger().entries
         ))

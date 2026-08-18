@@ -414,6 +414,46 @@ def get_total_crop_amount(buildings, crop="wheat"):
     return get_total_inventory(buildings).get(crop, 0)
 
 
+def get_marketable_item_amount(buildings, item_id):
+    """A termék katalógusban kijelölt piaci készletforrását összesíti."""
+    item_data = get_inventory_item_data(item_id)
+    if item_data is None or not item_data.get("marketable", False):
+        return 0
+    if item_data.get("inventory_source") == "processing_plant":
+        return sum(
+            max(0, int(building.get("processing_inventory", {}).get(item_id, 0)))
+            for building in buildings
+            if building.get("type") == "processing_plant"
+        )
+    return get_total_inventory(buildings).get(item_id, 0)
+
+
+def remove_marketable_item(buildings, item_id, amount):
+    """A piaci készletet stabil építési sorrendben, negatív érték nélkül vonja le."""
+    item_data = get_inventory_item_data(item_id)
+    if item_data is None or not item_data.get("marketable", False):
+        return False
+    if (not isinstance(amount, int) or isinstance(amount, bool)
+            or amount < 0
+            or get_marketable_item_amount(buildings, item_id) < amount):
+        return False
+    if item_data.get("inventory_source") != "processing_plant":
+        return remove_item(buildings, item_id, amount)
+
+    remaining = amount
+    for building in buildings:
+        if building.get("type") != "processing_plant":
+            continue
+        inventory = building.get("processing_inventory", {})
+        available = max(0, int(inventory.get(item_id, 0)))
+        removed_here = min(remaining, available)
+        inventory[item_id] = available - removed_here
+        remaining -= removed_here
+        if remaining == 0:
+            return True
+    return remaining == 0
+
+
 def get_free_capacity(buildings):
     """Megadja az összes raktárban még felhasználható helyet."""
     stored_amount = sum(get_total_inventory(buildings).values())

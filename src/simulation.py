@@ -59,7 +59,7 @@ MAX_TASK_TICKS = 20_000
 
 INCOME_CATEGORIES = (
     "crop_sales", "milk_sales", "pork_sales",
-    "other_animal_sales", "other_income",
+    "other_animal_sales", "processed_product_sales", "other_income",
 )
 EXPENSE_CATEGORIES = (
     "building_maintenance", "field_maintenance", "road_maintenance",
@@ -191,6 +191,8 @@ class SimulationBot:
             return "milk_sales"
         if item_id == "pork":
             return "pork_sales"
+        if PRODUCTS.get(item_id, {}).get("product_category") == "processed_products":
+            return "processed_product_sales"
         if item_id in PRODUCTS:
             return "other_animal_sales"
         return "other_income"
@@ -489,7 +491,8 @@ class SimulationBot:
         if not sale_week and utilization < 0.80:
             return
         for item_id in get_marketable_item_ids():
-            amount = get_total_inventory(self.buildings).get(item_id, 0)
+            quote = self.economy.get_sale_quote(self.buildings, item_id)
+            amount = quote["amount"] if quote is not None else 0
             if amount <= 0:
                 continue
             before = self.economy.money

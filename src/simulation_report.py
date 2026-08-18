@@ -16,6 +16,7 @@ INCOME_CATEGORY_NAMES = {
     "milk_sales": "Tejértékesítés",
     "pork_sales": "Sertéshús-értékesítés",
     "other_animal_sales": "Egyéb állati termék",
+    "processed_product_sales": "Feldolgozott termékek értékesítése",
     "other_income": "Egyéb bevétel",
 }
 
