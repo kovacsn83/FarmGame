@@ -15,6 +15,7 @@ PROCESSING_STATUS_IN_TRANSIT = "in_transit"
 PROCESSING_STATUS_NO_MONEY = "no_money"
 PROCESSING_STATUS_FULL = "storage_full"
 PROCESSING_STATUS_PROCESSING = "processing"
+PROCESSING_STATUS_STOPPED = "stopped"
 
 PROCESSING_RECIPES = {
     "canned_tomato": {
@@ -74,11 +75,20 @@ def get_processing_output_ids(plant):
 
 
 def select_processing_recipe(plant, recipe_id):
-    """Kijelöli a következő adag receptjét a futó gyártás megszakítása nélkül."""
+    """Kapcsolja a következő adag receptjét a futó gyártás megszakítása nélkül."""
     initialize_processing_plant(plant)
     if recipe_id not in get_processing_recipe_ids(plant):
         return False
-    plant["active_recipe"] = recipe_id
+    if plant.get("active_recipe") == recipe_id:
+        plant["active_recipe"] = None
+        plant["processing_status"] = PROCESSING_STATUS_STOPPED
+    else:
+        plant["active_recipe"] = recipe_id
+        plant["processing_status"] = (
+            PROCESSING_STATUS_PROCESSING
+            if plant.get("processing_batch") is not None
+            else PROCESSING_STATUS_WAITING
+        )
     return True
 
 
@@ -162,7 +172,14 @@ def start_processing_batch(plant, elapsed_week=None):
     if elapsed_week is not None:
         plant["processing_week"] = elapsed_week
     if plant.get("processing_batch") is not None:
-        plant["processing_status"] = PROCESSING_STATUS_PROCESSING
+        plant["processing_status"] = (
+            PROCESSING_STATUS_STOPPED
+            if plant.get("active_recipe") is None
+            else PROCESSING_STATUS_PROCESSING
+        )
+        return 0
+    if plant.get("active_recipe") is None:
+        plant["processing_status"] = PROCESSING_STATUS_STOPPED
         return 0
     recipe = PROCESSING_RECIPES[plant["active_recipe"]]
     batches = recipe["weekly_capacity"] // recipe["output_amount"]
@@ -230,12 +247,13 @@ def run_weekly_processing_cycle(
         current_ticks=None):
     """Minden üzemet egyszer futtat, majd csak a heti hiányt szerzi be."""
     for plant in get_processing_plants(buildings):
-        recipe = PROCESSING_RECIPES.get(plant.get("active_recipe"))
-        if recipe is None:
-            continue
         plant["processing_week"] = elapsed_week
         plant["processed_this_week"] = 0
         complete_processing_batch(plant, elapsed_week)
+        recipe = PROCESSING_RECIPES.get(plant.get("active_recipe"))
+        if recipe is None:
+            plant["processing_status"] = PROCESSING_STATUS_STOPPED
+            continue
         start_processing_batch(plant, elapsed_week)
         if plant.get("processing_batch") is not None:
             continue

@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- A Feldolgozó üzem most már a kijelölt recept ismételt megnyomásával leállítható; recept nélkül nem indít új gyártást, nem rendel alapanyagot és nem küld járművet, miközben a már folyamatban lévő adag még szabályosan elkészül.
+
 - Átalakult a Feldolgozó üzem popupja: az új, teljes sorában kattintható „Gyártandó termék” szekció egyszerre egy aktív recept kiválasztását teszi lehetővé, és előkészíti a későbbi többtermékes gyártást a folyamatban lévő adag megszakítása nélkül.
 
 - A Feldolgozó üzem mostantól átfedéses, folyamatos heti gyártási ciklust használ: az előző heti adag elkészülte után ugyanabban a heti eseményben elindulhat a következő alapanyag-ellátás és gyártás, így megszűnt a minden második heti üresjárat.

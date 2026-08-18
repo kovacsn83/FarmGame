@@ -103,6 +103,44 @@ class ProcessingPlantTests(unittest.TestCase):
         self.assertTrue(info.open_for_building(plant))
         self.assertEqual("processing_plant", info.building_type)
 
+    def test_selected_product_row_toggles_the_plant_off_and_on(self):
+        plant = place_building(
+            self.world, self.buildings, 8, 8, "processing_plant",
+        )
+        info = InfoPanel()
+        self.assertTrue(info.open_for_building(plant))
+        surface = pygame.Surface((1000, 800))
+        font = pygame.font.Font(None, 20)
+        state = GameState(
+            self.world, [], self.buildings, Economy(),
+            GameTime(start_ticks=0),
+        )
+        info.draw(surface, font, state)
+        row = info.processing_recipe_rects["canned_tomato"]
+
+        info.handle_event(pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN, {"pos": row.center, "button": 1},
+        ))
+        self.assertIsNone(plant["active_recipe"])
+
+        captured_text = []
+        original_draw_text = info.draw_text
+
+        def capture_text(screen, draw_font, text, x, y):
+            captured_text.append(text)
+            original_draw_text(screen, draw_font, text, x, y)
+
+        with patch.object(info, "draw_text", side_effect=capture_text):
+            info.draw(surface, font, state)
+        self.assertIn("Állapot: Leállítva", captured_text)
+        self.assertIn("  Nincs kiválasztott termék.", captured_text)
+
+        row = info.processing_recipe_rects["canned_tomato"]
+        info.handle_event(pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN, {"pos": row.center, "button": 1},
+        ))
+        self.assertEqual("canned_tomato", plant["active_recipe"])
+
     def test_product_rows_select_the_next_recipe_without_stopping_active_batch(self):
         second_recipe = {
             "name": "Almalé",
@@ -197,6 +235,7 @@ class ProcessingPlantTests(unittest.TestCase):
             "inputs": {"tomato": 3},
             "outputs": {"canned_tomato": 3},
         }
+        plant["active_recipe"] = None
         state = GameState(
             self.world, [], self.buildings, Economy(), GameTime(start_ticks=0),
         )
@@ -216,6 +255,7 @@ class ProcessingPlantTests(unittest.TestCase):
         self.assertEqual(12, loaded["processing_week"])
         self.assertEqual(3, loaded["processed_this_week"])
         self.assertEqual(12, loaded["processing_batch"]["started_week"])
+        self.assertIsNone(loaded["active_recipe"])
         self.assertEqual(
             3, loaded["processing_batch"]["outputs"]["canned_tomato"],
         )

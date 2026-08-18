@@ -12,9 +12,11 @@ from economy import Economy
 from financial_history import EXPENSE_PROCESSING_INPUT, EXPENSE_SHIPPING
 from inventory import get_marketable_item_ids
 from processing import (
-    PROCESSING_STATUS_NO_MONEY, PROCESSING_STORAGE_CAPACITY,
+    PROCESSING_STATUS_NO_MONEY, PROCESSING_STATUS_STOPPED,
+    PROCESSING_STORAGE_CAPACITY,
     complete_processing_batch, get_processing_in_transit,
-    initialize_processing_plant, start_processing_batch,
+    initialize_processing_plant, select_processing_recipe,
+    start_processing_batch,
     run_weekly_processing_cycle,
 )
 from time_system import GameTime, TIME_SLOW
@@ -31,6 +33,15 @@ class _ReservationManager:
             plant["processing_in_transit"].get(item_id, 0) + amount
         )
         return amount
+
+
+class _CountingReservationManager(_ReservationManager):
+    def __init__(self):
+        self.requests = 0
+
+    def start_processing_supply(self, *args, **kwargs):
+        self.requests += 1
+        return super().start_processing_supply(*args, **kwargs)
 
 
 class ProcessingProductionTests(unittest.TestCase):
@@ -117,6 +128,38 @@ class ProcessingProductionTests(unittest.TestCase):
         run_weekly_processing_cycle([], [plant], economy, manager, 3)
         self.assertEqual(10, plant["processing_inventory"]["canned_tomato"])
         self.assertIsNotNone(plant["processing_batch"])
+
+    def test_stopped_plant_finishes_current_batch_without_new_procurement(self):
+        plant = self._plant()
+        plant["processing_inventory"]["tomato"] = 5
+        self.assertEqual(5, start_processing_batch(plant, 1))
+        self.assertTrue(select_processing_recipe(plant, "canned_tomato"))
+        self.assertIsNone(plant["active_recipe"])
+
+        warehouse = {
+            "type": "warehouse", "row": 2, "col": 10,
+            "width": 5, "height": 4, "capacity": 500,
+            "inventory": {"tomato": 20},
+        }
+        economy = Economy(starting_money=1000)
+        manager = _CountingReservationManager()
+        run_weekly_processing_cycle(
+            [], [warehouse, plant], economy, manager, 2,
+        )
+
+        self.assertEqual(5, plant["processing_inventory"]["canned_tomato"])
+        self.assertIsNone(plant["processing_batch"])
+        self.assertEqual(PROCESSING_STATUS_STOPPED, plant["processing_status"])
+        self.assertEqual(0, manager.requests)
+        self.assertEqual(20, warehouse["inventory"]["tomato"])
+        self.assertEqual(1000, economy.money)
+
+        run_weekly_processing_cycle(
+            [], [warehouse, plant], economy, manager, 3,
+        )
+        self.assertEqual(5, plant["processing_inventory"]["canned_tomato"])
+        self.assertIsNone(plant["processing_batch"])
+        self.assertEqual(0, manager.requests)
 
     def test_real_tractor_and_trailer_deliver_only_on_arrival(self):
         world = [[ROAD for _ in range(40)] for _ in range(40)]

@@ -39,7 +39,7 @@ from orchards import TREE_TYPES
 from processing import (
     PROCESSING_RECIPES, PROCESSING_STATUS_FULL, PROCESSING_STATUS_IN_TRANSIT,
     PROCESSING_STATUS_NO_MONEY, PROCESSING_STATUS_PROCESSING,
-    PROCESSING_STATUS_READY,
+    PROCESSING_STATUS_READY, PROCESSING_STATUS_STOPPED,
     get_processing_inventory_used, get_processing_output_ids,
     get_processing_recipe_ids, initialize_processing_plant,
     select_processing_recipe,
@@ -1372,9 +1372,9 @@ class InfoPanel(PopupWindow):
     def _draw_processing_plant(self, screen, font):
         """Az üzem termékválasztását, készletét és állapotát mutatja."""
         initialize_processing_plant(self.building)
-        recipe = PROCESSING_RECIPES[self.building["active_recipe"]]
+        active_recipe_id = self.building.get("active_recipe")
+        recipe = PROCESSING_RECIPES.get(active_recipe_id)
         inventory = self.building["processing_inventory"]
-        input_id = recipe["input_product"]
         recipe_ids = get_processing_recipe_ids(self.building)
         output_ids = get_processing_output_ids(self.building)
         status_labels = {
@@ -1385,8 +1385,17 @@ class InfoPanel(PopupWindow):
             ),
             PROCESSING_STATUS_FULL: "Üzemi raktár megtelt",
             PROCESSING_STATUS_PROCESSING: "Gyártás folyamatban",
+            PROCESSING_STATUS_STOPPED: "Leállítva",
             "waiting_input": "Alapanyagra vár",
         }
+        weekly_capacity = (
+            recipe["weekly_capacity"] if recipe is not None
+            else max(
+                (PROCESSING_RECIPES[item_id]["weekly_capacity"]
+                 for item_id in recipe_ids),
+                default=0,
+            )
+        )
         visible_recipe_rows = min(
             len(recipe_ids), PROCESSING_RECIPE_VISIBLE_ROWS,
         )
@@ -1403,7 +1412,7 @@ class InfoPanel(PopupWindow):
         y += 38
         self.draw_text(
             screen, font,
-            f"Heti kapacitás: {recipe['weekly_capacity']} db", x, y,
+            f"Heti kapacitás: {weekly_capacity} db", x, y,
         )
         y += 28
         self.draw_text(
@@ -1451,7 +1460,7 @@ class InfoPanel(PopupWindow):
                 PROCESSING_RECIPE_CHECKBOX_SIZE,
             )
             pygame.draw.rect(screen, INFO_PANEL_BORDER, checkbox, 1)
-            if recipe_id == self.building["active_recipe"]:
+            if recipe_id == active_recipe_id:
                 pygame.draw.lines(
                     screen, PROCESSING_RECIPE_CHECK_COLOR, False,
                     (
@@ -1470,11 +1479,15 @@ class InfoPanel(PopupWindow):
 
         self.draw_text(screen, font, "Alapanyag:", x, y)
         y += 26
-        self.draw_text(
-            screen, font,
-            f"  {get_inventory_item_name(input_id)}: "
-            f"{inventory.get(input_id, 0)} db", x, y,
-        )
+        if recipe is None:
+            self.draw_text(screen, font, "  Nincs kiválasztott termék.", x, y)
+        else:
+            input_id = recipe["input_product"]
+            self.draw_text(
+                screen, font,
+                f"  {get_inventory_item_name(input_id)}: "
+                f"{inventory.get(input_id, 0)} db", x, y,
+            )
         y += 38
         self.draw_text(screen, font, "Késztermékek:", x, y)
         y += 26
@@ -1488,6 +1501,7 @@ class InfoPanel(PopupWindow):
         y += 10
         self.draw_text(
             screen, font,
+            "Állapot: Leállítva" if active_recipe_id is None else
             f"Állapot: {status_labels.get(self.building['processing_status'], 'Alapanyagra vár')}",
             x, y,
         )

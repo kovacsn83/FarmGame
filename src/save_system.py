@@ -465,7 +465,10 @@ def _validate_inventory(building):
         )
         return (
             building.get("processing_capacity") == PROCESSING_STORAGE_CAPACITY
-            and building.get("active_recipe") in PROCESSING_RECIPES
+            and (
+                building.get("active_recipe") is None
+                or building.get("active_recipe") in PROCESSING_RECIPES
+            )
             and isinstance(inventory, dict)
             and all(
                 item_id in get_inventory_item_ids()
