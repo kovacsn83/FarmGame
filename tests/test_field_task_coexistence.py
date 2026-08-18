@@ -150,6 +150,30 @@ class FieldTaskCoexistenceTests(unittest.TestCase):
         ))
         self.assertEqual(self.manager.reserved_fertilizer, reserved)
 
+    def test_automatic_treatments_share_pipeline_but_do_not_emit_quest_events(self):
+        quest_events = []
+        self.manager.quest_event_handler = quest_events.append
+        self.assertTrue(self.manager.start_watering(
+            self.world, self.buildings, self.economy, self.field,
+            current_ticks=0, source="automatic",
+        ))
+        self.assertTrue(self.manager.start_fertilizing(
+            self.world, self.buildings, self.economy, self.field,
+            current_ticks=0, source="automatic",
+        ))
+        tasks = [
+            task for task in self.manager._all_tasks()
+            if task.field is self.field
+        ]
+        self.assertEqual(len(tasks), 2)
+        self.assertTrue(all(not task.manually_initiated for task in tasks))
+
+        self._run_to_idle()
+
+        self.assertTrue(self.field["watered"])
+        self.assertTrue(self.field["fertilized"])
+        self.assertEqual(quest_events, [])
+
     def test_treatments_finish_before_later_harvest(self):
         self.manager._create_managed_asset(
             VehicleType.COMBINE, self.garage, 2,

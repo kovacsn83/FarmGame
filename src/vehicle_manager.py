@@ -114,6 +114,7 @@ class VehicleManager:
         self.task_queue = deque()
         self.next_task_order = 1
         self.quest_event_handler = None
+        self.field_automation_handler = None
 
     @property
     def tractors(self):
@@ -444,35 +445,42 @@ class VehicleManager:
         return True
 
     def start_fertilizing(
-            self, world, buildings, economy, field, current_ticks=None):
+            self, world, buildings, economy, field, current_ticks=None,
+            source="manual"):
         """Egy Trágyát lefoglal, majd a közös FIFO sorba teszi a mezőmunkát."""
+        report = source == "manual"
         task_vehicles = self.vehicles_for_task(TASK_FERTILIZING)
         if not task_vehicles:
-            log("A trágyázáshoz traktor szükséges.", "Fertilizing")
+            if report:
+                log("A trágyázáshoz traktor szükséges.", "Fertilizing")
             return False
         if self.has_pending_field_task(field, TASK_FERTILIZING):
-            log(
-                "A trágyázás már folyamatban van vagy várakozik.",
-                "Fertilizing",
-            )
+            if report:
+                log(
+                    "A trágyázás már folyamatban van vagy várakozik.",
+                    "Fertilizing",
+                )
             return False
         if not can_fertilize_field(field, include_task_status=False):
-            log(
-                "Nincs trágyázható növény a kijelölt területen.",
-                "Fertilizing",
-            )
+            if report:
+                log(
+                    "Nincs trágyázható növény a kijelölt területen.",
+                    "Fertilizing",
+                )
             return False
 
         fertilizer_cost = get_field_fertilizer_cost(field)
         if fertilizer_cost is None:
-            log(
-                "A termőföld Trágya-igénye nincs beállítva.",
-                "Fertilizing",
-            )
+            if report:
+                log(
+                    "A termőföld Trágya-igénye nincs beállítva.",
+                    "Fertilizing",
+                )
             return False
         manure_amount = get_total_inventory(buildings).get("manure", 0)
         if manure_amount - self.reserved_fertilizer < fertilizer_cost:
-            log("Nincs elegendő trágya a raktárban.", "Fertilizing")
+            if report:
+                log("Nincs elegendő trágya a raktárban.", "Fertilizing")
             return False
 
         has_road_connection = False
@@ -492,13 +500,15 @@ class VehicleManager:
                 has_reachable_tractor = True
                 break
         if not has_road_connection:
-            log("A veteményes nem érhető el útról.", "Fertilizing")
+            if report:
+                log("A veteményes nem érhető el útról.", "Fertilizing")
             return False
         if not has_reachable_tractor:
-            log(
-                "Egyik traktor sem talál útvonalat a veteményeshez.",
-                "Fertilizing",
-            )
+            if report:
+                log(
+                    "Egyik traktor sem talál útvonalat a veteményeshez.",
+                    "Fertilizing",
+                )
             return False
 
         self.task_queue.append(FieldTask(
@@ -508,14 +518,15 @@ class VehicleManager:
             resource_reserved=True,
             resource_amount=fertilizer_cost,
             creation_order=self._take_task_order(),
+            manually_initiated=report,
         ))
         self._set_waiting_statuses()
         self._dispatch_tasks(
             world, buildings, economy, current_ticks=current_ticks,
         )
-        if field.get("vehicle_task_status") == "active":
+        if report and field.get("vehicle_task_status") == "active":
             log("Trágyázási feladat elindítva.", "Fertilizing")
-        else:
+        elif report:
             log(
                 "Trágyázási feladat hozzáadva a közös várólistához.",
                 "Fertilizing",
@@ -523,25 +534,32 @@ class VehicleManager:
         return True
 
     def start_watering(
-            self, world, buildings, economy, field, current_ticks=None):
+            self, world, buildings, economy, field, current_ticks=None,
+            source="manual"):
         """Ellenőrzi és a közös Dispatcherhez adja a teljes locsolási munkát."""
+        report = source == "manual"
         if field is None:
-            log("A kijelölt helyen nincs Veteményes.", "Watering")
+            if report:
+                log("A kijelölt helyen nincs Veteményes.", "Watering")
             return False
         if field.get("crop") is None:
-            log("Az üres Veteményes nem locsolható.", "Watering")
+            if report:
+                log("Az üres Veteményes nem locsolható.", "Watering")
             return False
         if field.get("watered", False):
-            log("Ez a Veteményes már meg van locsolva.", "Watering")
+            if report:
+                log("Ez a Veteményes már meg van locsolva.", "Watering")
             return False
         if self.has_pending_field_task(field, TASK_WATERING):
-            log(
-                "A locsolás már folyamatban van vagy várakozik.",
-                "Watering",
-            )
+            if report:
+                log(
+                    "A locsolás már folyamatban van vagy várakozik.",
+                    "Watering",
+                )
             return False
         if not can_water_field(field, include_task_status=False):
-            log("Ez a Veteményes jelenleg nem locsolható.", "Watering")
+            if report:
+                log("Ez a Veteményes jelenleg nem locsolható.", "Watering")
             return False
 
         ponds = [
@@ -549,17 +567,20 @@ class VehicleManager:
             if building.get("type") == "pond"
         ]
         if not ponds:
-            log("A locsoláshoz megépített Tó szükséges.", "Watering")
+            if report:
+                log("A locsoláshoz megépített Tó szükséges.", "Watering")
             return False
         water_tanks = [
             implement for implement in self.implements
             if implement.vehicle_type == VehicleType.WATER_TANK
         ]
         if not water_tanks:
-            log("A locsoláshoz Locsolótartály szükséges.", "Watering")
+            if report:
+                log("A locsoláshoz Locsolótartály szükséges.", "Watering")
             return False
         if not self.tractors:
-            log("A locsoláshoz Traktor szükséges.", "Watering")
+            if report:
+                log("A locsoláshoz Traktor szükséges.", "Watering")
             return False
 
         assignment = self._find_watering_assignment(
@@ -567,10 +588,11 @@ class VehicleManager:
             use_parking_start=True,
         )
         if assignment is None:
-            log(
-                "Nem található összefüggő útvonal a Garázs, a Tó és a "
-                "Veteményes között.", "Watering",
-            )
+            if report:
+                log(
+                    "Nem található összefüggő útvonal a Garázs, a Tó és a "
+                    "Veteményes között.", "Watering",
+                )
             return False
         task = FieldTask(
             field=field,
@@ -579,15 +601,16 @@ class VehicleManager:
             required_implement_type=VehicleType.WATER_TANK,
             source_type="pond",
             creation_order=self._take_task_order(),
+            manually_initiated=report,
         )
         self.task_queue.append(task)
         self._set_waiting_statuses()
         self._dispatch_tasks(
             world, buildings, economy, current_ticks=current_ticks,
         )
-        if field.get("vehicle_task_status") == "active":
+        if report and field.get("vehicle_task_status") == "active":
             log("Locsolási feladat létrehozva.", "Watering")
-        else:
+        elif report:
             log("Locsolási feladat várólistára helyezve.", "Dispatcher")
         return True
 
@@ -1419,12 +1442,20 @@ class VehicleManager:
     def update(
             self, world, buildings, economy, game_time,
             current_ticks=None):
+        field_became_treatable = False
         for vehicle in self.vehicles:
             active_task = vehicle.current_task
             completed = vehicle.update(
                 world, buildings, economy, game_time,
                 current_ticks=current_ticks,
             )
+            if (
+                completed
+                and active_task is not None
+                and active_task.status == "completed"
+                and active_task.task_type in (TASK_PLANTING, TASK_HARVESTING)
+            ):
+                field_became_treatable = True
             if (
                 completed
                 and active_task is not None
@@ -1442,6 +1473,7 @@ class VehicleManager:
                 and active_task is not None
                 and active_task.status == "completed"
                 and active_task.task_type in (TASK_WATERING, TASK_FERTILIZING)
+                and active_task.manually_initiated
                 and self.quest_event_handler is not None
             ):
                 field_event = (
@@ -1490,6 +1522,8 @@ class VehicleManager:
         self._dispatch_tasks(
             world, buildings, economy, current_ticks=current_ticks,
         )
+        if field_became_treatable and self.field_automation_handler is not None:
+            self.field_automation_handler(current_ticks)
         for vehicle in self.vehicles:
             if vehicle.state == TRACTOR_AWAITING_ASSIGNMENT:
                 self._handle_task_completion(

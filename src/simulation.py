@@ -17,6 +17,11 @@ from animal_automation import (
     AUTOMATED_FEEDING_UPGRADE, AUTOMATED_WATERING_UPGRADE,
     run_weekly_animal_supply_automation,
 )
+from field_automation import (
+    AUTOMATED_FIELD_FERTILIZING_UPGRADE,
+    AUTOMATED_FIELD_WATERING_UPGRADE,
+    run_field_automation,
+)
 from bank import BankSystem, LOAN_INTEREST_PERCENT
 from animals import (
     get_animal_placement_error, get_animals_in_pen_group, get_pen_group_tiles,
@@ -331,6 +336,17 @@ class SimulationBot:
             if self.economy.money >= UPGRADES[upgrade_id]["price"] + reserve:
                 self.purchase_upgrade(upgrade_id)
 
+    def _purchase_field_automation(self):
+        """Tartalék mellett bekapcsolja a valódi mezőmunka-automatizálást."""
+        reserve = 5000.00
+        for upgrade_id in (
+                AUTOMATED_FIELD_WATERING_UPGRADE,
+                AUTOMATED_FIELD_FERTILIZING_UPGRADE):
+            if upgrade_id in self.state.purchased_upgrades:
+                continue
+            if self.economy.money >= UPGRADES[upgrade_id]["price"] + reserve:
+                self.purchase_upgrade(upgrade_id)
+
     def _has_pending_vehicle_work(self):
         return bool(self.vehicles.task_queue) or any(
             vehicle.state != TRACTOR_IDLE or vehicle.current_task is not None
@@ -451,12 +467,18 @@ class SimulationBot:
                     self._record_money_change(self.year, before, "seed_purchase")
                     self.drain_vehicle_tasks()
             if field.get("crop") is not None and field.get("growth", 0) < 100:
-                if not field.get("watered", False):
+                if (
+                    AUTOMATED_FIELD_WATERING_UPGRADE
+                    not in self.state.purchased_upgrades
+                    and not field.get("watered", False)
+                ):
                     if self.vehicles.start_watering(
                             self.world, self.buildings, self.economy, field,
                             current_ticks=self.virtual_ticks):
                         self.drain_vehicle_tasks()
-                if (not field.get("fertilized", False)
+                if (AUTOMATED_FIELD_FERTILIZING_UPGRADE
+                        not in self.state.purchased_upgrades
+                        and not field.get("fertilized", False)
                         and get_total_inventory(self.buildings).get("manure", 0) > 0):
                     if self.vehicles.start_fertilizing(
                             self.world, self.buildings, self.economy, field,
@@ -505,9 +527,15 @@ class SimulationBot:
     def run_week(self):
         """A prioritási sorrend: ellátás, aratás/vetés, gondozás, eladás, heti ciklus."""
         self._purchase_animal_automation()
+        self._purchase_field_automation()
         self._supply_animals()
         self._harvest()
         self._plant_and_tend()
+        if run_field_automation(
+                self.world, self.buildings, self.economy, self.fields,
+                self.vehicles, self.state.purchased_upgrades,
+                current_ticks=self.virtual_ticks):
+            self.drain_vehicle_tasks()
         self._sell_market_surplus()
 
         year = self.year
@@ -558,6 +586,11 @@ class SimulationBot:
         run_weekly_animal_cycle(self.animals, self.buildings, self.economy)
         if run_weekly_animal_supply_automation(
                 self.world, self.buildings, self.economy, self.animals,
+                self.vehicles, self.state.purchased_upgrades,
+                current_ticks=self.virtual_ticks):
+            self.drain_vehicle_tasks()
+        if run_field_automation(
+                self.world, self.buildings, self.economy, self.fields,
                 self.vehicles, self.state.purchased_upgrades,
                 current_ticks=self.virtual_ticks):
             self.drain_vehicle_tasks()

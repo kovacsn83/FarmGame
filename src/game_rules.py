@@ -101,6 +101,28 @@ UPGRADES = {
         "state_key": "automated_animal_watering",
         "requires": None,
     },
+    "automated_field_watering": {
+        "name": "Automatizált veteményes locsolás",
+        "description": (
+            "Amikor egy Veteményes locsolhatóvá válik, automatikusan "
+            "Locsolási feladat indul."
+        ),
+        "price": 20000.00,
+        "unlocks": "automated_field_watering",
+        "state_key": "automated_field_watering",
+        "requires": None,
+    },
+    "automated_field_fertilizing": {
+        "name": "Automatizált veteményes trágyázás",
+        "description": (
+            "Amikor egy Veteményes trágyázhatóvá válik, automatikusan "
+            "Trágyázási feladat indul."
+        ),
+        "price": 20000.00,
+        "unlocks": "automated_field_fertilizing",
+        "state_key": "automated_field_fertilizing",
+        "requires": None,
+    },
 }
 
 

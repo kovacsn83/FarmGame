@@ -1,5 +1,8 @@
 # CHANGELOG
 
+- Két új, külön megvásárolható Farmház-fejlesztés készült: az Automatizált veteményes locsolás és az Automatizált veteményes trágyázás, egyenként $20 000 áron.
+- Az automatizálások a kézi eszközökkel közös Dispatcher- és járműfolyamatot használják, a feladatokat szükség esetén várólistára teszik, és megakadályozzák az azonos típusú duplikációkat.
+
 - A Piac dinamikus, kétoszlopos és nagy termékszámnál görgethető kártyaelrendezést kapott; a lista clippinget és clampelt scrollt használ, az egérgörgő, valamint a jobb és középső gomb pedig többé nem indíthat téves értékesítést.
 
 - A Paradicsomkonzerv mostantól $32/db áron eladható a Piacon; több Feldolgozó üzem készlete összeadódik, az eladás közvetlenül az üzemi raktárakból fogyaszt, bevétele pedig az új „Feldolgozott termékek értékesítése” pénzügyi kategóriába kerül.

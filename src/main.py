@@ -10,6 +10,11 @@ from animal_troughs import (
     synchronize_pen_group_stocks,
 )
 from animal_automation import run_weekly_animal_supply_automation
+from field_automation import (
+    AUTOMATED_FIELD_FERTILIZING_UPGRADE,
+    AUTOMATED_FIELD_WATERING_UPGRADE,
+    run_field_automation,
+)
 from asset_loader import load_grass_tiles
 from bank import BankSystem
 from camera import Camera
@@ -174,6 +179,13 @@ def main():
         else:
             quest_manager.hide()
         vehicles.quest_event_handler = quest_manager.record_event
+        vehicles.field_automation_handler = lambda current_ticks: (
+            run_field_automation(
+                world, buildings, economy, fields, vehicles,
+                game_state.purchased_upgrades,
+                current_ticks=current_ticks,
+            )
+        )
         quest_panel = QuestPanel(create_quest_icon())
         road_drag = RoadDragState()
         camera.update_world_size(len(world[0]), len(world))
@@ -192,6 +204,11 @@ def main():
         camera.update_world_size(len(world[0]) if world else 0, len(world))
         camera.reset()
         animal_movement.reset()
+        run_field_automation(
+            world, buildings, economy, fields, vehicles,
+            game_state.purchased_upgrades,
+            current_ticks=pygame.time.get_ticks(),
+        )
         app_state.start_playing()
 
     def resume_after_bank():
@@ -210,7 +227,15 @@ def main():
                     quest_manager.record_event(QUEST_EVENT_MILK_SOLD)
         upgrade_to_purchase = info_panel.take_upgrade_selection()
         if upgrade_to_purchase is not None:
-            economy.purchase_upgrade(game_state, upgrade_to_purchase)
+            purchased = economy.purchase_upgrade(game_state, upgrade_to_purchase)
+            if purchased and upgrade_to_purchase in (
+                    AUTOMATED_FIELD_WATERING_UPGRADE,
+                    AUTOMATED_FIELD_FERTILIZING_UPGRADE):
+                run_field_automation(
+                    world, buildings, economy, fields, vehicles,
+                    game_state.purchased_upgrades,
+                    current_ticks=pygame.time.get_ticks(),
+                )
         vehicle_purchase = info_panel.take_vehicle_purchase()
         if vehicle_purchase is not None:
             garage, vehicle_type = vehicle_purchase
@@ -796,6 +821,11 @@ def main():
                 )
                 run_weekly_animal_supply_automation(
                     world, buildings, economy, animals, vehicles,
+                    game_state.purchased_upgrades,
+                    current_ticks=pygame.time.get_ticks(),
+                )
+                run_field_automation(
+                    world, buildings, economy, fields, vehicles,
                     game_state.purchased_upgrades,
                     current_ticks=pygame.time.get_ticks(),
                 )
