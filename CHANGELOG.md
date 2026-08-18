@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Átalakult a Feldolgozó üzem popupja: az új, teljes sorában kattintható „Gyártandó termék” szekció egyszerre egy aktív recept kiválasztását teszi lehetővé, és előkészíti a későbbi többtermékes gyártást a folyamatban lévő adag megszakítása nélkül.
+
 - A Feldolgozó üzem mostantól átfedéses, folyamatos heti gyártási ciklust használ: az előző heti adag elkészülte után ugyanabban a heti eseményben elindulhat a következő alapanyag-ellátás és gyártás, így megszűnt a minden második heti üresjárat.
 
 - Elkészült a Feldolgozó üzem első működő, adatvezérelt termelési rendszere: az első recept 1 Paradicsomból 1 Paradicsomkonzervet készít, üzemenként heti legfeljebb 5 darabot.

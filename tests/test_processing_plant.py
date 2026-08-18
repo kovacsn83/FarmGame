@@ -3,6 +3,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -22,6 +23,9 @@ from constants import (
 from economy import Economy
 from game_state import GameState
 from maintenance import calculate_annual_maintenance
+from processing import (
+    PROCESSING_RECIPES, complete_processing_batch, start_processing_batch,
+)
 from save_system import load_game, save_game
 from screen_layout import set_camera, set_screen_size, world_to_screen
 from time_system import GameTime
@@ -98,6 +102,86 @@ class ProcessingPlantTests(unittest.TestCase):
         info = InfoPanel()
         self.assertTrue(info.open_for_building(plant))
         self.assertEqual("processing_plant", info.building_type)
+
+    def test_product_rows_select_the_next_recipe_without_stopping_active_batch(self):
+        second_recipe = {
+            "name": "Almalé",
+            "input_product": "wheat",
+            "input_amount": 1,
+            "output_product": "apple",
+            "output_amount": 1,
+            "weekly_capacity": 5,
+        }
+        with (
+            patch.dict(PROCESSING_RECIPES, {"apple_juice": second_recipe}),
+            patch.dict(
+                BUILDING_TYPES["processing_plant"],
+                {"recipes": ("canned_tomato", "apple_juice")},
+            ),
+        ):
+            plant = place_building(
+                self.world, self.buildings, 8, 8, "processing_plant",
+            )
+            plant["processing_inventory"]["tomato"] = 1
+            plant["processing_inventory"]["wheat"] = 5
+            self.assertEqual(1, start_processing_batch(plant, 1))
+
+            info = InfoPanel()
+            self.assertTrue(info.open_for_building(plant))
+            surface = pygame.Surface((1000, 800))
+            font = pygame.font.Font(None, 20)
+            state = GameState(
+                self.world, [], self.buildings, Economy(),
+                GameTime(start_ticks=0),
+            )
+            captured_text = []
+            original_draw_text = info.draw_text
+
+            def capture_text(screen, draw_font, text, x, y):
+                captured_text.append(text)
+                original_draw_text(screen, draw_font, text, x, y)
+
+            with patch.object(info, "draw_text", side_effect=capture_text):
+                info.draw(surface, font, state)
+
+            self.assertNotIn("Aktív recept", "\n".join(captured_text))
+            self.assertIn("Gyártandó termék:", captured_text)
+            self.assertEqual(
+                {"canned_tomato", "apple_juice"},
+                set(info.processing_recipe_rects),
+            )
+
+            row = info.processing_recipe_rects["apple_juice"]
+            info.handle_event(pygame.event.Event(
+                pygame.MOUSEBUTTONDOWN, {"pos": row.center, "button": 1},
+            ))
+            self.assertEqual("apple_juice", plant["active_recipe"])
+            self.assertEqual(
+                "canned_tomato", plant["processing_batch"]["recipe_id"],
+            )
+
+            self.assertEqual(1, complete_processing_batch(plant, 2))
+            self.assertEqual(5, start_processing_batch(plant, 2))
+            self.assertEqual(
+                "apple_juice", plant["processing_batch"]["recipe_id"],
+            )
+
+            captured_text.clear()
+            with patch.object(info, "draw_text", side_effect=capture_text):
+                info.draw(surface, font, state)
+            self.assertIn("  Búza: 0 db", captured_text)
+            self.assertIn("  Paradicsomkonzerv: 1 db", captured_text)
+            self.assertIn("  Alma: 0 db", captured_text)
+
+            with tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / "selected-processing-recipe.json"
+                self.assertTrue(save_game(state, path))
+                self.assertTrue(load_game(state, path))
+            loaded = state.buildings[0]
+            self.assertEqual("apple_juice", loaded["active_recipe"])
+            self.assertEqual(
+                "apple_juice", loaded["processing_batch"]["recipe_id"],
+            )
 
     def test_save_load_preserves_position_and_footprint(self):
         plant = place_building(

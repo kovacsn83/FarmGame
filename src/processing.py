@@ -1,6 +1,6 @@
 """Adatvezérelt feldolgozóipari receptek és heti termelési ciklus."""
 
-from buildings import get_total_inventory, store_item
+from buildings import BUILDING_TYPES, get_total_inventory, store_item
 from crops import CROPS
 from financial_history import EXPENSE_PROCESSING_INPUT
 from game_logger import log
@@ -36,7 +36,12 @@ def initialize_processing_plant(plant):
     if not isinstance(inventory, dict):
         inventory = {}
         plant["processing_inventory"] = inventory
-    for item_id in ("tomato", "canned_tomato"):
+    inventory_item_ids = {
+        item_id
+        for recipe in PROCESSING_RECIPES.values()
+        for item_id in (recipe["input_product"], recipe["output_product"])
+    }
+    for item_id in inventory_item_ids:
         inventory.setdefault(item_id, 0)
     plant.setdefault("processing_capacity", PROCESSING_STORAGE_CAPACITY)
     plant.setdefault("active_recipe", DEFAULT_PROCESSING_RECIPE)
@@ -46,6 +51,35 @@ def initialize_processing_plant(plant):
     plant.setdefault("processed_this_week", 0)
     plant.setdefault("processing_batch", None)
     return plant
+
+
+def get_processing_recipe_ids(plant):
+    """Az adott üzem által választható recepteket katalógussorrendben adja."""
+    initialize_processing_plant(plant)
+    configured_ids = BUILDING_TYPES["processing_plant"].get(
+        "recipes", tuple(PROCESSING_RECIPES),
+    )
+    return tuple(
+        recipe_id for recipe_id in configured_ids
+        if recipe_id in PROCESSING_RECIPES
+    )
+
+
+def get_processing_output_ids(plant):
+    """Az üzem összes lehetséges késztermékét ismétlés nélkül adja vissza."""
+    return tuple(dict.fromkeys(
+        PROCESSING_RECIPES[recipe_id]["output_product"]
+        for recipe_id in get_processing_recipe_ids(plant)
+    ))
+
+
+def select_processing_recipe(plant, recipe_id):
+    """Kijelöli a következő adag receptjét a futó gyártás megszakítása nélkül."""
+    initialize_processing_plant(plant)
+    if recipe_id not in get_processing_recipe_ids(plant):
+        return False
+    plant["active_recipe"] = recipe_id
+    return True
 
 
 def get_processing_plants(buildings):

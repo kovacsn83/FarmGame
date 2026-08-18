@@ -40,7 +40,9 @@ from processing import (
     PROCESSING_RECIPES, PROCESSING_STATUS_FULL, PROCESSING_STATUS_IN_TRANSIT,
     PROCESSING_STATUS_NO_MONEY, PROCESSING_STATUS_PROCESSING,
     PROCESSING_STATUS_READY,
-    get_processing_inventory_used, initialize_processing_plant,
+    get_processing_inventory_used, get_processing_output_ids,
+    get_processing_recipe_ids, initialize_processing_plant,
+    select_processing_recipe,
 )
 from time_system import (
     SEASON_PERIODS, TIME_NORMAL, WEEKS_PER_YEAR, Season, format_game_time,
@@ -128,6 +130,11 @@ QUEST_IMAGE_BORDER_WIDTH = 2
 QUEST_IMAGE_BORDER_COLOR = (110, 110, 110)
 QUEST_COMPLETED_COLOR = (45, 150, 65)
 QUEST_CHECK_SIZE = 16
+
+PROCESSING_RECIPE_ROW_HEIGHT = 30
+PROCESSING_RECIPE_VISIBLE_ROWS = 4
+PROCESSING_RECIPE_CHECKBOX_SIZE = 18
+PROCESSING_RECIPE_CHECK_COLOR = (55, 105, 65)
 QUEST_CHECK_GAP = 6
 QUEST_LABEL_MAX_TEXT_WIDTH = 300
 QUEST_LABEL_LINE_GAP = 2
@@ -1238,6 +1245,10 @@ class InfoPanel(PopupWindow):
         self.building = None
         self.garage_purchase_rects = {}
         self.pending_vehicle_purchase = None
+        self.processing_recipe_rects = {}
+        self.processing_recipe_view_rect = pygame.Rect(0, 0, 0, 0)
+        self.processing_recipe_scroll = 0
+        self.processing_recipe_max_scroll = 0
 
     def open_for_building(self, building):
         """Megnyitja a panelt, ha az épülettípushoz már tartozik nézet."""
@@ -1251,8 +1262,30 @@ class InfoPanel(PopupWindow):
         self.pending_upgrade_selection = None
         self.pending_vehicle_purchase = None
         self.garage_purchase_rects = {}
+        self.processing_recipe_rects = {}
+        self.processing_recipe_scroll = 0
         self.open()
         return True
+
+    def handle_event(self, event):
+        if (
+            self.visible
+            and self.building_type == "processing_plant"
+            and event.type == pygame.MOUSEWHEEL
+            and self.processing_recipe_view_rect.collidepoint(
+                pygame.mouse.get_pos()
+            )
+        ):
+            self.processing_recipe_scroll = max(
+                0,
+                min(
+                    self.processing_recipe_max_scroll,
+                    self.processing_recipe_scroll
+                    - event.y * PROCESSING_RECIPE_ROW_HEIGHT,
+                ),
+            )
+            return True
+        return super().handle_event(event)
 
     def take_sale_selection(self):
         selection = self.pending_sale_selection
@@ -1297,6 +1330,11 @@ class InfoPanel(PopupWindow):
                 if purchase_rect.collidepoint(position):
                     self.pending_vehicle_purchase = vehicle_type
                     return True
+        elif self.building_type == "processing_plant":
+            for recipe_id, row_rect in self.processing_recipe_rects.items():
+                if row_rect.collidepoint(position):
+                    select_processing_recipe(self.building, recipe_id)
+                    return True
         return True
 
     def close(self):
@@ -1310,6 +1348,10 @@ class InfoPanel(PopupWindow):
         self.building = None
         self.garage_purchase_rects = {}
         self.pending_vehicle_purchase = None
+        self.processing_recipe_rects = {}
+        self.processing_recipe_view_rect = pygame.Rect(0, 0, 0, 0)
+        self.processing_recipe_scroll = 0
+        self.processing_recipe_max_scroll = 0
 
     def draw(self, screen, font, game_state):
         if not self.visible:
@@ -1328,12 +1370,13 @@ class InfoPanel(PopupWindow):
             self._draw_processing_plant(screen, font)
 
     def _draw_processing_plant(self, screen, font):
-        """Az üzem receptjét, saját készletét és aktuális állapotát mutatja."""
+        """Az üzem termékválasztását, készletét és állapotát mutatja."""
         initialize_processing_plant(self.building)
         recipe = PROCESSING_RECIPES[self.building["active_recipe"]]
         inventory = self.building["processing_inventory"]
         input_id = recipe["input_product"]
-        output_id = recipe["output_product"]
+        recipe_ids = get_processing_recipe_ids(self.building)
+        output_ids = get_processing_output_ids(self.building)
         status_labels = {
             PROCESSING_STATUS_READY: "Termelésre kész",
             PROCESSING_STATUS_IN_TRANSIT: "Szállítás folyamatban",
@@ -1344,32 +1387,110 @@ class InfoPanel(PopupWindow):
             PROCESSING_STATUS_PROCESSING: "Gyártás folyamatban",
             "waiting_input": "Alapanyagra vár",
         }
-        self.rect.size = (responsive_panel_width(INFO_PANEL_WIDTH), 350)
+        visible_recipe_rows = min(
+            len(recipe_ids), PROCESSING_RECIPE_VISIBLE_ROWS,
+        )
+        recipe_view_height = visible_recipe_rows * PROCESSING_RECIPE_ROW_HEIGHT
+        self.rect.size = (
+            responsive_panel_width(INFO_PANEL_WIDTH),
+            320 + recipe_view_height + len(output_ids) * 28,
+        )
         self.rect.center = get_screen_center()
         self.draw_frame(screen)
         x = self.rect.x + INFO_PANEL_PADDING
         y = self.rect.y + INFO_PANEL_PADDING
         self.draw_text(screen, font, POPUP_TITLES["processing_plant"], x, y)
         y += 38
-        lines = (
-            f"Heti kapacitás: {recipe['weekly_capacity']} db",
-            (
-                f"Aktív recept: {get_inventory_item_name(input_id)} → "
-                f"{get_inventory_item_name(output_id)}"
-            ),
-            (
-                f"Üzemi raktár: {get_processing_inventory_used(self.building)} / "
-                f"{self.building['processing_capacity']}"
-            ),
-            "Alapanyag:",
-            f"  {get_inventory_item_name(input_id)}: {inventory.get(input_id, 0)} db",
-            "Késztermék:",
-            f"  {get_inventory_item_name(output_id)}: {inventory.get(output_id, 0)} db",
-            f"Állapot: {status_labels.get(self.building['processing_status'], 'Alapanyagra vár')}",
+        self.draw_text(
+            screen, font,
+            f"Heti kapacitás: {recipe['weekly_capacity']} db", x, y,
         )
-        for line in lines:
-            self.draw_text(screen, font, line, x, y)
-            y += 30
+        y += 28
+        self.draw_text(
+            screen, font,
+            f"Üzemi raktár: {get_processing_inventory_used(self.building)} / "
+            f"{self.building['processing_capacity']}", x, y,
+        )
+        y += 38
+
+        self.draw_text(screen, font, "Gyártandó termék:", x, y)
+        y += 26
+        list_width = self.rect.width - INFO_PANEL_PADDING * 2
+        self.processing_recipe_view_rect = pygame.Rect(
+            x, y, list_width, recipe_view_height,
+        )
+        total_recipe_height = len(recipe_ids) * PROCESSING_RECIPE_ROW_HEIGHT
+        self.processing_recipe_max_scroll = max(
+            0, total_recipe_height - recipe_view_height,
+        )
+        self.processing_recipe_scroll = min(
+            self.processing_recipe_scroll, self.processing_recipe_max_scroll,
+        )
+        self.processing_recipe_rects = {}
+        previous_clip = screen.get_clip()
+        screen.set_clip(self.processing_recipe_view_rect)
+        for index, recipe_id in enumerate(recipe_ids):
+            row_y = (
+                y + index * PROCESSING_RECIPE_ROW_HEIGHT
+                - self.processing_recipe_scroll
+            )
+            row_rect = pygame.Rect(
+                x, row_y, list_width, PROCESSING_RECIPE_ROW_HEIGHT,
+            )
+            if row_rect.colliderect(self.processing_recipe_view_rect):
+                self.processing_recipe_rects[recipe_id] = row_rect.clip(
+                    self.processing_recipe_view_rect,
+                )
+            checkbox = pygame.Rect(
+                x + 2,
+                row_y + (
+                    PROCESSING_RECIPE_ROW_HEIGHT
+                    - PROCESSING_RECIPE_CHECKBOX_SIZE
+                ) // 2,
+                PROCESSING_RECIPE_CHECKBOX_SIZE,
+                PROCESSING_RECIPE_CHECKBOX_SIZE,
+            )
+            pygame.draw.rect(screen, INFO_PANEL_BORDER, checkbox, 1)
+            if recipe_id == self.building["active_recipe"]:
+                pygame.draw.lines(
+                    screen, PROCESSING_RECIPE_CHECK_COLOR, False,
+                    (
+                        (checkbox.left + 4, checkbox.centery),
+                        (checkbox.left + 8, checkbox.bottom - 4),
+                        (checkbox.right - 3, checkbox.top + 4),
+                    ),
+                    2,
+                )
+            output_name = PROCESSING_RECIPES[recipe_id]["name"]
+            self.draw_text(
+                screen, font, output_name, checkbox.right + 8, row_y + 4,
+            )
+        screen.set_clip(previous_clip)
+        y += recipe_view_height + 18
+
+        self.draw_text(screen, font, "Alapanyag:", x, y)
+        y += 26
+        self.draw_text(
+            screen, font,
+            f"  {get_inventory_item_name(input_id)}: "
+            f"{inventory.get(input_id, 0)} db", x, y,
+        )
+        y += 38
+        self.draw_text(screen, font, "Késztermékek:", x, y)
+        y += 26
+        for output_id in output_ids:
+            self.draw_text(
+                screen, font,
+                f"  {get_inventory_item_name(output_id)}: "
+                f"{inventory.get(output_id, 0)} db", x, y,
+            )
+            y += 28
+        y += 10
+        self.draw_text(
+            screen, font,
+            f"Állapot: {status_labels.get(self.building['processing_status'], 'Alapanyagra vár')}",
+            x, y,
+        )
 
     def _draw_pond(self, screen, font):
         """A későbbi öntözéshez előkészített Tó statikus adatlapja."""
