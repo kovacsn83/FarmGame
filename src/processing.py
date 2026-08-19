@@ -83,6 +83,20 @@ def get_processing_output_ids(plant):
     ))
 
 
+def get_processing_tooltip_lines(plant):
+    """A Feldolgozó üzem rövid, később további sorokkal bővíthető nézetét adja."""
+    initialize_processing_plant(plant)
+    recipe = PROCESSING_RECIPES.get(plant.get("active_recipe"))
+    product_name = recipe["name"] if recipe is not None else "Nincs kiválasztva"
+    return [
+        "Feldolgozó üzem",
+        "Termék:",
+        product_name,
+        "Raktár:",
+        f"{get_processing_inventory_used(plant)} / {plant['processing_capacity']}",
+    ]
+
+
 def select_processing_recipe(plant, recipe_id):
     """Kapcsolja a következő adag receptjét a futó gyártás megszakítása nélkül."""
     initialize_processing_plant(plant)

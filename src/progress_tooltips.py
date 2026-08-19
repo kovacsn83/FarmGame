@@ -8,6 +8,7 @@ from crops import (
     LATE_HARVEST_DURATION_WEEKS, LATE_HARVEST_YIELD_MULTIPLIER,
 )
 from orchards import find_tree_at, get_tree_tooltip_lines
+from processing import get_processing_tooltip_lines
 
 
 def format_progress(
@@ -206,6 +207,20 @@ def find_timed_object_tooltip(
             ]
 
     if buildings:
+        processing_plant = next(
+            (
+                building for building in buildings
+                if building.get("type") == "processing_plant"
+                and building.get("row", 0) <= row
+                < building.get("row", 0) + building.get("height", 0)
+                and building.get("col", 0) <= col
+                < building.get("col", 0) + building.get("width", 0)
+            ),
+            None,
+        )
+        if processing_plant is not None:
+            return get_processing_tooltip_lines(processing_plant)
+
         orchard_tree = find_tree_at(buildings, row, col)
         if orchard_tree is not None:
             _orchard, tree = orchard_tree

@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- A Feldolgozó üzem az Információ eszközzel történő hover esetén rövid tooltipet jelenít meg az aktuális késztermékről és a saját üzemi raktár kihasználtságáról.
+
 - Új Feldolgozó üzem recept készült: 5 Tejből legfeljebb 5 Sajt gyártható hetente, részleges alapanyagkészlet esetén arányosan kisebb adaggal.
 - A Sajt mostantól $16/db áron eladható a Piacon, bevétele a Feldolgozott termékek értékesítése kategóriába kerül.
 
