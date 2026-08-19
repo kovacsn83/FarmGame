@@ -64,7 +64,7 @@ PRODUCTS = {
     "chicken_meat": {
         "name": "Csirkehús",
         "marketable": True,
-        "price": 50.00,
+        "price": 60.00,
         "income_category": INCOME_LIVESTOCK_SALES,
     },
 }

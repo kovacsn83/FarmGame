@@ -115,10 +115,10 @@ class ChickenLifecycleTests(unittest.TestCase):
             self.warehouse["inventory"]["chicken_meat"],
             CHICKEN_MEAT_PER_CYCLE,
         )
-        self.assertIn("5 db csirkehús", notifications.current_message)
+        self.assertIn("6 db csirkehús", notifications.current_message)
         self.assertTrue(any(
             entry.category == "Animals"
-            and "5 db csirkehús" in entry.message
+            and "6 db csirkehús" in entry.message
             for entry in get_logger().entries
         ))
 
@@ -144,10 +144,10 @@ class ChickenLifecycleTests(unittest.TestCase):
 
         self.assertEqual(animals, [])
         self.assertEqual(self.warehouse["inventory"]["egg"], 12)
-        self.assertEqual(self.warehouse["inventory"]["chicken_meat"], 60)
+        self.assertEqual(self.warehouse["inventory"]["chicken_meat"], 72)
         self.assertEqual(
             notifications.current_message,
-            "12 csirke levágásra került. 60 db csirkehús került a raktárba.",
+            "12 csirke levágásra került. 72 db csirkehús került a raktárba.",
         )
 
     def test_feed_supply_uses_wheat_and_can_buy_market_shortage(self):
@@ -172,16 +172,22 @@ class ChickenLifecycleTests(unittest.TestCase):
     def test_egg_and_chicken_meat_are_marketable_at_catalog_prices(self):
         self.assertEqual(get_inventory_item_data("egg")["price"], 6.00)
         self.assertEqual(
-            get_inventory_item_data("chicken_meat")["price"], 50.00,
+            get_inventory_item_data("chicken_meat")["price"], 60.00,
         )
         self.assertIn("egg", get_marketable_item_ids())
         self.assertIn("chicken_meat", get_marketable_item_ids())
 
-        self.warehouse["inventory"].update({"egg": 2, "chicken_meat": 5})
+        self.warehouse["inventory"].update({"egg": 2, "chicken_meat": 6})
         economy = Economy(starting_money=0)
         self.assertTrue(economy.sell_item(self.buildings, "egg"))
         self.assertTrue(economy.sell_item(self.buildings, "chicken_meat"))
-        self.assertEqual(economy.money, 262)
+        self.assertEqual(economy.money, 372)
+        summary = economy.get_financial_summary(52)
+        self.assertEqual(summary["income"]["livestock_sales"]["total"], 372)
+        self.assertEqual(
+            summary["income"]["livestock_sales"]["items"]["chicken_meat"],
+            360,
+        )
 
     def test_tooltip_shows_age_egg_rate_and_missing_supply(self):
         chicken = {**self.chicken, "age_weeks": 12}

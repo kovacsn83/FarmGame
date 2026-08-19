@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Csirke balanszmódosítás: levágáskor mostantól 6 db Csirkehús keletkezik, amelynek piaci ára $60/db.
+
 - Javítva a Búzát szállító Pótkocsi mentési kompatibilitása; a csirketakarmány-szállítás közben készült mentések többé nem jelennek meg sérültként.
 
 - Az Almafa mostantól szezonálisan terem: termőkorban minden év 30. hetében érik be, a szüreti időszaka a 30–35. hét, a le nem szüretelt éves termés pedig ezután elveszik.

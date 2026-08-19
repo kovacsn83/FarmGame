@@ -40,7 +40,7 @@ PIG_FATTENING_WEEKS = 52
 PIG_PORK_PER_CYCLE = 10
 CHICKEN_EGGS_PER_WEEK = 1
 CHICKEN_FATTENING_WEEKS = 26
-CHICKEN_MEAT_PER_CYCLE = 5
+CHICKEN_MEAT_PER_CYCLE = 6
 
 # Az állattípusok központi katalógusa később további állatokkal bővíthető.
 ANIMAL_TYPES = {
