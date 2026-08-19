@@ -7,6 +7,15 @@ from financial_history import (
 
 # Az állati termékek a közös raktárkapacitást és az adatvezérelt piaci szabályt használják.
 PRODUCTS = {
+    "cheese": {
+        "product_id": "cheese",
+        "name": "Sajt",
+        "price": 16.00,
+        "product_category": "processed_products",
+        "income_category": INCOME_PROCESSED_PRODUCT_SALES,
+        "inventory_source": "processing_plant",
+        "marketable": True,
+    },
     "canned_tomato": {
         "product_id": "canned_tomato",
         "name": "Paradicsomkonzerv",

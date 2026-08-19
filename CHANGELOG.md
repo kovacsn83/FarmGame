@@ -1,5 +1,8 @@
 # CHANGELOG
 
+- Új Feldolgozó üzem recept készült: 5 Tejből legfeljebb 5 Sajt gyártható hetente, részleges alapanyagkészlet esetén arányosan kisebb adaggal.
+- A Sajt mostantól $16/db áron eladható a Piacon, bevétele a Feldolgozott termékek értékesítése kategóriába kerül.
+
 - Két új, külön megvásárolható Farmház-fejlesztés készült: az Automatizált veteményes locsolás és az Automatizált veteményes trágyázás, egyenként $20 000 áron.
 - Az automatizálások a kézi eszközökkel közös Dispatcher- és járműfolyamatot használják, a feladatokat szükség esetén várólistára teszik, és megakadályozzák az azonos típusú duplikációkat.
 

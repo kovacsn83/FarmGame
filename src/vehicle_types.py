@@ -73,7 +73,7 @@ VEHICLE_TYPE_DEFINITIONS = {
         "category": "towable",
         "renderer_type": "trailer",
         "parking_slots": 1,
-        "cargo_states": ("empty", "alfalfa", "corn", "tomato"),
+        "cargo_states": ("empty", "alfalfa", "corn", "tomato", "milk"),
         # A későbbi Dispatcher-integrációhoz csak leíró előkészítés.
         "future_supported_tasks": (
             "manure_transport", "feed_transport",

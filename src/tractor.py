@@ -14,6 +14,7 @@ from feed_supply import (
     deliver_feed_cargo, prepare_feed_supply, return_feed_cargo,
 )
 from game_logger import log
+from inventory import get_inventory_item_name
 from orchards import complete_tree_harvest
 from processing import receive_processing_delivery, refund_processing_delivery
 from world import tile_to_world_center
@@ -955,7 +956,7 @@ class Vehicle:
                         task.remaining_payload = task.resource_amount
                         log(
                             f"Pótkocsi megrakodva: {trailer.cargo_amount} "
-                            f"{CROPS[trailer.cargo_type]['name']}.",
+                            f"{get_inventory_item_name(trailer.cargo_type)}.",
                             "Processing",
                         )
                     elif task.task_type == TASK_SUPPLY_FEED:
@@ -1014,7 +1015,7 @@ class Vehicle:
                         completed_work = delivered == task.resource_amount
                         if completed_work:
                             log(
-                                f"{delivered} db {CROPS[task.cargo_type]['name']} "
+                                f"{delivered} db {get_inventory_item_name(task.cargo_type)} "
                                 "megérkezett a Feldolgozó üzembe.",
                                 "Processing",
                             )

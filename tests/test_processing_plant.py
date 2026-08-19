@@ -25,6 +25,7 @@ from game_state import GameState
 from maintenance import calculate_annual_maintenance
 from processing import (
     PROCESSING_RECIPES, complete_processing_batch, start_processing_batch,
+    select_processing_recipe,
 )
 from save_system import load_game, save_game
 from screen_layout import set_camera, set_screen_size, world_to_screen
@@ -57,7 +58,7 @@ class ProcessingPlantTests(unittest.TestCase):
         self.assertEqual(3000.0, definition["build_cost"])
         self.assertEqual(PROCESSING_PLANT_BUILD_COST, definition["build_cost"])
         self.assertEqual(300.0, calculate_annual_maintenance(3000.0))
-        self.assertEqual(("canned_tomato",), definition["recipes"])
+        self.assertEqual(("canned_tomato", "cheese"), definition["recipes"])
 
         panel = BuildingSelectionPanel()
         panel.open()
@@ -140,6 +141,37 @@ class ProcessingPlantTests(unittest.TestCase):
             pygame.MOUSEBUTTONDOWN, {"pos": row.center, "button": 1},
         ))
         self.assertEqual("canned_tomato", plant["active_recipe"])
+
+    def test_cheese_recipe_is_selectable_and_updates_input_and_output_rows(self):
+        plant = place_building(
+            self.world, self.buildings, 8, 8, "processing_plant",
+        )
+        info = InfoPanel()
+        self.assertTrue(info.open_for_building(plant))
+        surface = pygame.Surface((1000, 800))
+        font = pygame.font.Font(None, 20)
+        state = GameState(
+            self.world, [], self.buildings, Economy(), GameTime(start_ticks=0),
+        )
+        info.draw(surface, font, state)
+        self.assertEqual(
+            {"canned_tomato", "cheese"}, set(info.processing_recipe_rects),
+        )
+        cheese_row = info.processing_recipe_rects["cheese"]
+        info.handle_event(pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN, {"pos": cheese_row.center, "button": 1},
+        ))
+        self.assertEqual("cheese", plant["active_recipe"])
+
+        captured_text = []
+        with patch.object(
+                info, "draw_text",
+                side_effect=lambda screen, draw_font, text, x, y:
+                captured_text.append(text)):
+            info.draw(surface, font, state)
+        self.assertIn("  Tej: 0 db", captured_text)
+        self.assertIn("  Paradicsomkonzerv: 0 db", captured_text)
+        self.assertIn("  Sajt: 0 db", captured_text)
 
     def test_product_rows_select_the_next_recipe_without_stopping_active_batch(self):
         second_recipe = {
@@ -227,6 +259,7 @@ class ProcessingPlantTests(unittest.TestCase):
         )
         plant["processing_inventory"]["tomato"] = 4
         plant["processing_inventory"]["canned_tomato"] = 7
+        plant["processing_inventory"]["cheese"] = 9
         plant["processing_week"] = 12
         plant["processed_this_week"] = 3
         plant["processing_batch"] = {
@@ -252,6 +285,7 @@ class ProcessingPlantTests(unittest.TestCase):
         ))
         self.assertEqual(4, loaded["processing_inventory"]["tomato"])
         self.assertEqual(7, loaded["processing_inventory"]["canned_tomato"])
+        self.assertEqual(9, loaded["processing_inventory"]["cheese"])
         self.assertEqual(12, loaded["processing_week"])
         self.assertEqual(3, loaded["processed_this_week"])
         self.assertEqual(12, loaded["processing_batch"]["started_week"])
@@ -259,6 +293,30 @@ class ProcessingPlantTests(unittest.TestCase):
         self.assertEqual(
             3, loaded["processing_batch"]["outputs"]["canned_tomato"],
         )
+
+    def test_save_load_preserves_active_cheese_batch_and_inventory(self):
+        plant = place_building(
+            self.world, self.buildings, 8, 8, "processing_plant",
+        )
+        self.assertTrue(select_processing_recipe(plant, "cheese"))
+        plant["processing_inventory"]["milk"] = 8
+        self.assertEqual(5, start_processing_batch(plant, 12))
+        plant["processing_inventory"]["cheese"] = 4
+        state = GameState(
+            self.world, [], self.buildings, Economy(), GameTime(start_ticks=0),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "cheese-processing.json"
+            self.assertTrue(save_game(state, path))
+            self.assertTrue(load_game(state, path))
+
+        loaded = state.buildings[0]
+        self.assertEqual("cheese", loaded["active_recipe"])
+        self.assertEqual(3, loaded["processing_inventory"]["milk"])
+        self.assertEqual(4, loaded["processing_inventory"]["cheese"])
+        self.assertEqual("cheese", loaded["processing_batch"]["recipe_id"])
+        self.assertEqual({"milk": 5}, loaded["processing_batch"]["inputs"])
+        self.assertEqual({"cheese": 5}, loaded["processing_batch"]["outputs"])
 
 
 if __name__ == "__main__":

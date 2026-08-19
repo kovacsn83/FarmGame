@@ -124,7 +124,7 @@ BUILDING_TYPES = {
         "future_role": "processing_industry",
         "description": "Mezőgazdasági alapanyagok feldolgozása.",
         # A részletes adatok a központi processing.PROCESSING_RECIPES katalógusban vannak.
-        "recipes": ("canned_tomato",),
+        "recipes": ("canned_tomato", "cheese"),
     },
 }
 

@@ -24,12 +24,13 @@ from time_system import GameTime
 from ui import FinancialSummaryPanel, InfoPanel
 
 
-def _processing_plant(canned_tomato):
+def _processing_plant(canned_tomato=0, cheese=0):
     plant = initialize_processing_plant({
         "type": "processing_plant", "row": 4, "col": 4,
         "width": 6, "height": 5,
     })
     plant["processing_inventory"]["canned_tomato"] = canned_tomato
+    plant["processing_inventory"]["cheese"] = cheese
     return plant
 
 
@@ -86,6 +87,30 @@ class ProcessedProductMarketTests(unittest.TestCase):
             and "$1 600" in entry.message
             for entry in get_logger().entries
         ))
+
+    def test_cheese_is_marketable_for_sixteen_dollars_and_records_income(self):
+        product = get_inventory_item_data("cheese")
+        self.assertEqual("cheese", product["product_id"])
+        self.assertEqual("processed_products", product["product_category"])
+        self.assertEqual(16.00, product["price"])
+        self.assertIn("cheese", get_marketable_item_ids())
+
+        plant = _processing_plant(cheese=10)
+        economy = Economy(starting_money=0)
+        buildings = [plant, {"type": "market"}]
+        self.assertTrue(economy.sell_item(buildings, "cheese"))
+        self.assertEqual(160.00, economy.money)
+        self.assertEqual(0, plant["processing_inventory"]["cheese"])
+        self.assertEqual(
+            INCOME_PROCESSED_PRODUCT_SALES,
+            economy.financial_history[-1]["category"],
+        )
+        self.assertEqual("cheese", economy.financial_history[-1]["subcategory"])
+
+        rows = FinancialSummaryPanel()._column_rows(
+            economy.get_financial_summary(52), "income",
+        )
+        self.assertIn(("detail", "  Sajt", 160.00), rows)
 
     def test_partial_removal_is_fifo_and_never_makes_inventory_negative(self):
         first = _processing_plant(20)

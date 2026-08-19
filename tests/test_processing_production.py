@@ -64,6 +64,34 @@ class ProcessingProductionTests(unittest.TestCase):
         self.assertEqual(3, complete_processing_batch(plant, 3))
         self.assertEqual(8, plant["processing_inventory"]["canned_tomato"])
 
+    def test_cheese_recipe_produces_full_and_partial_weekly_batches(self):
+        full = self._plant()
+        self.assertTrue(select_processing_recipe(full, "cheese"))
+        full["processing_inventory"]["milk"] = 5
+        self.assertEqual(5, start_processing_batch(full, 1))
+        self.assertEqual(0, full["processing_inventory"]["milk"])
+        self.assertEqual(5, complete_processing_batch(full, 2))
+        self.assertEqual(5, full["processing_inventory"]["cheese"])
+
+        partial = self._plant()
+        self.assertTrue(select_processing_recipe(partial, "cheese"))
+        partial["processing_inventory"]["milk"] = 3
+        self.assertEqual(3, start_processing_batch(partial, 1))
+        self.assertEqual(3, complete_processing_batch(partial, 2))
+        self.assertEqual(3, partial["processing_inventory"]["cheese"])
+
+    def test_cheese_shortage_uses_milk_market_price_and_shipping(self):
+        plant = self._plant()
+        self.assertTrue(select_processing_recipe(plant, "cheese"))
+        economy = Economy(starting_money=1000)
+        run_weekly_processing_cycle(
+            [], [plant], economy, _ReservationManager(), 1,
+        )
+        self.assertEqual(5, plant["processing_batch"]["outputs"]["cheese"])
+        self.assertEqual(945, economy.money)
+        categories = [item["category"] for item in economy.financial_history]
+        self.assertEqual([EXPENSE_PROCESSING_INPUT, EXPENSE_SHIPPING], categories)
+
     def test_partial_warehouse_supply_buys_only_market_shortage(self):
         plant = self._plant()
         warehouse = {
@@ -197,6 +225,37 @@ class ProcessingProductionTests(unittest.TestCase):
         self.assertEqual(0, get_processing_in_transit(plant, "tomato"))
         self.assertEqual(3, plant["processing_batch"]["outputs"]["canned_tomato"])
         self.assertEqual(10000, economy.money)
+
+    def test_real_tractor_and_trailer_can_deliver_milk(self):
+        world = [[ROAD for _ in range(40)] for _ in range(40)]
+        garage = {"type": "garage", "row": 2, "col": 2, "width": 4, "height": 4}
+        warehouse = {
+            "type": "warehouse", "row": 2, "col": 12,
+            "width": 5, "height": 4, "capacity": 500,
+            "inventory": {"milk": 5},
+        }
+        plant = self._plant()
+        self.assertTrue(select_processing_recipe(plant, "cheese"))
+        buildings = [garage, warehouse, plant]
+        manager = VehicleManager()
+        tractor = manager._create_managed_asset(VehicleType.TRACTOR, garage, 0)
+        manager._create_managed_asset(VehicleType.TRAILER, garage, 1)
+        manager.ensure_idle_positions(world, buildings)
+        economy = Economy()
+        game_time = GameTime(current_time_speed=TIME_SLOW, start_ticks=0)
+
+        self.assertEqual(5, manager.start_processing_supply(
+            world, buildings, plant, "milk", 5, current_ticks=0,
+        ))
+        for tick in range(100, 30000, 100):
+            manager.update(world, buildings, economy, game_time, current_ticks=tick)
+            if tractor.is_idle and tick > 100:
+                break
+        else:
+            self.fail("A Tej feldolgozóüzemi szállítása nem fejeződött be.")
+        self.assertEqual(0, warehouse["inventory"]["milk"])
+        self.assertEqual(0, get_processing_in_transit(plant, "milk"))
+        self.assertEqual(5, plant["processing_batch"]["outputs"]["cheese"])
 
 
 if __name__ == "__main__":

@@ -1,10 +1,11 @@
 """Adatvezérelt feldolgozóipari receptek és heti termelési ciklus."""
 
+import math
+
 from buildings import BUILDING_TYPES, get_total_inventory, store_item
-from crops import CROPS
 from financial_history import EXPENSE_PROCESSING_INPUT
 from game_logger import log
-from inventory import get_inventory_item_name
+from inventory import get_inventory_item_data, get_inventory_item_name
 from market_procurement import purchase_automatically
 
 
@@ -24,6 +25,14 @@ PROCESSING_RECIPES = {
         "input_amount": 1,
         "output_product": "canned_tomato",
         "output_amount": 1,
+        "weekly_capacity": 5,
+    },
+    "cheese": {
+        "name": "Sajt",
+        "input_product": "milk",
+        "input_amount": 5,
+        "output_product": "cheese",
+        "output_amount": 5,
         "weekly_capacity": 5,
     },
 }
@@ -144,9 +153,17 @@ def refund_processing_delivery(buildings, plant, item_id, amount):
     return amount == 0 or store_item(buildings, item_id, amount)
 
 
-def _max_batches_for_storage(plant, recipe, requested_batches):
-    input_amount = recipe["input_amount"]
-    output_amount = recipe["output_amount"]
+def _recipe_unit_amounts(recipe):
+    """A recept arányát legkisebb egész gyártási egységre egyszerűsíti."""
+    divisor = math.gcd(recipe["input_amount"], recipe["output_amount"])
+    return (
+        recipe["input_amount"] // divisor,
+        recipe["output_amount"] // divisor,
+    )
+
+
+def _max_units_for_storage(plant, recipe, requested_units):
+    input_amount, output_amount = _recipe_unit_amounts(recipe)
     occupied = get_processing_inventory_used(plant)
     capacity = plant["processing_capacity"]
     reserved_in_transit = sum(
@@ -157,12 +174,12 @@ def _max_batches_for_storage(plant, recipe, requested_batches):
         max(0, int(amount))
         for amount in (plant.get("processing_batch") or {}).get("outputs", {}).values()
     )
-    batches = max(0, int(requested_batches))
-    while batches > 0:
-        resulting_occupied = occupied - batches * input_amount + batches * output_amount
+    units = max(0, int(requested_units))
+    while units > 0:
+        resulting_occupied = occupied - units * input_amount + units * output_amount
         if resulting_occupied + reserved_in_transit + pending_output <= capacity:
-            return batches
-        batches -= 1
+            return units
+        units -= 1
     return 0
 
 
@@ -182,19 +199,20 @@ def start_processing_batch(plant, elapsed_week=None):
         plant["processing_status"] = PROCESSING_STATUS_STOPPED
         return 0
     recipe = PROCESSING_RECIPES[plant["active_recipe"]]
-    batches = recipe["weekly_capacity"] // recipe["output_amount"]
+    unit_input, unit_output = _recipe_unit_amounts(recipe)
+    units = recipe["weekly_capacity"] // unit_output
     inventory = plant["processing_inventory"]
-    batches = min(
-        batches,
-        inventory.get(recipe["input_product"], 0) // recipe["input_amount"],
+    units = min(
+        units,
+        inventory.get(recipe["input_product"], 0) // unit_input,
     )
-    batches = _max_batches_for_storage(plant, recipe, batches)
-    if batches <= 0:
+    units = _max_units_for_storage(plant, recipe, units)
+    if units <= 0:
         if get_processing_free_capacity(plant) <= 0:
             plant["processing_status"] = PROCESSING_STATUS_FULL
         return 0
-    input_used = batches * recipe["input_amount"]
-    output_scheduled = batches * recipe["output_amount"]
+    input_used = units * unit_input
+    output_scheduled = units * unit_output
     inventory[recipe["input_product"]] -= input_used
     plant["processing_batch"] = {
         "recipe_id": plant["active_recipe"],
@@ -238,8 +256,9 @@ def complete_processing_batch(plant, elapsed_week):
 
 
 def _required_input_for_capacity(recipe):
-    batches = recipe["weekly_capacity"] // recipe["output_amount"]
-    return batches * recipe["input_amount"]
+    unit_input, unit_output = _recipe_unit_amounts(recipe)
+    units = recipe["weekly_capacity"] // unit_output
+    return units * unit_input
 
 
 def run_weekly_processing_cycle(
@@ -295,7 +314,10 @@ def run_weekly_processing_cycle(
         market_missing = max(0, missing - max(0, warehouse_request - transported))
         market_missing = min(market_missing, get_processing_free_capacity(plant))
         if market_missing > 0:
-            item_data = CROPS[input_id]
+            item_data = get_inventory_item_data(input_id)
+            if item_data is None:
+                plant["processing_status"] = PROCESSING_STATUS_WAITING
+                continue
             quote = purchase_automatically(
                 economy, item_data["name"], item_data["price"], market_missing,
                 EXPENSE_PROCESSING_INPUT, input_id,
