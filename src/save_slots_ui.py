@@ -6,7 +6,7 @@ from save_system import MAX_SAVE_NAME_LENGTH, get_save_slots
 from time_system import format_game_time, legacy_day_to_elapsed_weeks
 from ui import (
     CROP_CARD_BACKGROUND, CROP_CARD_HOVER, INFO_PANEL_BACKGROUND,
-    INFO_PANEL_BORDER, INFO_PANEL_PADDING,
+    INFO_PANEL_BORDER, INFO_PANEL_PADDING, is_outside_popup_click,
 )
 
 
@@ -156,6 +156,7 @@ class SaveSlotsBase:
         self.state = "slots"
         self.selected_slot_id = None
         self.feedback = None
+        self.pending_navigation = None
         self.refresh()
 
     def close(self):
@@ -174,11 +175,26 @@ class SaveSlotsBase:
 
     def _back(self):
         if self.state == "slots":
-            self.close()
-            self.pending_navigation = "game_menu"
+            self._close_to_parent()
         else:
             self.state = "slots"
             self.feedback = None
+
+    def _close_to_parent(self):
+        """Bezárja a teljes slotablakot, és visszalép a megnyitó menübe."""
+        self.close()
+        self.pending_navigation = "game_menu"
+
+    def _handle_outside_click(self, event):
+        """A közös popup-szabály szerint elfogyasztja a külső bal kattintást."""
+        if (
+            event.type == pygame.MOUSEBUTTONDOWN
+            and event.button == 1
+            and is_outside_popup_click(event, self.rect)
+        ):
+            self._close_to_parent()
+            return True
+        return False
 
     def _slot_at(self, position):
         return next((slot_id for slot_id, rect in self.slot_rects.items()
@@ -325,6 +341,8 @@ class SaveSlotsMenu(SaveSlotsBase):
     def handle_event(self, event, elapsed_weeks):
         if not self.visible:
             return False
+        if self._handle_outside_click(event):
+            return True
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             if self.state in ("overwrite", "name"):
                 self.state = "name" if self.state == "overwrite" else "slots"
@@ -431,6 +449,8 @@ class LoadSlotsMenu(SaveSlotsBase):
     def handle_event(self, event):
         if not self.visible:
             return False
+        if self._handle_outside_click(event):
+            return True
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             if self.state == "confirm":
                 self.state = "slots"
