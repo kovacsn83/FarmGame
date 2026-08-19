@@ -48,16 +48,40 @@ class StartupFlowTests(unittest.TestCase):
         self.assertIsNotNone(image)
         self.assertEqual(image.get_size(), (1024, 1024))
 
-    def test_splash_preserves_aspect_ratio_and_centers_image(self):
+    def test_splash_cover_preserves_aspect_ratio_and_fills_window(self):
         image = pygame.Surface((1024, 1024), pygame.SRCALPHA)
         splash = SplashScreen(image)
         rect = splash.get_image_rect((1500, 1000))
-        self.assertEqual(rect.size, (1000, 1000))
+        self.assertEqual(rect, pygame.Rect(0, 0, 1500, 1000))
         self.assertEqual(rect.center, (750, 500))
+        cover_size = splash.get_cover_size((1500, 1000))
+        self.assertGreaterEqual(cover_size[0], 1500)
+        self.assertGreaterEqual(cover_size[1], 1000)
         self.assertEqual(
-            rect.width / rect.height,
+            cover_size[0] / cover_size[1],
             image.get_width() / image.get_height(),
         )
+
+    def test_splash_has_no_edge_gap_at_multiple_window_sizes(self):
+        image = pygame.Surface((1024, 1024))
+        image.fill((31, 31, 31))
+        splash = SplashScreen(image)
+        for size in ((1500, 1000), (1001, 777), (800, 1200), (641, 479)):
+            with self.subTest(size=size):
+                target = pygame.Surface(size)
+                target.fill((0, 0, 0))
+                splash.draw(target)
+                self.assertEqual(splash._scaled_image.get_size(), size)
+                edge_points = (
+                    [(x, 0) for x in range(size[0])]
+                    + [(x, size[1] - 1) for x in range(size[0])]
+                    + [(0, y) for y in range(size[1])]
+                    + [(size[0] - 1, y) for y in range(size[1])]
+                )
+                self.assertTrue(all(
+                    target.get_at(point)[:3] != (0, 0, 0)
+                    for point in edge_points
+                ))
 
     def test_main_menu_exposes_only_the_three_startup_actions(self):
         set_screen_size(1500, 1000)

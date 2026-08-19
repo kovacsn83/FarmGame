@@ -1,3 +1,5 @@
+import math
+
 import pygame
 
 from asset_loader import load_splash_image
@@ -23,7 +25,7 @@ MAIN_MENU_ITEMS = (
 
 
 class SplashScreen:
-    """Fekete háttéren, torzítás nélkül jeleníti meg a stúdióképet."""
+    """Torzítás és háttérrés nélkül tölti ki a stúdióképpel az ablakot."""
 
     def __init__(self, image=None):
         self.image = image if image is not None else load_splash_image()
@@ -34,27 +36,36 @@ class SplashScreen:
         screen_width, screen_height = screen_size or get_screen_size()
         if self.image is None:
             return pygame.Rect(0, 0, 0, 0)
+        return pygame.Rect(0, 0, screen_width, screen_height)
+
+    def get_cover_size(self, screen_size=None):
+        """A képarányt őrző, az egész célfelületet lefedő méretet adja."""
+        screen_width, screen_height = screen_size or get_screen_size()
         image_width, image_height = self.image.get_size()
-        scale = min(screen_width / image_width, screen_height / image_height)
-        width = max(1, round(image_width * scale))
-        height = max(1, round(image_height * scale))
-        return pygame.Rect(
-            (screen_width - width) // 2,
-            (screen_height - height) // 2,
-            width,
-            height,
+        scale = max(screen_width / image_width, screen_height / image_height)
+        return (
+            max(screen_width, math.ceil(image_width * scale)),
+            max(screen_height, math.ceil(image_height * scale)),
         )
+
+    def _create_cover_image(self, screen_size):
+        """Középre vágott, pontosan célméretű képet készít háttérrés nélkül."""
+        cover_size = self.get_cover_size(screen_size)
+        cover = pygame.transform.smoothscale(self.image, cover_size)
+        crop_rect = pygame.Rect((0, 0), screen_size)
+        crop_rect.center = cover.get_rect().center
+        result = pygame.Surface(screen_size, flags=cover.get_flags(), depth=32)
+        result.blit(cover, (0, 0), crop_rect)
+        return result
 
     def draw(self, screen):
         screen.fill((0, 0, 0))
         if self.image is None:
             return
         image_rect = self.get_image_rect(screen.get_size())
-        cache_key = image_rect.size
+        cache_key = screen.get_size()
         if self._scaled_image is None or self._scaled_for != cache_key:
-            self._scaled_image = pygame.transform.smoothscale(
-                self.image, image_rect.size,
-            )
+            self._scaled_image = self._create_cover_image(cache_key)
             self._scaled_for = cache_key
         screen.blit(self._scaled_image, image_rect)
 
