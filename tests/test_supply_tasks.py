@@ -607,6 +607,27 @@ class SupplyTaskIntegrationTests(unittest.TestCase):
         self.assertEqual(loaded_trailer.cargo_type, "empty")
         self.assertEqual(loaded_trailer.cargo_amount, 0)
 
+    def test_attached_trailer_with_wheat_cargo_is_a_valid_save(self):
+        """A csirketakarmányt szállító Pótkocsi nem sértheti meg a mentést."""
+        state = self._prepare_valid_save_state()
+        self.trailer.cargo_type = "wheat"
+        self.trailer.cargo_amount = 96
+        self.trailer.attached_to = self.tractor
+        self.tractor.attached_implement = self.trailer
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "wheat-trailer.json"
+            self.assertTrue(save_game(state, path))
+            self.assertTrue(load_game(state, path))
+
+        self.assertEqual(
+            "wheat",
+            next(
+                asset for asset in self.manager.implements
+                if asset.vehicle_type == VehicleType.TRAILER
+            ).cargo_type,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
