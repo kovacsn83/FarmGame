@@ -24,7 +24,7 @@ from game_rules import FIELD_TYPES, UPGRADES
 from game_logger import log
 from inventory import get_inventory_item_ids
 from financial_history import is_valid_transaction
-from orchards import is_valid_tree_record
+from orchards import is_valid_tree_record, synchronize_orchard_seasons
 from processing import (
     PROCESSING_RECIPES, PROCESSING_STORAGE_CAPACITY,
     initialize_processing_plant,
@@ -957,6 +957,9 @@ def _apply_game_data(game_state, data):
     if saved_time_speed == TIME_FAST:
         saved_time_speed = TIME_NORMAL
     game_state.game_time.set_time_speed(saved_time_speed)
+    synchronize_orchard_seasons(
+        game_state.buildings, game_state.game_time.elapsed_weeks, legacy=True,
+    )
     game_state.purchased_upgrades.clear()
     game_state.purchased_upgrades.update(data.get("purchased_upgrades", []))
     quest_manager = getattr(game_state, "quest_manager", None)

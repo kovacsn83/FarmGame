@@ -23,7 +23,8 @@ from orchards import (
     ORCHARD_TREE_SLOT_OFFSETS, TREE_TYPES, can_plant_tree, find_tree_at,
     complete_tree_harvest, draw_orchard_trees, get_tree_age_years,
     get_tree_tooltip_lines, is_tree_harvestable, plant_tree,
-    run_weekly_orchard_cycle, TREE_CANOPY_LIGHT_OFFSET,
+    run_weekly_orchard_cycle, synchronize_tree_season,
+    TREE_CANOPY_LIGHT_OFFSET,
     TREE_GROUND_SHADOW_COLOR, TREE_GROUND_SHADOW_OFFSET,
 )
 from building_renderers import (
@@ -58,6 +59,8 @@ class OrchardTreeTests(unittest.TestCase):
         self.assertEqual(100, apple["planting_cost"])
         self.assertEqual(3, apple["first_yield_age_years"])
         self.assertEqual(30, apple["last_yield_age_years"])
+        self.assertEqual(30, apple["ripening_week"])
+        self.assertEqual(35, apple["harvest_end_week"])
         self.assertEqual(20, apple["annual_yield"])
 
         panel = OrchardSelectionPanel()
@@ -99,18 +102,15 @@ class OrchardTreeTests(unittest.TestCase):
         ))
         self.assertEqual(1000, self.economy.money)
 
-    def test_apple_tree_becomes_harvestable_at_three_years_once_per_year(self):
+    def test_apple_tree_uses_calendar_harvest_window_once_per_year(self):
         tree = plant_tree(
             self.buildings, self.economy, 10, 10, "apple",
         )
-        for _ in range(3 * 52 - 1):
-            self.assertEqual({}, run_weekly_orchard_cycle(self.buildings))
-        self.assertEqual(0, get_total_inventory(self.buildings)["apple"])
-
-        self.assertEqual({}, run_weekly_orchard_cycle(self.buildings))
-        self.assertEqual(3, get_tree_age_years(tree))
+        tree["age_weeks"] = 3 * 52
+        synchronize_tree_season(tree, 4, 29)
+        self.assertFalse(is_tree_harvestable(tree))
+        synchronize_tree_season(tree, 4, 30)
         self.assertTrue(is_tree_harvestable(tree))
-        self.assertEqual(0, get_total_inventory(self.buildings)["apple"])
         self.assertTrue(complete_tree_harvest(
             self.buildings, self.orchard, tree["slot"],
         ))
@@ -119,11 +119,7 @@ class OrchardTreeTests(unittest.TestCase):
         self.assertFalse(complete_tree_harvest(
             self.buildings, self.orchard, tree["slot"],
         ))
-        self.assertEqual({}, run_weekly_orchard_cycle(self.buildings))
-        self.assertEqual(20, get_total_inventory(self.buildings)["apple"])
-
-        for _ in range(51):
-            run_weekly_orchard_cycle(self.buildings)
+        synchronize_tree_season(tree, 5, 30)
         self.assertTrue(is_tree_harvestable(tree))
         self.assertTrue(complete_tree_harvest(
             self.buildings, self.orchard, tree["slot"],
@@ -134,13 +130,13 @@ class OrchardTreeTests(unittest.TestCase):
         tree = plant_tree(
             self.buildings, self.economy, 10, 10, "apple",
         )
-        tree["age_weeks"] = 30 * 52 - 1
-        self.assertEqual({}, run_weekly_orchard_cycle(self.buildings))
+        tree["age_weeks"] = 30 * 52
+        synchronize_tree_season(tree, 31, 30)
         self.assertTrue(complete_tree_harvest(
             self.buildings, self.orchard, tree["slot"],
         ))
-        for _ in range(52):
-            self.assertEqual({}, run_weekly_orchard_cycle(self.buildings))
+        tree["age_weeks"] = 31 * 52
+        synchronize_tree_season(tree, 32, 30)
         self.assertEqual(31, get_tree_age_years(tree))
         self.assertEqual(20, get_total_inventory(self.buildings)["apple"])
         self.assertIn("Már nem termő", get_tree_tooltip_lines(tree))
@@ -150,8 +146,8 @@ class OrchardTreeTests(unittest.TestCase):
         tree = plant_tree(
             self.buildings, self.economy, 10, 10, "apple",
         )
-        tree["age_weeks"] = 3 * 52 - 1
-        run_weekly_orchard_cycle(self.buildings)
+        tree["age_weeks"] = 3 * 52
+        synchronize_tree_season(tree, 4, 30)
         complete_tree_harvest(self.buildings, self.orchard, tree["slot"])
         self.assertEqual(20, self.warehouse["inventory"]["apple"])
 
@@ -182,7 +178,9 @@ class OrchardTreeTests(unittest.TestCase):
         self.assertIn("Még nem termő", tooltip)
         self.assertIn("1 év múlva", tooltip)
         tree["age_weeks"] = 5 * 52
-        tree["last_produced_year"] = 5
+        synchronize_tree_season(tree, 6, 30)
+        tree["last_harvested_calendar_year"] = 6
+        synchronize_tree_season(tree, 6, 31)
         tooltip = get_tree_tooltip_lines(tree)
         self.assertIn("Ebben az évben már leszüretelve", tooltip)
 

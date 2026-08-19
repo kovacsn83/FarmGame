@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Az Almafa mostantól szezonálisan terem: termőkorban minden év 30. hetében érik be, a szüreti időszaka a 30–35. hét, a le nem szüretelt éves termés pedig ezután elveszik.
+
 - A Feldolgozó üzem az Információ eszközzel történő hover esetén rövid tooltipet jelenít meg az aktuális késztermékről és a saját üzemi raktár kihasználtságáról.
 
 - Új Feldolgozó üzem recept készült: 5 Tejből legfeljebb 5 Sajt gyártható hetente, részleges alapanyagkészlet esetén arányosan kisebb adaggal.

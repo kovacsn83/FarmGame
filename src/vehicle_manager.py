@@ -794,8 +794,10 @@ class VehicleManager:
             return "immature"
         if age_years > definition["last_yield_age_years"]:
             return "expired"
-        if tree.get("last_produced_year") == age_years:
+        if tree.get("annual_harvest_state") == "harvested":
             return "already_harvested"
+        if not is_tree_harvestable(tree):
+            return "outside_harvest_season"
         if any(
             task.task_type == TASK_ORCHARD_HARVEST
             and task.field is orchard
@@ -864,6 +866,7 @@ class VehicleManager:
             "immature": "A gyümölcsfa még nem érett.",
             "expired": "Ez a gyümölcsfa már nem szüretelhető.",
             "already_harvested": "Ez a gyümölcsfa ebben az évben már le lett szüretelve.",
+            "outside_harvest_season": "Most nincs szüreti időszaka.",
             "duplicate": "Ehhez a fához már tartozik szüretelési feladat.",
             "no_fruit_harvester": "A szürethez Gyümölcs szüretelőgép szükséges.",
             "no_road": "A Gyümölcsös-rendszer nem érhető el útról.",

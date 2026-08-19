@@ -814,7 +814,7 @@ def main():
                 run_weekly_animal_cycle(
                     animals, buildings, economy, notification_manager,
                 )
-                run_weekly_orchard_cycle(buildings)
+                run_weekly_orchard_cycle(buildings, elapsed_week)
                 run_weekly_processing_cycle(
                     world, buildings, economy, vehicles, elapsed_week,
                     current_ticks=pygame.time.get_ticks(),

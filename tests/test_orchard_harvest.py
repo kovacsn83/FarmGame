@@ -20,7 +20,7 @@ from economy import Economy
 from game_state import GameState
 from orchards import (
     get_tree_in_slot, is_tree_harvestable, plant_tree,
-    run_weekly_orchard_cycle,
+    synchronize_tree_season,
 )
 from save_system import load_game, save_game
 from time_system import GameTime, TIME_SLOW
@@ -60,10 +60,13 @@ class OrchardHarvestWorkflowTests(unittest.TestCase):
         )
         self.harvester.ensure_idle_position(self.world, self.buildings)
         self.game_time = GameTime(TIME_SLOW, start_ticks=0)
+        # 4. év, 30. hét: az Almafa szezonális szüreti időszaka.
+        self.game_time.elapsed_weeks = 3 * 52 + 29
         self.tree = plant_tree(
             self.buildings, self.economy, 10, 14, "apple",
         )
         self.tree["age_weeks"] = 3 * 52
+        synchronize_tree_season(self.tree, 4, 30)
 
     def _run_until_idle(self, start_tick=0, limit=30000):
         for tick in range(start_tick + 100, start_tick + limit, 100):
@@ -98,6 +101,7 @@ class OrchardHarvestWorkflowTests(unittest.TestCase):
             self.inner_orchard, self.tree,
         ))
         self.tree["age_weeks"] = 3 * 52
+        synchronize_tree_season(self.tree, 4, 30)
         self.assertTrue(self.manager.start_orchard_harvest(
             self.world, self.buildings, self.economy,
             self.inner_orchard, self.tree,
@@ -117,6 +121,7 @@ class OrchardHarvestWorkflowTests(unittest.TestCase):
             self.buildings, self.economy, 12, 14, "apple",
         )
         second_tree["age_weeks"] = 3 * 52
+        synchronize_tree_season(second_tree, 4, 30)
         self.assertTrue(self.manager.start_orchard_harvest(
             self.world, self.buildings, self.economy,
             self.inner_orchard, self.tree,
@@ -136,9 +141,8 @@ class OrchardHarvestWorkflowTests(unittest.TestCase):
             self.inner_orchard, self.tree,
         )
         self._run_until_idle()
-        for _ in range(52):
-            run_weekly_orchard_cycle(self.buildings)
-        self.assertEqual(4, self.tree["age_weeks"] // 52)
+        self.tree["age_weeks"] = 4 * 52
+        synchronize_tree_season(self.tree, 5, 30)
         self.assertTrue(is_tree_harvestable(self.tree))
 
     def test_vehicle_and_warehouse_capacity_are_required(self):
@@ -159,6 +163,7 @@ class OrchardHarvestWorkflowTests(unittest.TestCase):
             self.buildings, self.economy, 12, 14, "apple",
         )
         queued_tree["age_weeks"] = 3 * 52
+        synchronize_tree_season(queued_tree, 4, 30)
         self.manager.start_orchard_harvest(
             self.world, self.buildings, self.economy,
             self.inner_orchard, self.tree, current_ticks=0,

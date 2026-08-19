@@ -2,12 +2,15 @@
 
 from animal_troughs import get_group_animals, get_group_supply
 from buildings import get_animal_pen_groups
+from calendar_utils import get_year_and_week
 from crops import (
     CROPS, can_harvest_crop_in_week, format_crop_week_intervals,
     get_crop_lifespan_weeks, get_current_growth_weeks,
     LATE_HARVEST_DURATION_WEEKS, LATE_HARVEST_YIELD_MULTIPLIER,
 )
-from orchards import find_tree_at, get_tree_tooltip_lines
+from orchards import (
+    find_tree_at, get_tree_tooltip_lines, synchronize_tree_season,
+)
 from processing import get_processing_tooltip_lines
 
 
@@ -224,6 +227,9 @@ def find_timed_object_tooltip(
         orchard_tree = find_tree_at(buildings, row, col)
         if orchard_tree is not None:
             _orchard, tree = orchard_tree
+            if current_elapsed_week is not None:
+                year, week = get_year_and_week(current_elapsed_week)
+                synchronize_tree_season(tree, year, week)
             return get_tree_tooltip_lines(tree)
 
     field = next(

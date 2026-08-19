@@ -12,6 +12,7 @@ from financial_history import EXPENSE_FRUIT_TREE
 from inventory import get_inventory_item_name
 from screen_layout import world_to_screen
 from constants import TILE_SIZE
+from calendar_utils import get_year_and_week
 
 
 WEEKS_PER_TREE_YEAR = 52
@@ -24,6 +25,8 @@ TREE_TYPES = {
         "planting_cost": 100.00,
         "first_yield_age_years": 3,
         "last_yield_age_years": 30,
+        "ripening_week": 30,
+        "harvest_end_week": 35,
         "annual_yield": 20,
         "product_id": "apple",
         "canopy_color": (62, 132, 58),
@@ -123,6 +126,12 @@ def plant_tree(buildings, economy, row, col, tree_type):
         "col": slot["col"],
         "age_weeks": 0,
         "last_produced_year": None,
+        "last_harvested_calendar_year": None,
+        "annual_state_year": None,
+        "annual_harvest_state": "waiting",
+        "annual_productive": False,
+        "current_calendar_year": None,
+        "current_calendar_week": None,
     }
     orchard.setdefault("trees", []).append(tree)
     log(
@@ -138,18 +147,76 @@ def get_tree_age_years(tree):
     return max(0, int(tree.get("age_weeks", 0))) // WEEKS_PER_TREE_YEAR
 
 
-def is_tree_harvestable(tree):
+def _was_productive_at_ripening(tree, definition, current_week):
+    """Megmondja, hogy a fa az adott év érési hetében termőkorú volt-e."""
+    ripening_week = definition["ripening_week"]
+    weeks_since_ripening = max(0, current_week - ripening_week)
+    age_at_ripening = max(0, int(tree.get("age_weeks", 0))) - weeks_since_ripening
+    return (
+        definition["first_yield_age_years"] * WEEKS_PER_TREE_YEAR
+        <= age_at_ripening
+        < (definition["last_yield_age_years"] + 1) * WEEKS_PER_TREE_YEAR
+    )
+
+
+def synchronize_tree_season(tree, current_year, current_week, legacy=False):
+    """A fa menthető éves állapotát a központi naptárhoz igazítja."""
+    definition = TREE_TYPES.get(tree.get("type"))
+    if definition is None:
+        return None
+    if tree.get("annual_state_year") != current_year:
+        tree["annual_state_year"] = current_year
+        tree["annual_harvest_state"] = "waiting"
+        tree["annual_productive"] = False
+
+    tree["current_calendar_year"] = current_year
+    tree["current_calendar_week"] = current_week
+    ripening_week = definition["ripening_week"]
+    harvest_end_week = definition["harvest_end_week"]
+    productive = _was_productive_at_ripening(
+        tree, definition, max(current_week, ripening_week),
+    )
+    tree["annual_productive"] = productive
+
+    if (
+        legacy
+        and current_week >= ripening_week
+        and tree.get("last_harvested_calendar_year") is None
+    ):
+        legacy_year = tree.get("last_produced_year")
+        if legacy_year is not None and legacy_year == get_tree_age_years(tree):
+            tree["last_harvested_calendar_year"] = current_year
+
+    if tree.get("last_harvested_calendar_year") == current_year:
+        state = "harvested"
+    elif current_week < ripening_week:
+        state = "waiting"
+    elif not productive:
+        state = "ineligible"
+    elif current_week <= harvest_end_week:
+        state = "ripe"
+    else:
+        state = "lost"
+    tree["annual_harvest_state"] = state
+    return state
+
+
+def synchronize_orchard_seasons(buildings, elapsed_weeks, legacy=False):
+    """Betöltéskor és heti lépéskor minden fa naptári állapotát frissíti."""
+    year, week = get_year_and_week(elapsed_weeks)
+    for orchard in get_orchards(buildings):
+        for tree in orchard.get("trees", []):
+            synchronize_tree_season(tree, year, week, legacy=legacy)
+
+
+def is_tree_harvestable(tree, current_year=None, current_week=None):
     """Jelzi, hogy a fa aktuális évi termése géppel leszüretelhető-e."""
     definition = TREE_TYPES.get(tree.get("type"))
     if definition is None:
         return False
-    age_years = get_tree_age_years(tree)
-    return (
-        definition["first_yield_age_years"]
-        <= age_years
-        <= definition["last_yield_age_years"]
-        and tree.get("last_produced_year") != age_years
-    )
+    if current_year is not None and current_week is not None:
+        synchronize_tree_season(tree, current_year, current_week)
+    return tree.get("annual_harvest_state") == "ripe"
 
 
 def complete_tree_harvest(buildings, orchard, tree_slot):
@@ -168,7 +235,10 @@ def complete_tree_harvest(buildings, orchard, tree_slot):
             "Orchard",
         )
         return False
+    current_year = tree.get("current_calendar_year")
+    tree["last_harvested_calendar_year"] = current_year
     tree["last_produced_year"] = get_tree_age_years(tree)
+    tree["annual_harvest_state"] = "harvested"
     log(
         f"{definition['tree_name']} leszüretelve: {amount} db "
         f"{get_inventory_item_name(definition['product_id'])} került a Raktárba.",
@@ -177,14 +247,30 @@ def complete_tree_harvest(buildings, orchard, tree_slot):
     return True
 
 
-def run_weekly_orchard_cycle(buildings):
+def run_weekly_orchard_cycle(buildings, elapsed_weeks):
     """Hetente öregíti a fákat; a termést a szüretelőgép gyűjti be."""
+    ripened = 0
+    lost = 0
+    year, week = get_year_and_week(elapsed_weeks)
     for orchard in get_orchards(buildings):
         for tree in orchard.get("trees", []):
             definition = TREE_TYPES.get(tree.get("type"))
             if definition is None:
                 continue
             tree["age_weeks"] = max(0, int(tree.get("age_weeks", 0))) + 1
+            previous_state = tree.get("annual_harvest_state")
+            state = synchronize_tree_season(tree, year, week)
+            if state == "ripe" and previous_state != "ripe":
+                ripened += 1
+            elif state == "lost" and previous_state != "lost":
+                lost += 1
+    if ripened:
+        log(f"Az Alma érési időszaka megkezdődött ({ripened} fa).", "Orchard")
+    if lost:
+        log(
+            f"{lost} Almafa idei termése nem került leszüretelésre és elveszett.",
+            "Orchard",
+        )
     return {}
 
 
@@ -197,6 +283,8 @@ def get_tree_tooltip_lines(tree):
     age_years = age_weeks // WEEKS_PER_TREE_YEAR
     first = definition["first_yield_age_years"]
     last = definition["last_yield_age_years"]
+    ripening_week = definition["ripening_week"]
+    harvest_end_week = definition["harvest_end_week"]
     lines = [definition["tree_name"], "Kor:", f"{age_years} év"]
     if age_years < first:
         remaining_weeks = first * WEEKS_PER_TREE_YEAR - age_weeks
@@ -206,16 +294,28 @@ def get_tree_tooltip_lines(tree):
             "Első termés:", f"{remaining_years} év múlva",
         ))
     elif age_years <= last:
-        if is_tree_harvestable(tree):
+        state = tree.get("annual_harvest_state", "waiting")
+        if state == "ripe":
             lines.extend((
                 "Állapot:", "Szüretelhető",
+                "Szüreti időszak:", f"{ripening_week}–{harvest_end_week}. hét",
                 "Éves termés:",
                 f"{definition['annual_yield']} db "
                 f"{get_inventory_item_name(definition['product_id'])}",
             ))
-        else:
+        elif state == "harvested":
             lines.extend((
                 "Állapot:", "Ebben az évben már leszüretelve",
+            ))
+        elif state == "lost":
+            lines.extend((
+                "Állapot:", "Az idei termés elveszett",
+                "Következő érés:", f"következő év {ripening_week}. hét",
+            ))
+        else:
+            lines.extend((
+                "Állapot:", "Érés alatt",
+                "Szüret:", f"{ripening_week}–{harvest_end_week}. hét",
             ))
     else:
         lines.extend(("Állapot:", "Már nem termő"))
@@ -229,6 +329,7 @@ def is_valid_tree_record(tree, orchard):
     slot = tree.get("slot")
     age_weeks = tree.get("age_weeks")
     last_produced_year = tree.get("last_produced_year")
+    last_harvested_calendar_year = tree.get("last_harvested_calendar_year")
     if (
         not isinstance(slot, int) or isinstance(slot, bool)
         or not 0 <= slot < len(ORCHARD_TREE_SLOT_OFFSETS)
@@ -240,6 +341,14 @@ def is_valid_tree_record(tree, orchard):
                 not isinstance(last_produced_year, int)
                 or isinstance(last_produced_year, bool)
                 or last_produced_year < 0
+            )
+        )
+        or (
+            last_harvested_calendar_year is not None
+            and (
+                not isinstance(last_harvested_calendar_year, int)
+                or isinstance(last_harvested_calendar_year, bool)
+                or last_harvested_calendar_year < 1
             )
         )
     ):
