@@ -151,7 +151,7 @@ class FarmhousePlotTests(unittest.TestCase):
         self.assertEqual(calculate_annual_maintenance(base), 500)
         self.assertAlmostEqual(calculate_weekly_maintenance(base), 500 / 52)
 
-    def test_level_three_requires_level_two_and_is_visual_only(self):
+    def test_level_three_requires_level_two_and_uses_new_maintenance_base(self):
         farmhouse = place_building(
             self.world, self.buildings, 2, 2, "farmhouse",
         )
@@ -173,7 +173,10 @@ class FarmhousePlotTests(unittest.TestCase):
         ))
         self.assertEqual(farmhouse["farmhouse_level"], 3)
         self.assertEqual(state.economy.money, 5000)
-        self.assertEqual(get_building_maintenance_base(farmhouse), 5000)
+        base = get_building_maintenance_base(farmhouse)
+        self.assertEqual(base, 15000)
+        self.assertEqual(calculate_annual_maintenance(base), 1500)
+        self.assertAlmostEqual(calculate_weekly_maintenance(base), 1500 / 52)
         self.assertEqual((farmhouse["width"], farmhouse["height"]), (8, 8))
 
     def test_level_round_trips_and_legacy_defaults_to_level_two(self):
