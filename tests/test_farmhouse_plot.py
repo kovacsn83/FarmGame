@@ -266,20 +266,30 @@ class FarmhousePlotTests(unittest.TestCase):
         })
 
         self.assertEqual(
-            screen.get_at((plot_x + 3 * TILE_SIZE + 4,
+            screen.get_at((plot_x + 4 * TILE_SIZE - 6,
                            plot_y + 5 * TILE_SIZE + 3))[:3],
             FARMHOUSE_DRIVEWAY,
         )
         self.assertEqual(
-            screen.get_at((plot_x + 5 * TILE_SIZE + 3,
-                           plot_y + TILE_SIZE // 2 + TILE_SIZE))[:3],
+            screen.get_at((plot_x + 4 * TILE_SIZE + 7,
+                           plot_y + 3 * TILE_SIZE))[:3],
             FARMHOUSE_GARAGE_WALL,
         )
         self.assertEqual(
-            screen.get_at((plot_x + TILE_SIZE // 2 + 8,
-                           plot_y + TILE_SIZE + 8))[:3],
+            screen.get_at((plot_x + 4 * TILE_SIZE + TILE_SIZE // 3 + 8,
+                           plot_y + TILE_SIZE // 3 + 8))[:3],
             FARMHOUSE_POOL_WATER,
         )
+        # A bal három csempe teljes egészében füvesen, bővíthetően marad.
+        for tile_row in range(1, 7):
+            for tile_col in range(1, 3):
+                self.assertEqual(
+                    screen.get_at((
+                        plot_x + tile_col * TILE_SIZE + TILE_SIZE // 2,
+                        plot_y + tile_row * TILE_SIZE + TILE_SIZE // 2,
+                    ))[:3],
+                    (1, 2, 3),
+                )
         self.assertEqual(
             screen.get_at((plot_x, plot_y + 4 * TILE_SIZE))[:3],
             FARMHOUSE_FENCE_COLOR,

@@ -277,19 +277,21 @@ def _draw_farmhouse_level_three_yard(screen, plot):
     """A III. szint rendezett felhajtóját, mellékgarázsát és medencéjét rajzolja."""
     inset = FARMHOUSE_FENCE_WIDTH + 3
 
-    # Keskeny, L alakú személyautó-beálló a telek alsó szélétől a garázsig.
-    driveway_width = max(12, TILE_SIZE - 4)
-    driveway_x = plot.x + 3 * TILE_SIZE
+    # A teljes fejlesztés a telek jobb felén marad. A keskeny beálló a
+    # középvonal mellett fut, így a bal oldali füves terület későbbi
+    # Farmház-szintek számára szabadon bővíthető marad.
+    driveway_width = max(10, TILE_SIZE - 8)
+    driveway_x = plot.x + 4 * TILE_SIZE - driveway_width
     vertical_driveway = pygame.Rect(
         driveway_x,
-        plot.y + 2 * TILE_SIZE,
+        plot.y + 2 * TILE_SIZE + TILE_SIZE // 4,
         driveway_width,
-        plot.height - 2 * TILE_SIZE - inset,
+        plot.height - 2 * TILE_SIZE - TILE_SIZE // 4 - inset,
     )
     upper_driveway = pygame.Rect(
         driveway_x,
-        plot.y + 2 * TILE_SIZE,
-        3 * TILE_SIZE,
+        plot.y + 2 * TILE_SIZE + TILE_SIZE // 4,
+        TILE_SIZE + TILE_SIZE // 2,
         driveway_width,
     )
     for section in (vertical_driveway, upper_driveway):
@@ -316,11 +318,11 @@ def _draw_farmhouse_level_three_yard(screen, plot):
             (x, upper_driveway.bottom - 1), 1,
         )
 
-    # A kisebb mellékgarázs a főépület mögött, azonos tetőszínekkel.
+    # A kisebb mellékgarázs közvetlenül a főépület mögött kap helyet.
     garage = pygame.Rect(
-        plot.x + 5 * TILE_SIZE,
-        plot.y + TILE_SIZE // 2,
-        2 * TILE_SIZE + TILE_SIZE // 2,
+        plot.x + 4 * TILE_SIZE + FARMHOUSE_BUILDING_INSET,
+        plot.y + 2 * TILE_SIZE + TILE_SIZE // 4,
+        4 * TILE_SIZE - FARMHOUSE_BUILDING_INSET * 2,
         TILE_SIZE + TILE_SIZE // 2,
     )
     _draw_building_shadow(screen, garage, PROCEDURAL_SHADOW_COLOR)
@@ -341,12 +343,12 @@ def _draw_farmhouse_level_three_yard(screen, plot):
         (ridge_x, roof.top + 1), (ridge_x, roof.bottom - 1), 1,
     )
 
-    # Kis dekoratív medence a melléképület mellett, világos kőszegéllyel.
+    # A dekoratív medence a jobb felső sarokban, a garázs mögött helyezkedik el.
     pool = pygame.Rect(
-        plot.x + TILE_SIZE // 2,
-        plot.y + TILE_SIZE,
-        2 * TILE_SIZE,
-        TILE_SIZE + TILE_SIZE // 2,
+        plot.x + 4 * TILE_SIZE + TILE_SIZE // 3,
+        plot.y + TILE_SIZE // 3,
+        3 * TILE_SIZE + TILE_SIZE // 3,
+        TILE_SIZE + TILE_SIZE // 3,
     )
     pygame.draw.rect(screen, FARMHOUSE_POOL_BORDER, pool, border_radius=3)
     water = pool.inflate(-6, -6)
