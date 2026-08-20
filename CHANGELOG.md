@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Új vizuális fejlesztés készült: Farmház III. ($15 000), amely a változatlan 8×8-as telket térköves autóbeállóval, külön garázzsal és dekoratív medencével egészíti ki.
+
 - A Gyümölcs szüretelőgép most már fizikailag behajt az összefüggő Gyümölcsösbe, a fatörzseket kerülve a kiválasztott fa mellé áll, több szüretet közvetlenül fa–fa útvonallal láncol, majd a kijelölt kapun át tér vissza a Garázsba.
 
 - Csirke balanszmódosítás: levágáskor mostantól 6 db Csirkehús keletkezik, amelynek piaci ára $60/db.

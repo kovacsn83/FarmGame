@@ -2010,7 +2010,7 @@ class InfoPanel(PopupWindow):
     @staticmethod
     def _roman_level(level):
         """A felhasználói felületen használt Farmház-szintjelölés."""
-        return {1: "I", 2: "II"}.get(level, str(level or 1))
+        return {1: "I", 2: "II", 3: "III"}.get(level, str(level or 1))
 
 
 class AnimalHusbandryPanel(SelectionPanel):

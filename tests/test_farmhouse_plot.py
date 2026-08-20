@@ -11,13 +11,17 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from building_renderers import FARMHOUSE_FENCE_COLOR, draw_farmhouse
+from building_renderers import (
+    FARMHOUSE_DRIVEWAY, FARMHOUSE_FENCE_COLOR, FARMHOUSE_GARAGE_WALL,
+    FARMHOUSE_POOL_WATER, draw_farmhouse,
+)
 from buildings import (
     BUILDING_TYPES, FARMHOUSE_LEVELS, can_place_building,
     find_building_data, get_building_maintenance_base,
     place_building, remove_building,
 )
 from constants import BUILDING, GRASS, ROAD, TILE_SIZE
+from constants import FARMHOUSE_LEVEL_3_UPGRADE_PRICE
 from economy import Economy
 from game_state import GameState
 from maintenance import calculate_annual_maintenance, calculate_weekly_maintenance
@@ -147,6 +151,31 @@ class FarmhousePlotTests(unittest.TestCase):
         self.assertEqual(calculate_annual_maintenance(base), 500)
         self.assertAlmostEqual(calculate_weekly_maintenance(base), 500 / 52)
 
+    def test_level_three_requires_level_two_and_is_visual_only(self):
+        farmhouse = place_building(
+            self.world, self.buildings, 2, 2, "farmhouse",
+        )
+        state = GameState(
+            self.world, [], self.buildings, Economy(25000), GameTime(start_ticks=0),
+        )
+        self.assertEqual(FARMHOUSE_LEVEL_3_UPGRADE_PRICE, 15000)
+        self.assertFalse(state.economy.purchase_upgrade(
+            state, "farmhouse_level_3",
+        ))
+        self.assertEqual(farmhouse["farmhouse_level"], 1)
+        self.assertEqual(state.economy.money, 25000)
+
+        self.assertTrue(state.economy.purchase_upgrade(
+            state, "farmhouse_level_2",
+        ))
+        self.assertTrue(state.economy.purchase_upgrade(
+            state, "farmhouse_level_3",
+        ))
+        self.assertEqual(farmhouse["farmhouse_level"], 3)
+        self.assertEqual(state.economy.money, 5000)
+        self.assertEqual(get_building_maintenance_base(farmhouse), 5000)
+        self.assertEqual((farmhouse["width"], farmhouse["height"]), (8, 8))
+
     def test_level_round_trips_and_legacy_defaults_to_level_two(self):
         farmhouse = place_building(
             self.world, self.buildings, 2, 2, "farmhouse",
@@ -162,6 +191,21 @@ class FarmhousePlotTests(unittest.TestCase):
             self.assertTrue(load_game(state, path))
         self.assertEqual(state.buildings[0]["farmhouse_level"], 2)
 
+    def test_level_three_round_trips_through_save(self):
+        farmhouse = place_building(
+            self.world, self.buildings, 2, 2, "farmhouse",
+        )
+        farmhouse["farmhouse_level"] = 3
+        state = GameState(
+            self.world, [], self.buildings, Economy(), GameTime(start_ticks=0),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "farmhouse-level-three.json"
+            self.assertTrue(save_game(state, path))
+            farmhouse["farmhouse_level"] = 1
+            self.assertTrue(load_game(state, path))
+        self.assertEqual(state.buildings[0]["farmhouse_level"], 3)
+
     def test_renderer_places_uniform_fence_and_house_in_lower_right(self):
         pygame.init()
         set_screen_size(300, 300)
@@ -170,7 +214,7 @@ class FarmhousePlotTests(unittest.TestCase):
         plot_size = 8 * TILE_SIZE
         background = (1, 2, 3)
 
-        for level in (1, 2):
+        for level in (1, 2, 3):
             with self.subTest(level=level):
                 screen = pygame.Surface((300, 300))
                 screen.fill(background)
@@ -196,7 +240,9 @@ class FarmhousePlotTests(unittest.TestCase):
                     screen.get_at((plot_x - 1, plot_y - 1))[:3], background,
                 )
                 self.assertEqual(
-                    screen.get_at((plot_x + 20, plot_y + 20))[:3], background,
+                    screen.get_at((plot_x + TILE_SIZE,
+                                   plot_y + 4 * TILE_SIZE))[:3],
+                    background,
                 )
                 self.assertNotEqual(
                     screen.get_at((plot_x + 5 * TILE_SIZE + 8,
@@ -205,6 +251,39 @@ class FarmhousePlotTests(unittest.TestCase):
                 )
         self.assertEqual(FARMHOUSE_LEVELS[1]["size"], (3, 3))
         self.assertEqual(FARMHOUSE_LEVELS[2]["size"], (4, 4))
+        self.assertEqual(FARMHOUSE_LEVELS[3]["size"], (4, 4))
+
+    def test_level_three_draws_driveway_garage_pool_and_keeps_hedge(self):
+        pygame.init()
+        set_screen_size(300, 300)
+        set_camera(None)
+        plot_x, plot_y = map(round, world_to_screen(TILE_SIZE, TILE_SIZE))
+        screen = pygame.Surface((300, 300))
+        screen.fill((1, 2, 3))
+        draw_farmhouse(screen, {
+            "type": "farmhouse", "row": 1, "col": 1,
+            "width": 8, "height": 8, "farmhouse_level": 3,
+        })
+
+        self.assertEqual(
+            screen.get_at((plot_x + 3 * TILE_SIZE + 4,
+                           plot_y + 5 * TILE_SIZE + 3))[:3],
+            FARMHOUSE_DRIVEWAY,
+        )
+        self.assertEqual(
+            screen.get_at((plot_x + 5 * TILE_SIZE + 3,
+                           plot_y + TILE_SIZE // 2 + TILE_SIZE))[:3],
+            FARMHOUSE_GARAGE_WALL,
+        )
+        self.assertEqual(
+            screen.get_at((plot_x + TILE_SIZE // 2 + 8,
+                           plot_y + TILE_SIZE + 8))[:3],
+            FARMHOUSE_POOL_WATER,
+        )
+        self.assertEqual(
+            screen.get_at((plot_x, plot_y + 4 * TILE_SIZE))[:3],
+            FARMHOUSE_FENCE_COLOR,
+        )
 
 
 if __name__ == "__main__":

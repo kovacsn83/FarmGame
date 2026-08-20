@@ -1,7 +1,8 @@
 from constants import (
     ANIMAL_PEN_BUILD_COST, BUILDING, COLOR_FIELD,
     FARMHOUSE_BUILD_COST, FARMHOUSE_LEVEL_2_MAINTENANCE_BASE,
-    FARMHOUSE_LEVEL_2_UPGRADE_PRICE, GARAGE_BUILD_COST, GRASS,
+    FARMHOUSE_LEVEL_2_UPGRADE_PRICE, FARMHOUSE_LEVEL_3_UPGRADE_PRICE,
+    GARAGE_BUILD_COST, GRASS,
     MARKET_BUILD_COST, ORCHARD_BUILD_COST, ROAD, TILE_SIZE, POND_BUILD_COST,
     PROCESSING_PLANT_BUILD_COST, WAREHOUSE_BUILD_COST,
 )
@@ -35,6 +36,13 @@ FARMHOUSE_LEVELS = {
         "name": "Farmház II.",
         "size": (4, 4),
         "upgrade_price": FARMHOUSE_LEVEL_2_UPGRADE_PRICE,
+        "maintenance_base_value": FARMHOUSE_LEVEL_2_MAINTENANCE_BASE,
+    },
+    3: {
+        "name": "Farmház III.",
+        "size": (4, 4),
+        "upgrade_price": FARMHOUSE_LEVEL_3_UPGRADE_PRICE,
+        # A III. szint kizárólag vizuális, ezért nem emeli a fenntartást.
         "maintenance_base_value": FARMHOUSE_LEVEL_2_MAINTENANCE_BASE,
     },
 }

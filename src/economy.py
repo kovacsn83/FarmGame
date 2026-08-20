@@ -283,6 +283,13 @@ class Economy:
             if farmhouse.get("farmhouse_level", 1) >= target_level:
                 log("Ezt a fejlesztést már megvásároltad.", "Economy")
                 return False
+            required_level = upgrade.get("required_level")
+            if (
+                required_level is not None
+                and farmhouse.get("farmhouse_level", 1) < required_level
+            ):
+                log("A fejlesztés előfeltétele még nem teljesült.", "Economy")
+                return False
             if not self.spend(upgrade["price"]):
                 log("Nincs elegendő pénz.", "Economy")
                 return False

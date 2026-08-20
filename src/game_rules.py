@@ -13,7 +13,9 @@ FERTILIZER_BONUS = 0.10
 PEST_PENALTY = 0.10
 WEED_PENALTY = 0.10
 
-from constants import FARMHOUSE_LEVEL_2_UPGRADE_PRICE
+from constants import (
+    FARMHOUSE_LEVEL_2_UPGRADE_PRICE, FARMHOUSE_LEVEL_3_UPGRADE_PRICE,
+)
 
 
 # A veteményesek központi, minden rendszer által használt definíciói.
@@ -68,6 +70,20 @@ UPGRADES = {
         "requires": None,
         "target_building_type": "farmhouse",
         "target_level": 2,
+    },
+    "farmhouse_level_3": {
+        "name": "Farmház III.",
+        "description": (
+            "Vizuálisan továbbfejleszti a Farmház telkét garázzsal, "
+            "térköves autóbeállóval és medencével."
+        ),
+        "price": FARMHOUSE_LEVEL_3_UPGRADE_PRICE,
+        "unlocks": None,
+        "state_key": "farmhouse_level_3",
+        "requires": None,
+        "required_level": 2,
+        "target_building_type": "farmhouse",
+        "target_level": 3,
     },
     "unlock_field_6x6": {
         "name": "6x6-os veteményes",
@@ -139,6 +155,10 @@ def get_upgrade_status(upgrade_id, purchased_upgrades, farmhouse_level=None):
     if target_level is not None:
         if farmhouse_level is not None and farmhouse_level >= target_level:
             return "Kifejlesztve"
+        required_level = upgrade.get("required_level")
+        if required_level is not None and (
+                farmhouse_level is None or farmhouse_level < required_level):
+            return "Előfeltétel szükséges"
         return "Nincs kifejlesztve"
     if upgrade_id in purchased_upgrades:
         return "Kifejlesztve"

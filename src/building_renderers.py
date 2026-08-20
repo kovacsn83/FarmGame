@@ -30,6 +30,15 @@ FARMHOUSE_PORCH_DARK = (126, 86, 51)
 FARMHOUSE_FENCE_COLOR = (48, 104, 55)
 FARMHOUSE_FENCE_WIDTH = 4
 FARMHOUSE_BUILDING_INSET = 4
+FARMHOUSE_DRIVEWAY = (174, 177, 171)
+FARMHOUSE_DRIVEWAY_LIGHT = (193, 195, 188)
+FARMHOUSE_DRIVEWAY_LINE = (145, 148, 143)
+FARMHOUSE_GARAGE_WALL = (151, 126, 94)
+FARMHOUSE_GARAGE_ROOF_LIGHT = (193, 84, 51)
+FARMHOUSE_GARAGE_ROOF_DARK = (155, 61, 40)
+FARMHOUSE_POOL_BORDER = (192, 190, 171)
+FARMHOUSE_POOL_WATER = (65, 143, 169)
+FARMHOUSE_POOL_LIGHT = (109, 178, 190)
 
 WAREHOUSE_FOUNDATION = (91, 82, 72)
 WAREHOUSE_ROOF_LIGHT = (139, 133, 122)
@@ -264,6 +273,91 @@ def _draw_farmhouse_level_one(screen, footprint):
     _draw_building_outline(screen, footprint, FARMHOUSE_OUTLINE)
 
 
+def _draw_farmhouse_level_three_yard(screen, plot):
+    """A III. szint rendezett felhajtóját, mellékgarázsát és medencéjét rajzolja."""
+    inset = FARMHOUSE_FENCE_WIDTH + 3
+
+    # Keskeny, L alakú személyautó-beálló a telek alsó szélétől a garázsig.
+    driveway_width = max(12, TILE_SIZE - 4)
+    driveway_x = plot.x + 3 * TILE_SIZE
+    vertical_driveway = pygame.Rect(
+        driveway_x,
+        plot.y + 2 * TILE_SIZE,
+        driveway_width,
+        plot.height - 2 * TILE_SIZE - inset,
+    )
+    upper_driveway = pygame.Rect(
+        driveway_x,
+        plot.y + 2 * TILE_SIZE,
+        3 * TILE_SIZE,
+        driveway_width,
+    )
+    for section in (vertical_driveway, upper_driveway):
+        pygame.draw.rect(screen, FARMHOUSE_DRIVEWAY, section)
+        pygame.draw.line(
+            screen, FARMHOUSE_DRIVEWAY_LIGHT,
+            section.topleft, section.topright, 1,
+        )
+        pygame.draw.rect(screen, FARMHOUSE_DRIVEWAY_LINE, section, 1)
+    paver_step = max(6, TILE_SIZE // 2)
+    for y in range(
+            vertical_driveway.top + paver_step,
+            vertical_driveway.bottom,
+            paver_step):
+        pygame.draw.line(
+            screen, FARMHOUSE_DRIVEWAY_LINE,
+            (vertical_driveway.left + 1, y),
+            (vertical_driveway.right - 1, y), 1,
+        )
+    for x in range(upper_driveway.left + paver_step, upper_driveway.right, paver_step):
+        pygame.draw.line(
+            screen, FARMHOUSE_DRIVEWAY_LINE,
+            (x, upper_driveway.top + 1),
+            (x, upper_driveway.bottom - 1), 1,
+        )
+
+    # A kisebb mellékgarázs a főépület mögött, azonos tetőszínekkel.
+    garage = pygame.Rect(
+        plot.x + 5 * TILE_SIZE,
+        plot.y + TILE_SIZE // 2,
+        2 * TILE_SIZE + TILE_SIZE // 2,
+        TILE_SIZE + TILE_SIZE // 2,
+    )
+    _draw_building_shadow(screen, garage, PROCEDURAL_SHADOW_COLOR)
+    pygame.draw.rect(screen, FARMHOUSE_GARAGE_WALL, garage, border_radius=1)
+    roof = garage.inflate(-8, -8)
+    ridge_x = roof.centerx
+    pygame.draw.polygon(screen, FARMHOUSE_GARAGE_ROOF_LIGHT, [
+        roof.topleft, (ridge_x, roof.top),
+        (ridge_x, roof.bottom), roof.bottomleft,
+    ])
+    pygame.draw.polygon(screen, FARMHOUSE_GARAGE_ROOF_DARK, [
+        (ridge_x, roof.top), roof.topright,
+        roof.bottomright, (ridge_x, roof.bottom),
+    ])
+    pygame.draw.rect(screen, FARMHOUSE_OUTLINE, garage, 2, border_radius=1)
+    pygame.draw.line(
+        screen, FARMHOUSE_RIDGE,
+        (ridge_x, roof.top + 1), (ridge_x, roof.bottom - 1), 1,
+    )
+
+    # Kis dekoratív medence a melléképület mellett, világos kőszegéllyel.
+    pool = pygame.Rect(
+        plot.x + TILE_SIZE // 2,
+        plot.y + TILE_SIZE,
+        2 * TILE_SIZE,
+        TILE_SIZE + TILE_SIZE // 2,
+    )
+    pygame.draw.rect(screen, FARMHOUSE_POOL_BORDER, pool, border_radius=3)
+    water = pool.inflate(-6, -6)
+    pygame.draw.rect(screen, FARMHOUSE_POOL_WATER, water, border_radius=3)
+    pygame.draw.line(
+        screen, FARMHOUSE_POOL_LIGHT,
+        (water.left + 4, water.bottom - 4),
+        (water.right - 4, water.bottom - 4), 2,
+    )
+
+
 def draw_farmhouse(screen, building):
     """A füves Farmház-telket, kerítést és jobb alsó házat rajzolja."""
     plot = _building_rect(building)
@@ -276,7 +370,6 @@ def draw_farmhouse(screen, building):
         _draw_farmhouse_body(screen, plot)
         return
 
-    _draw_farmhouse_fence(screen, plot)
     level = building.get("farmhouse_level", 2)
     definition = FARMHOUSE_LEVELS.get(
         level, FARMHOUSE_LEVELS[FARMHOUSE_DEFAULT_LEVEL],
@@ -288,6 +381,9 @@ def draw_farmhouse(screen, building):
         house_width * TILE_SIZE - FARMHOUSE_BUILDING_INSET * 2,
         house_height * TILE_SIZE - FARMHOUSE_BUILDING_INSET * 2,
     )
+    if level >= 3:
+        _draw_farmhouse_level_three_yard(screen, plot)
+    _draw_farmhouse_fence(screen, plot)
     if level == 1:
         _draw_farmhouse_level_one(screen, footprint)
     else:
