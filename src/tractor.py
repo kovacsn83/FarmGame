@@ -15,7 +15,7 @@ from feed_supply import (
 )
 from game_logger import log
 from inventory import get_inventory_item_name
-from orchards import complete_tree_harvest
+from orchards import complete_tree_harvest, get_tree_in_slot
 from processing import receive_processing_delivery, refund_processing_delivery
 from world import tile_to_world_center
 from screen_layout import world_to_screen
@@ -148,6 +148,9 @@ class FieldTask:
     purchase_cost: float = 0.0
     tree_slot: int | None = None
     tree_type: str | None = None
+    orchard_entry_tile: tuple | None = None
+    harvest_approach_position: tuple | None = None
+    orchard_internal_path: list | None = None
     cargo_type: str | None = None
 
 
@@ -299,6 +302,73 @@ def create_field_work_path(field, entry_tile):
     return cycle[start_index:] + cycle[:start_index]
 
 
+def _orchard_group_tiles(group):
+    """Az összefüggő Gyümölcsös-rendszer minden belső csempéjét adja."""
+    return {
+        (row, col)
+        for orchard in group
+        for row in range(orchard["row"], orchard["row"] + orchard["height"])
+        for col in range(orchard["col"], orchard["col"] + orchard["width"])
+    }
+
+
+def _orchard_tree_centers(group):
+    """A gép számára tiltott fatörzs-középpontokat gyűjti össze."""
+    return {
+        (tree["row"] + 1, tree["col"] + 1)
+        for orchard in group
+        for tree in orchard.get("trees", [])
+    }
+
+
+def _find_tile_path(start, targets, allowed_tiles, blocked_tiles):
+    """Rövid belső BFS-útvonalat keres a Gyümölcsös járható csempéin."""
+    targets = set(targets)
+    if start not in allowed_tiles or start in blocked_tiles or not targets:
+        return None
+    queue = deque([start])
+    previous = {start: None}
+    while queue:
+        tile = queue.popleft()
+        if tile in targets:
+            path = [tile]
+            while previous[path[-1]] is not None:
+                path.append(previous[path[-1]])
+            path.reverse()
+            return path
+        row, col = tile
+        for row_offset, col_offset in NEIGHBOR_OFFSETS:
+            neighbor = row + row_offset, col + col_offset
+            if (
+                neighbor not in allowed_tiles
+                or neighbor in blocked_tiles
+                or neighbor in previous
+            ):
+                continue
+            previous[neighbor] = tile
+            queue.append(neighbor)
+    return None
+
+
+def _orchard_approach_path(group, orchard, tree_slot, start):
+    """A jelenlegi helytől a konkrét fa legközelebbi biztonságos oldaláig vezet."""
+    tree = get_tree_in_slot(orchard, tree_slot)
+    if tree is None:
+        return None
+    allowed = _orchard_group_tiles(group)
+    blocked = _orchard_tree_centers(group)
+    center = tree["row"] + 1, tree["col"] + 1
+    approaches = {
+        (center[0] + row_offset, center[1] + col_offset)
+        for row_offset, col_offset in NEIGHBOR_OFFSETS
+        if (
+            (center[0] + row_offset, center[1] + col_offset) in allowed
+            and (center[0] + row_offset, center[1] + col_offset) not in blocked
+        )
+    }
+    return _find_tile_path(start, approaches, allowed, blocked)
+
+
 class Vehicle:
     """Egy jármű közös állapotát, útvonalát és parkolását kezeli."""
 
@@ -329,6 +399,9 @@ class Vehicle:
         self.facing_direction = "up"
         # Általános kapcsolódási pont a későbbi vontatott munkagépekhez.
         self.attached_implement = None
+        # Gyümölcsösön belüli munka után ezen a kapun tér vissza az útra.
+        self._orchard_exit_path = None
+        self._orchard_exit_road = None
 
     def _find_preferred_parking(self, world, buildings):
         if self.assigned_parking_building in buildings:
@@ -722,7 +795,7 @@ class Vehicle:
         return True
 
     def _activate_orchard_task(self, world, task, start_road, now, first):
-        """Az összefüggő Gyümölcsös bármely közúti kapcsolatához irányít."""
+        """Úton, majd a Gyümölcsös belsejében a konkrét fához irányít."""
         group = next(
             (items for items in get_orchard_groups(task.buildings)
              if task.field in items),
@@ -730,27 +803,62 @@ class Vehicle:
         )
         if group is None:
             return False
-        candidates = []
-        for orchard in group:
-            route, connection_road = find_building_route(
-                world, start_road, orchard,
+        group_tiles = _orchard_group_tiles(group)
+        blocked = _orchard_tree_centers(group)
+
+        if start_road in group_tiles:
+            # Azonos összefüggő rendszer következő fájához nem tér vissza
+            # az útra vagy a Garázsba, hanem közvetlenül odagurul.
+            internal_path = _orchard_approach_path(
+                group, task.field, task.tree_slot, start_road,
             )
-            if route is None:
-                continue
-            return_route = find_road_path(
-                world, connection_road, self.parking_tile,
+            if internal_path is None:
+                return False
+            route = internal_path
+            connection_road = self._orchard_exit_road
+            entry_tile = (
+                self._orchard_exit_path[-2]
+                if self._orchard_exit_path and len(self._orchard_exit_path) >= 2
+                else start_road
             )
-            if return_route is not None:
-                candidates.append((len(route), route, connection_road, return_route))
-        if not candidates:
-            return False
-        _, route, connection_road, return_route = min(
-            candidates, key=lambda item: item[0],
-        )
+            return_route = None
+        else:
+            candidates = []
+            for orchard in group:
+                for road_tile, entry in iter_perimeter_connections(
+                        orchard, world):
+                    road_row, road_col = road_tile
+                    if world[road_row][road_col] != ROAD or entry in blocked:
+                        continue
+                    road_route = find_road_path(world, start_road, road_tile)
+                    if road_route is None:
+                        continue
+                    inside_route = _orchard_approach_path(
+                        group, task.field, task.tree_slot, entry,
+                    )
+                    if inside_route is None:
+                        continue
+                    home_route = find_road_path(
+                        world, road_tile, self.parking_tile,
+                    )
+                    if home_route is None:
+                        continue
+                    candidates.append((
+                        len(road_route) + len(inside_route), road_route,
+                        inside_route, road_tile, entry, home_route,
+                    ))
+            if not candidates:
+                return False
+            (_, road_route, internal_path, connection_road, entry_tile,
+             return_route) = min(candidates, key=lambda item: item[0])
+            route = road_route + internal_path
         self.current_task = task
         task.status = "active"
         task.connection_road = connection_road
         task.return_route = return_route
+        task.orchard_entry_tile = entry_tile
+        task.harvest_approach_position = route[-1]
+        task.orchard_internal_path = internal_path
         task.field["vehicle_task_status"] = "active"
         task.field["vehicle_task_type"] = task.task_type
         task.field.pop("vehicle_queue_position", None)
@@ -768,7 +876,16 @@ class Vehicle:
             self.movement_accumulator_ms = 0.0
             self.last_update_ticks = now
             self._last_time_speed = None
-        self.protected_road_tiles = set(route) | set(return_route)
+        self.protected_road_tiles = set(route) | set(return_route or [])
+        self._orchard_exit_road = connection_road
+        exit_inside = _find_tile_path(
+            route[-1], {entry_tile}, group_tiles, blocked,
+        )
+        self._orchard_exit_path = (
+            exit_inside + [connection_road]
+            if exit_inside is not None and connection_road is not None
+            else None
+        )
         if self.parking_tile is not None:
             self.protected_road_tiles.add(self.parking_tile)
         return True
@@ -1338,7 +1455,18 @@ class Vehicle:
 
     def _begin_return_home(self, world, now):
         vehicle_name = VEHICLE_TYPE_DEFINITIONS[self.vehicle_type]["name"]
-        route = find_road_path(world, (self.row, self.col), self.parking_tile)
+        if self._orchard_exit_path and self._orchard_exit_road is not None:
+            road_route = find_road_path(
+                world, self._orchard_exit_road, self.parking_tile,
+            )
+            route = (
+                self._orchard_exit_path + road_route[1:]
+                if road_route is not None else None
+            )
+            self._orchard_exit_path = None
+            self._orchard_exit_road = None
+        else:
+            route = find_road_path(world, (self.row, self.col), self.parking_tile)
         if route is None:
             # Az aktív feladathoz a visszautat végig védjük, ezért ez csak
             # sérült külső állapotnál fordulhat elő.
@@ -1393,6 +1521,8 @@ class Vehicle:
         if self.parking_building_type == "garage":
             self._unreachable_parking_building = None
         self.state = TRACTOR_IDLE
+        self._orchard_exit_path = None
+        self._orchard_exit_road = None
         self.movement_accumulator_ms = 0.0
 
     def demolition_block_reason(self, row, col, building=None, field=None):
@@ -1460,6 +1590,8 @@ class Vehicle:
         self.protected_road_tiles.clear()
         self.facing_direction = "up"
         self.attached_implement = None
+        self._orchard_exit_path = None
+        self._orchard_exit_road = None
 
     def draw(self, screen):
         if self.world_x is None or self.world_y is None:

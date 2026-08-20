@@ -24,7 +24,9 @@ from orchards import (
 )
 from save_system import load_game, save_game
 from time_system import GameTime, TIME_SLOW
-from tractor import TRACTOR_IDLE, TRACTOR_WORKING_ORCHARD
+from tractor import (
+    TRACTOR_IDLE, TRACTOR_RETURNING_HOME, TRACTOR_WORKING_ORCHARD,
+)
 from vehicle_manager import VehicleManager
 from vehicle_types import VehicleType
 
@@ -93,6 +95,123 @@ class OrchardHarvestWorkflowTests(unittest.TestCase):
         self.assertEqual(3, self.tree["last_produced_year"])
         self.assertFalse(is_tree_harvestable(self.tree))
         self.assertIs(self.harvester.assigned_parking_building, self.garage)
+
+    def test_harvester_physically_enters_orchard_and_stops_next_to_tree(self):
+        self.assertTrue(self.manager.start_orchard_harvest(
+            self.world, self.buildings, self.economy,
+            self.inner_orchard, self.tree, current_ticks=0,
+        ))
+        task = self.harvester.current_task
+        group_tiles = {
+            (row, col)
+            for orchard in (self.first_orchard, self.inner_orchard)
+            for row in range(orchard["row"], orchard["row"] + 4)
+            for col in range(orchard["col"], orchard["col"] + 4)
+        }
+        tree_centers = {
+            (tree["row"] + 1, tree["col"] + 1)
+            for orchard in (self.first_orchard, self.inner_orchard)
+            for tree in orchard.get("trees", [])
+        }
+        self.assertTrue(set(task.orchard_internal_path) <= group_tiles)
+        self.assertFalse(set(task.orchard_internal_path) & tree_centers)
+        center = self.tree["row"] + 1, self.tree["col"] + 1
+        approach = task.harvest_approach_position
+        self.assertEqual(1, abs(approach[0] - center[0]) + abs(approach[1] - center[1]))
+
+        for tick in range(100, 20000, 100):
+            self.manager.update(
+                self.world, self.buildings, self.economy, self.game_time,
+                current_ticks=tick,
+            )
+            if self.harvester.state == TRACTOR_WORKING_ORCHARD:
+                break
+        self.assertEqual(TRACTOR_WORKING_ORCHARD, self.harvester.state)
+        self.assertEqual(approach, (self.harvester.row, self.harvester.col))
+
+    def test_second_tree_in_connected_group_is_reached_without_garage_return(self):
+        second_tree = plant_tree(
+            self.buildings, self.economy, 12, 14, "apple",
+        )
+        second_tree["age_weeks"] = 3 * 52
+        synchronize_tree_season(second_tree, 4, 30)
+        self.manager.start_orchard_harvest(
+            self.world, self.buildings, self.economy,
+            self.inner_orchard, self.tree, current_ticks=0,
+        )
+        self.manager.start_orchard_harvest(
+            self.world, self.buildings, self.economy,
+            self.inner_orchard, second_tree, current_ticks=0,
+        )
+        for tick in range(100, 30000, 100):
+            self.manager.update(
+                self.world, self.buildings, self.economy, self.game_time,
+                current_ticks=tick,
+            )
+            task = self.harvester.current_task
+            if task is not None and task.tree_slot == second_tree["slot"]:
+                break
+        self.assertIsNotNone(self.harvester.current_task)
+        self.assertEqual(second_tree["slot"], self.harvester.current_task.tree_slot)
+        self.assertNotIn(self.harvester.parking_tile, self.harvester.path)
+        self.assertTrue(all(
+            10 <= row < 14 and 10 <= col < 18
+            for row, col in self.harvester.path
+        ))
+
+    def test_orchard_entry_and_exit_routes_continue_after_save_and_load(self):
+        self.manager.start_orchard_harvest(
+            self.world, self.buildings, self.economy,
+            self.inner_orchard, self.tree, current_ticks=0,
+        )
+        last_tick = 0
+        for tick in range(100, 20000, 100):
+            self.manager.update(
+                self.world, self.buildings, self.economy, self.game_time,
+                current_ticks=tick,
+            )
+            last_tick = tick
+            if (
+                10 <= self.harvester.row < 14
+                and 10 <= self.harvester.col < 18
+                and self.harvester.state != TRACTOR_WORKING_ORCHARD
+            ):
+                break
+        self.assertIsNotNone(self.harvester.current_task)
+        state = GameState(
+            self.world, [], self.buildings, self.economy, self.game_time,
+            vehicles=self.manager,
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "orchard-entry.json"
+            self.assertTrue(save_game(state, path))
+            self.assertTrue(load_game(state, path))
+        self.harvester = next(
+            vehicle for vehicle in self.manager.vehicles
+            if vehicle.vehicle_type == VehicleType.FRUIT_HARVESTER
+        )
+
+        for tick in range(last_tick + 100, last_tick + 20000, 100):
+            self.manager.update(
+                state.world, state.buildings, state.economy, state.game_time,
+                current_ticks=tick,
+            )
+            last_tick = tick
+            if self.harvester.state == TRACTOR_RETURNING_HOME:
+                break
+        self.assertEqual(TRACTOR_RETURNING_HOME, self.harvester.state)
+        self.assertIsNone(self.harvester.current_task)
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "orchard-exit.json"
+            self.assertTrue(save_game(state, path))
+            self.assertTrue(load_game(state, path))
+        self.harvester = next(
+            vehicle for vehicle in self.manager.vehicles
+            if vehicle.vehicle_type == VehicleType.FRUIT_HARVESTER
+        )
+        self._run_until_idle(start_tick=last_tick)
+        self.assertEqual(20, get_total_inventory(state.buildings)["apple"])
 
     def test_immature_harvested_and_duplicate_tree_are_rejected(self):
         self.tree["age_weeks"] = 2 * 52

@@ -45,6 +45,7 @@ from tractor import (
     TASK_ORCHARD_HARVEST, TASK_SUPPLY_FEED, TASK_SUPPLY_WATER, TASK_WATERING,
     TASK_PROCESSING_SUPPLY,
     TRACTOR_AWAITING_ASSIGNMENT, TRACTOR_SELECTING_NEXT_TASK,
+    TRACTOR_RETURNING_HOME,
     WATER_FILL_DURATION_MS, WATER_UNLOAD_DURATION_MS,
     Combine, FieldTask, FruitHarvester, TowableImplement, Tractor,
     find_building_parking, find_building_route, find_field_route,
@@ -1776,11 +1777,12 @@ class VehicleManager:
         route_fields = {
             "route_to_implement", "route_to_source", "route_to_pond",
             "route_pond_to_field", "return_route", "route_implement_to_home",
-            "route_source_to_target",
+            "route_source_to_target", "orchard_internal_path",
         }
         tuple_fields = {
             "entry_tile", "connection_road", "implement_connection_road",
-            "pond_connection_road",
+            "pond_connection_road", "orchard_entry_tile",
+            "harvest_approach_position",
         }
         for task in tasks:
             record = {"task_id": task_ids[id(task)]}
@@ -1854,6 +1856,13 @@ class VehicleManager:
                     "protected_road_tiles": [
                         list(point) for point in sorted(asset.protected_road_tiles)
                     ],
+                    "orchard_exit_path": [
+                        list(point) for point in (asset._orchard_exit_path or [])
+                    ],
+                    "orchard_exit_road": (
+                        list(asset._orchard_exit_road)
+                        if asset._orchard_exit_road is not None else None
+                    ),
                     "attached_implement_id": (
                         asset.attached_implement.vehicle_id
                         if asset.attached_implement is not None else None
@@ -1961,11 +1970,12 @@ class VehicleManager:
         route_names = {
             "route_to_implement", "route_to_source", "route_to_pond",
             "route_pond_to_field", "return_route", "route_implement_to_home",
-            "route_source_to_target",
+            "route_source_to_target", "orchard_internal_path",
         }
         tuple_names = {
             "entry_tile", "connection_road", "implement_connection_road",
-            "pond_connection_road",
+            "pond_connection_road", "orchard_entry_tile",
+            "harvest_approach_position",
         }
         reference_names = {"field", "pond", "source_building"}
         for record in runtime.get("tasks", []):
@@ -2048,9 +2058,20 @@ class VehicleManager:
             asset.protected_road_tiles = {
                 tuple(point) for point in record.get("protected_road_tiles", [])
             }
+            asset._orchard_exit_path = [
+                tuple(point) for point in record.get("orchard_exit_path", [])
+            ] or None
+            asset._orchard_exit_road = (
+                tuple(record["orchard_exit_road"])
+                if record.get("orchard_exit_road") is not None else None
+            )
             asset.last_update_ticks = None
             asset._last_time_speed = None
-            if asset.state != "idle" and asset.current_task is None:
+            if (
+                asset.state != "idle"
+                and asset.current_task is None
+                and asset.state != TRACTOR_RETURNING_HOME
+            ):
                 asset.reset(fields)
                 asset.ensure_idle_position(world, buildings)
 

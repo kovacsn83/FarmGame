@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- A Gyümölcs szüretelőgép most már fizikailag behajt az összefüggő Gyümölcsösbe, a fatörzseket kerülve a kiválasztott fa mellé áll, több szüretet közvetlenül fa–fa útvonallal láncol, majd a kijelölt kapun át tér vissza a Garázsba.
+
 - Csirke balanszmódosítás: levágáskor mostantól 6 db Csirkehús keletkezik, amelynek piaci ára $60/db.
 
 - Javítva a Búzát szállító Pótkocsi mentési kompatibilitása; a csirketakarmány-szállítás közben készült mentések többé nem jelennek meg sérültként.
