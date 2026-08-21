@@ -57,8 +57,9 @@ class LoanState:
 class BankSystem:
     """Érzékeli a negatív átmenetet, folyósít és hetente törleszt."""
 
-    def __init__(self, economy):
+    def __init__(self, economy, notification_manager=None):
         self.economy = economy
+        self.notification_manager = notification_manager
         self.loan = LoanState()
         self.offer_pending = False
         self.last_observed_money = float(economy.money)
@@ -201,14 +202,19 @@ class BankSystem:
             self.loan.remaining_weeks = 0
             completed_name = LOAN_TIERS[completed_tier].name
             next_tier = completed_tier + 1
+            message = f"{completed_name} teljesen visszafizetve!"
+            log(f"{completed_name} teljesen visszafizetve.", "Bank")
             if newly_completed and next_tier in LOAN_TIERS:
-                log(
-                    f"{completed_name} teljesen visszafizetve. "
-                    f"{LOAN_TIERS[next_tier].name} feloldva.",
-                    "Bank",
+                next_name = LOAN_TIERS[next_tier].name
+                message += f"\nA {next_name} mostantól elérhető."
+                log(f"{next_name} feloldva.", "Bank")
+            if self.notification_manager is not None:
+                self.notification_manager.enqueue(
+                    message,
+                    event_id=(
+                        "loan_repaid", self.loan.loans_taken, completed_tier,
+                    ),
                 )
-            else:
-                log(f"{completed_name} teljesen visszafizetve.", "Bank")
         return payment
 
     def to_save_record(self):

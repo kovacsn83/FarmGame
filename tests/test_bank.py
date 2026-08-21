@@ -17,11 +17,54 @@ from bank import (
 from economy import Economy
 from financial_history import INCOME_LOAN, EXPENSE_LOAN_REPAYMENT
 from game_logger import GameLogger
+from notification_system import NotificationManager
 from save_system import load_game, save_game
 from simulation import SimulationBot, run_simulation
 
 
 class BankSystemTests(unittest.TestCase):
+    def test_each_tier_emits_one_completion_notification(self):
+        expected_messages = {
+            1: "Hitel I. teljesen visszafizetve!\nA Hitel II. mostantól elérhető.",
+            2: "Hitel II. teljesen visszafizetve!\nA Hitel III. mostantól elérhető.",
+            3: "Hitel III. teljesen visszafizetve!",
+        }
+        for tier, expected in expected_messages.items():
+            with self.subTest(tier=tier):
+                notifications = NotificationManager(start_ticks=0)
+                bank = BankSystem(Economy(100000), notifications)
+                bank.loan.completed_tiers = list(range(1, tier))
+                self.assertTrue(bank.take_loan(tier))
+                bank.loan.remaining_balance_cents = (
+                    bank.loan.weekly_payment_cents
+                )
+                bank.loan.remaining_weeks = 1
+
+                bank.apply_weekly_repayment()
+
+                self.assertEqual(notifications.current_message, expected)
+                self.assertFalse(bank.active_loan)
+                self.assertIn(tier, bank.loan.completed_tiers)
+                self.assertEqual(bank.apply_weekly_repayment(), 0.0)
+                self.assertEqual(len(notifications.queue), 0)
+
+    def test_loaded_completed_loan_does_not_replay_notification(self):
+        original_notifications = NotificationManager(start_ticks=0)
+        original = BankSystem(Economy(100000), original_notifications)
+        self.assertTrue(original.take_loan(1))
+        original.loan.remaining_balance_cents = (
+            original.loan.weekly_payment_cents
+        )
+        original.loan.remaining_weeks = 1
+        original.apply_weekly_repayment()
+        record = original.to_save_record()
+
+        restored_notifications = NotificationManager(start_ticks=0)
+        restored = BankSystem(Economy(100000), restored_notifications)
+        restored.load_save_record(record)
+        self.assertEqual(restored.apply_weekly_repayment(), 0.0)
+        self.assertIsNone(restored_notifications.current_message)
+
     def test_central_loan_calculation(self):
         self.assertEqual(LOAN_PRINCIPAL_CENTS, 1_000_000)
         self.assertEqual(LOAN_TOTAL_REPAYMENT_CENTS, 1_160_000)

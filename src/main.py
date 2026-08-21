@@ -155,7 +155,7 @@ def main():
             start_ticks=pygame.time.get_ticks(),
         )
         economy = Economy()
-        bank_system = BankSystem(economy)
+        bank_system = BankSystem(economy, notification_manager)
         vehicles = VehicleManager()
         quest_manager = QuestManager(economy)
         game_state = GameState(
