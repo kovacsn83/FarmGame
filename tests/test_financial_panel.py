@@ -108,6 +108,21 @@ class FinancialSummaryPanelTests(unittest.TestCase):
         )
         self.assertEqual(expected, self.panel.max_scroll)
 
+    def test_bank_button_is_top_right_and_emits_request(self):
+        self._draw_at(1500, 1000)
+        button = self.panel.bank_button_rect
+        self.assertGreater(button.left, self.panel.rect.centerx)
+        self.assertLess(button.right, self.panel.rect.right)
+        self.assertLess(button.top, self.panel._layout_rects()["income_heading"].top)
+
+        event = pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN,
+            {"button": 1, "pos": button.center},
+        )
+        self.assertTrue(self.panel.handle_event(event))
+        self.assertTrue(self.panel.take_bank_request())
+        self.assertFalse(self.panel.take_bank_request())
+
 
 if __name__ == "__main__":
     unittest.main()

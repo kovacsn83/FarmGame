@@ -65,6 +65,27 @@ class BankPanelTests(unittest.TestCase):
             panel.button_rects["decline"].left,
         )
 
+    def test_escape_closes_panel_and_consumes_event(self):
+        panel = BankPanel()
+        panel.open(previous_time_speed=1)
+        event = pygame.event.Event(
+            pygame.KEYDOWN, {"key": pygame.K_ESCAPE},
+        )
+        self.assertTrue(panel.handle_event(event))
+        self.assertFalse(panel.visible)
+        self.assertEqual(panel.take_decision(), "decline")
+
+    def test_outside_click_closes_panel_and_consumes_event(self):
+        panel = BankPanel()
+        panel.open(previous_time_speed=1)
+        outside = (panel.rect.left - 1, panel.rect.top)
+        event = pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN, {"button": 1, "pos": outside},
+        )
+        self.assertTrue(panel.handle_event(event))
+        self.assertFalse(panel.visible)
+        self.assertEqual(panel.take_decision(), "decline")
+
 
 if __name__ == "__main__":
     unittest.main()

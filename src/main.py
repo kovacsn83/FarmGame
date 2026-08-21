@@ -217,6 +217,17 @@ def main():
         vehicles.synchronize_time()
         animal_movement.synchronize()
 
+    def open_bank_panel():
+        """Modálisan megnyitja a közös Bank panelt és szünetelteti a játékot."""
+        previous_time_speed = game_time.current_time_speed
+        game_time.set_time_speed(TIME_PAUSED)
+        vehicles.synchronize_time()
+        animal_movement.synchronize()
+        camera.cancel_drag()
+        road_drag.cancel()
+        financial_summary_panel.close()
+        bank_panel.open(previous_time_speed)
+
     def handle_info_panel_event(event):
         """Egy helyen kezeli az információs panelek minden műveletét."""
         handled = info_panel.handle_event(event)
@@ -578,7 +589,11 @@ def main():
             if calendar_panel.handle_event(event):
                 continue
 
-            if financial_summary_panel.handle_event(event):
+            financial_handled = financial_summary_panel.handle_event(event)
+            if financial_summary_panel.take_bank_request():
+                open_bank_panel()
+                continue
+            if financial_handled:
                 continue
 
             economy_clicked = (
@@ -840,12 +855,6 @@ def main():
         )
 
         if not bank_panel.visible and bank_system.observe_balance():
-            previous_time_speed = game_time.current_time_speed
-            game_time.set_time_speed(TIME_PAUSED)
-            vehicles.synchronize_time()
-            animal_movement.synchronize()
-            camera.cancel_drag()
-            road_drag.cancel()
             info_panel.close()
             crop_selection_panel.close()
             building_selection_panel.close()
@@ -854,7 +863,7 @@ def main():
             calendar_panel.close()
             financial_summary_panel.close()
             game_menu.close()
-            bank_panel.open(previous_time_speed)
+            open_bank_panel()
     
         quest_manager.update()
     

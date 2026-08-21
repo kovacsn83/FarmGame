@@ -87,6 +87,8 @@ FINANCE_COLUMN_HEADER_HEIGHT = 24
 FINANCE_TOTALS_HEIGHT = 38
 FINANCE_NET_HEIGHT = 52
 FINANCE_SCROLL_STEP = 48
+FINANCE_BANK_BUTTON_WIDTH = 96
+FINANCE_BANK_BUTTON_HEIGHT = 34
 FINANCE_INCOME_COLOR = (45, 125, 70)
 FINANCE_EXPENSE_COLOR = (160, 70, 55)
 FINANCE_SEPARATOR_COLOR = (150, 150, 140)
@@ -777,7 +779,7 @@ class BankPanel(PopupWindow):
         super().open()
 
     def handle_event(self, event):
-        """A panel csak egy egyértelmű elfogadó vagy elutasító döntéssel zárul."""
+        """A panel döntéssel, ESC-pel vagy külső kattintással zárható."""
         if not self.visible:
             return False
         if self.market_active:
@@ -787,7 +789,10 @@ class BankPanel(PopupWindow):
             self.close()
             return True
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if self.button_rects.get("market", pygame.Rect(0, 0, 0, 0)).collidepoint(event.pos):
+            if not self.rect.collidepoint(event.pos):
+                self.pending_decision = "decline"
+                self.close()
+            elif self.button_rects.get("market", pygame.Rect(0, 0, 0, 0)).collidepoint(event.pos):
                 self.pending_decision = "market"
             elif self.button_rects.get("accept", pygame.Rect(0, 0, 0, 0)).collidepoint(event.pos):
                 self.pending_decision = "accept"
@@ -894,6 +899,8 @@ class FinancialSummaryPanel(PopupWindow):
         super().__init__(FINANCE_PANEL_WIDTH, FINANCE_PANEL_HEIGHT)
         self.scroll_offset = 0
         self.max_scroll = 0
+        self.bank_button_rect = pygame.Rect(0, 0, 0, 0)
+        self._bank_requested = False
 
     def open(self):
         screen_width, screen_height = get_screen_size()
@@ -901,11 +908,19 @@ class FinancialSummaryPanel(PopupWindow):
         self.rect.height = min(FINANCE_PANEL_HEIGHT, screen_height - 80)
         self.rect.center = get_screen_center()
         self.scroll_offset = 0
+        self._bank_requested = False
         super().open()
 
     def handle_event(self, event):
         if not self.visible:
             return False
+        if (
+            event.type == pygame.MOUSEBUTTONDOWN
+            and event.button == 1
+            and self.bank_button_rect.collidepoint(event.pos)
+        ):
+            self._bank_requested = True
+            return True
         if event.type == pygame.MOUSEWHEEL:
             if self.rect.collidepoint(pygame.mouse.get_pos()):
                 self.scroll_offset = max(
@@ -914,6 +929,29 @@ class FinancialSummaryPanel(PopupWindow):
                 )
                 return True
         return super().handle_event(event)
+
+    def take_bank_request(self):
+        """Egyszer adja vissza a Bank gomb megnyomását."""
+        requested = self._bank_requested
+        self._bank_requested = False
+        return requested
+
+    def _draw_bank_button(self, screen, font):
+        self.bank_button_rect = pygame.Rect(
+            self.rect.right - FINANCE_PANEL_PADDING - FINANCE_BANK_BUTTON_WIDTH,
+            self.rect.top + FINANCE_PANEL_PADDING,
+            FINANCE_BANK_BUTTON_WIDTH,
+            FINANCE_BANK_BUTTON_HEIGHT,
+        )
+        color = (
+            CROP_CARD_HOVER
+            if self.bank_button_rect.collidepoint(pygame.mouse.get_pos())
+            else CROP_CARD_BACKGROUND
+        )
+        pygame.draw.rect(screen, color, self.bank_button_rect)
+        pygame.draw.rect(screen, INFO_PANEL_BORDER, self.bank_button_rect, 1)
+        label = font.render("Bank", True, COLOR_TEXT)
+        screen.blit(label, label.get_rect(center=self.bank_button_rect.center))
 
     @staticmethod
     def _subcategory_name(item_id):
@@ -1057,6 +1095,7 @@ class FinancialSummaryPanel(PopupWindow):
         title_y = self.rect.top + FINANCE_PANEL_PADDING
         self.draw_text(screen, font, "Pénzügyi összesítő", title_x, title_y)
         self.draw_text(screen, font, "Utolsó 52 hét", title_x, title_y + 26)
+        self._draw_bank_button(screen, font)
 
         screen.blit(
             font.render("BEVÉTELEK", True, COLOR_TEXT),
