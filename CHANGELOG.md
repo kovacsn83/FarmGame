@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Elkészült a háromszintű, adatvezérelt hitelrendszer: Hitel I. $10 000, Hitel II. $25 000, Hitel III. $50 000 összeggel. A magasabb szintek az előző hitel teljes visszafizetésével tartósan oldódnak fel, miközben egyszerre továbbra is csak egy hitel lehet aktív.
+
 - A Bank manuálisan, pozitív egyenleg mellett is használható gazdaságfejlesztési hitel felvételére; egyszerre továbbra is csak egy aktív hitel engedélyezett.
 
 - A Pénzügyi összesítő új Bank gombot kapott, amelyről a meglévő Bank popup manuálisan is megnyitható.

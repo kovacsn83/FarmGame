@@ -9,7 +9,7 @@ from asset_loader import (
 from buildings import (
     BUILD_OPTIONS, BUILDING_TYPES, get_total_capacity, get_total_inventory,
 )
-from bank import LOAN_TERM_WEEKS
+from bank import LOAN_TIERS
 from constants import (
     BOTTOM_BAR_HEIGHT, COLOR_BUTTON, COLOR_BUTTON_ACTIVE, COLOR_BUTTON_BORDER,
     COLOR_FIELD, COLOR_ROAD, COLOR_TEXT, COLOR_TOOLBAR, COLOR_TOOLBAR_LINE,
@@ -757,12 +757,15 @@ class PopupWindow:
 
 
 class BankPanel(PopupWindow):
-    """A negatív egyenlegkor megjelenő, modális hitelajánlat."""
+    """A manuálisan és vészhelyzetben is használható hitelválasztó."""
 
-    WIDTH = 520
-    HEIGHT = 360
+    WIDTH = 680
+    HEIGHT = 820
     BUTTON_HEIGHT = 42
     BUTTON_GAP = 16
+    CARD_HEIGHT = 170
+    CARD_GAP = 12
+    SCROLL_STEP = 64
 
     def __init__(self):
         super().__init__(self.WIDTH, self.HEIGHT)
@@ -772,6 +775,11 @@ class BankPanel(PopupWindow):
         self.market_active = False
         self.emergency_mode = True
         self.accept_enabled = True
+        self.enabled_tiers = set()
+        self.selected_loan_tier = None
+        self.scroll_offset = 0
+        self.max_scroll = 0
+        self.cards_rect = pygame.Rect(0, 0, 0, 0)
 
     def open(self, previous_time_speed, emergency_mode=True):
         self.pending_decision = None
@@ -779,6 +787,12 @@ class BankPanel(PopupWindow):
         self.market_active = False
         self.emergency_mode = emergency_mode
         self.accept_enabled = True
+        self.enabled_tiers = set()
+        self.selected_loan_tier = None
+        self.scroll_offset = 0
+        screen_width, screen_height = get_screen_size()
+        self.rect.width = min(self.WIDTH, screen_width - 40)
+        self.rect.height = min(self.HEIGHT, screen_height - 40)
         self.button_rects = {}
         self.rect.center = get_screen_center()
         super().open()
@@ -789,6 +803,16 @@ class BankPanel(PopupWindow):
             return False
         if self.market_active:
             return False
+        if event.type == pygame.MOUSEWHEEL:
+            if self.cards_rect.collidepoint(pygame.mouse.get_pos()):
+                self.scroll_offset = max(
+                    0,
+                    min(
+                        self.max_scroll,
+                        self.scroll_offset - event.y * self.SCROLL_STEP,
+                    ),
+                )
+                return True
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             self.pending_decision = "decline"
             self.close()
@@ -799,17 +823,26 @@ class BankPanel(PopupWindow):
                 self.close()
             elif self.button_rects.get("market", pygame.Rect(0, 0, 0, 0)).collidepoint(event.pos):
                 self.pending_decision = "market"
-            elif (
-                self.accept_enabled
-                and self.button_rects.get(
-                    "accept", pygame.Rect(0, 0, 0, 0),
-                ).collidepoint(event.pos)
-            ):
-                self.pending_decision = "accept"
-                self.close()
-            elif self.button_rects.get("decline", pygame.Rect(0, 0, 0, 0)).collidepoint(event.pos):
-                self.pending_decision = "decline"
-                self.close()
+            else:
+                for tier in LOAN_TIERS:
+                    button = self.button_rects.get(
+                        f"accept_{tier}", pygame.Rect(0, 0, 0, 0),
+                    )
+                    if (
+                        tier in self.enabled_tiers
+                        and self.cards_rect.collidepoint(event.pos)
+                        and button.collidepoint(event.pos)
+                    ):
+                        self.selected_loan_tier = tier
+                        self.pending_decision = "accept"
+                        self.close()
+                        break
+                else:
+                    if self.button_rects.get(
+                        "decline", pygame.Rect(0, 0, 0, 0),
+                    ).collidepoint(event.pos):
+                        self.pending_decision = "decline"
+                        self.close()
             return True
         return event.type in (pygame.KEYDOWN, pygame.KEYUP, pygame.MOUSEBUTTONUP)
 
@@ -824,6 +857,11 @@ class BankPanel(PopupWindow):
         decision = self.pending_decision
         self.pending_decision = None
         return decision
+
+    def take_selected_loan_tier(self):
+        tier = self.selected_loan_tier
+        self.selected_loan_tier = None
+        return tier
 
     def _draw_button(self, screen, font, rect, label, enabled=True):
         if not enabled:
@@ -841,16 +879,23 @@ class BankPanel(PopupWindow):
             return
         self.rect.center = get_screen_center()
         self.draw_frame(screen)
-        left = self.rect.left + INFO_PANEL_PADDING
-        top = self.rect.top + INFO_PANEL_PADDING
+        padding = INFO_PANEL_PADDING
+        left = self.rect.left + padding
+        top = self.rect.top + padding
         loan = bank_system.loan
         self.accept_enabled = not loan.active_loan
+        self.enabled_tiers = {
+            tier for tier in LOAN_TIERS
+            if self.accept_enabled and bank_system.is_tier_unlocked(tier)
+        }
         if loan.active_loan:
+            active_definition = LOAN_TIERS.get(
+                loan.active_loan_tier, LOAN_TIERS[1],
+            )
             lines = (
                 "Bank",
-                "Aktív hitel",
+                f"Aktív hitel: {active_definition.name}",
                 "Már van aktív hiteled.",
-                "",
                 f"Hátralévő tartozás: {format_money(loan.remaining_balance_cents / 100)}",
                 f"Hátralévő futamidő: {loan.remaining_weeks} hét",
                 f"Heti törlesztőrészlet: {format_money(loan.weekly_payment_cents / 100)}",
@@ -861,26 +906,81 @@ class BankPanel(PopupWindow):
                 if self.emergency_mode
                 else "Finanszírozd gazdaságod fejlesztését hitelből."
             )
-            lines = (
-                "Bank",
-                context_text,
-                "",
-                f"Hitelösszeg: {format_money(loan.principal_cents / 100)}",
-                f"Kamat: {loan.interest_percent}%",
-                f"Teljes visszafizetés: {format_money(loan.total_repayment_cents / 100)}",
-                f"Futamidő: {LOAN_TERM_WEEKS} hét",
-                f"Heti törlesztőrészlet: {format_money(loan.weekly_payment_cents / 100)}",
-            )
+            lines = ("Bank", context_text)
         for index, line in enumerate(lines):
-            self.draw_text(screen, font, line, left, top + index * 28)
-        button_count = 3 if self.emergency_mode else 2
+            self.draw_text(screen, font, line, left, top + index * 24)
+
+        header_height = len(lines) * 24 + 12
+        footer_height = self.BUTTON_HEIGHT + padding * 2
+        cards_top = top + header_height
+        cards_bottom = self.rect.bottom - footer_height
+        self.cards_rect = pygame.Rect(
+            left, cards_top, self.rect.width - padding * 2,
+            max(1, cards_bottom - cards_top),
+        )
+        total_cards_height = (
+            len(LOAN_TIERS) * self.CARD_HEIGHT
+            + (len(LOAN_TIERS) - 1) * self.CARD_GAP
+        )
+        self.max_scroll = max(0, total_cards_height - self.cards_rect.height)
+        self.scroll_offset = min(self.scroll_offset, self.max_scroll)
+
+        self.button_rects = {}
+        old_clip = screen.get_clip()
+        screen.set_clip(self.cards_rect)
+        for index, (tier, definition) in enumerate(LOAN_TIERS.items()):
+            card = pygame.Rect(
+                self.cards_rect.left,
+                self.cards_rect.top - self.scroll_offset
+                + index * (self.CARD_HEIGHT + self.CARD_GAP),
+                self.cards_rect.width,
+                self.CARD_HEIGHT,
+            )
+            unlocked = bank_system.is_tier_unlocked(tier)
+            card_color = CROP_CARD_BACKGROUND if unlocked else (215, 215, 210)
+            pygame.draw.rect(screen, card_color, card)
+            pygame.draw.rect(screen, INFO_PANEL_BORDER, card, 1)
+            text_color = COLOR_TEXT if unlocked else (120, 120, 115)
+            card_left = card.left + 14
+            card_top = card.top + 10
+            details = (
+                definition.name,
+                f"Hitelösszeg: {format_money(definition.principal_cents / 100)}",
+                f"Kamat: {definition.interest_percent}%",
+                "Teljes visszafizetés: "
+                f"{format_money(definition.total_repayment_cents / 100)}",
+                f"Futamidő: {definition.duration_weeks} hét",
+                "Heti törlesztőrészlet: "
+                f"{format_money(definition.weekly_payment_cents / 100)}",
+            )
+            for line_index, line in enumerate(details):
+                rendered = font.render(line, True, text_color)
+                screen.blit(rendered, (card_left, card_top + line_index * 20))
+            if not unlocked:
+                prerequisite = LOAN_TIERS[tier - 1].name
+                locked_text = font.render(
+                    f"A {prerequisite} teljes visszafizetése szükséges.",
+                    True, text_color,
+                )
+                screen.blit(locked_text, (card_left + 250, card_top + 10))
+            accept_rect = pygame.Rect(
+                card.right - 178, card.bottom - 42, 164, 32,
+            )
+            self.button_rects[f"accept_{tier}"] = accept_rect
+            if tier == 1:
+                self.button_rects["accept"] = accept_rect
+            self._draw_button(
+                screen, font, accept_rect, "Hitel felvétele",
+                enabled=tier in self.enabled_tiers,
+            )
+        screen.set_clip(old_clip)
+
+        button_count = 2 if self.emergency_mode else 1
         button_width = (
-            self.rect.width - INFO_PANEL_PADDING * 2
+            self.rect.width - padding * 2
             - self.BUTTON_GAP * (button_count - 1)
         ) // button_count
-        button_y = self.rect.bottom - INFO_PANEL_PADDING - self.BUTTON_HEIGHT
-        self.button_rects = {}
-        accept_index = 1 if self.emergency_mode else 0
+        button_y = self.rect.bottom - padding - self.BUTTON_HEIGHT
         if self.emergency_mode:
             self.button_rects["market"] = pygame.Rect(
                 left, button_y, button_width, self.BUTTON_HEIGHT,
@@ -888,17 +988,9 @@ class BankPanel(PopupWindow):
             self._draw_button(
                 screen, font, self.button_rects["market"], "Piac",
             )
-        self.button_rects["accept"] = pygame.Rect(
-            left + (button_width + self.BUTTON_GAP) * accept_index,
-            button_y, button_width, self.BUTTON_HEIGHT,
-        )
         self.button_rects["decline"] = pygame.Rect(
-            left + (button_width + self.BUTTON_GAP) * (accept_index + 1),
+            left + (button_width + self.BUTTON_GAP if self.emergency_mode else 0),
             button_y, button_width, self.BUTTON_HEIGHT,
-        )
-        self._draw_button(
-            screen, font, self.button_rects["accept"], "Hitel felvétele",
-            enabled=self.accept_enabled,
         )
         self._draw_button(
             screen, font, self.button_rects["decline"],

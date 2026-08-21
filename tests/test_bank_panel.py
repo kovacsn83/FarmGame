@@ -50,20 +50,18 @@ class BankPanelTests(unittest.TestCase):
         panel.finish_market()
         self.assertFalse(panel.market_active)
 
-    def test_buttons_follow_requested_order(self):
+    def test_emergency_mode_shows_market_and_all_three_tiers(self):
         panel = BankPanel()
         panel.open(previous_time_speed=1)
         panel.draw(
             pygame.Surface((900, 600)), self.font, BankSystem(Economy()),
         )
-        self.assertLess(
-            panel.button_rects["market"].left,
-            panel.button_rects["accept"].left,
-        )
-        self.assertLess(
-            panel.button_rects["accept"].left,
-            panel.button_rects["decline"].left,
-        )
+        self.assertIn("market", panel.button_rects)
+        self.assertIn("decline", panel.button_rects)
+        self.assertIn("accept_1", panel.button_rects)
+        self.assertIn("accept_2", panel.button_rects)
+        self.assertIn("accept_3", panel.button_rects)
+        self.assertEqual(panel.enabled_tiers, {1})
 
     def test_escape_closes_panel_and_consumes_event(self):
         panel = BankPanel()
@@ -113,6 +111,40 @@ class BankPanelTests(unittest.TestCase):
         self.assertTrue(panel.handle_event(event))
         self.assertIsNone(panel.take_decision())
         self.assertTrue(panel.visible)
+
+    def test_repaid_tier_enables_next_card(self):
+        economy = Economy(50000)
+        bank = BankSystem(economy)
+        bank.take_loan(1)
+        for _ in range(80):
+            bank.apply_weekly_repayment()
+        panel = BankPanel()
+        panel.open(previous_time_speed=1, emergency_mode=False)
+        panel.draw(pygame.Surface((900, 600)), self.font, bank)
+        self.assertEqual(panel.enabled_tiers, {1, 2})
+
+        panel.scroll_offset = min(panel.max_scroll, panel.CARD_HEIGHT)
+        panel.draw(pygame.Surface((900, 600)), self.font, bank)
+        tier_two_button = panel.button_rects["accept_2"]
+        self.assertTrue(panel.cards_rect.collidepoint(tier_two_button.center))
+        event = pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN,
+            {"button": 1, "pos": tier_two_button.center},
+        )
+        self.assertTrue(panel.handle_event(event))
+        self.assertEqual(panel.take_decision(), "accept")
+        self.assertEqual(panel.take_selected_loan_tier(), 2)
+
+    def test_small_screen_uses_scrollable_card_area(self):
+        set_screen_size(640, 420)
+        panel = BankPanel()
+        panel.open(previous_time_speed=1, emergency_mode=False)
+        panel.draw(
+            pygame.Surface((640, 420)), self.font, BankSystem(Economy()),
+        )
+        self.assertLessEqual(panel.rect.bottom, 420)
+        self.assertGreater(panel.max_scroll, 0)
+        set_screen_size(900, 600)
 
 
 if __name__ == "__main__":

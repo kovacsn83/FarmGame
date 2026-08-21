@@ -543,6 +543,7 @@ def main():
 
                 bank_panel.handle_event(event)
                 bank_decision = bank_panel.take_decision()
+                selected_loan_tier = bank_panel.take_selected_loan_tier()
                 if bank_decision == "market":
                     market = next(
                         (item for item in buildings if item["type"] == "market"),
@@ -557,9 +558,9 @@ def main():
                         )
                 elif bank_decision == "accept":
                     if bank_panel.emergency_mode:
-                        bank_system.accept_offer()
+                        bank_system.accept_offer(selected_loan_tier)
                     else:
-                        bank_system.take_loan()
+                        bank_system.take_loan(selected_loan_tier)
                 elif bank_decision == "decline":
                     bank_system.decline_offer()
                 if bank_decision in ("accept", "decline"):

@@ -10,8 +10,9 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from bank import (
-    BankSystem, LOAN_PRINCIPAL_CENTS, LOAN_TERM_WEEKS,
+    BankSystem, LOAN_PRINCIPAL_CENTS, LOAN_TERM_WEEKS, LOAN_TIERS,
     LOAN_TOTAL_REPAYMENT_CENTS, LOAN_WEEKLY_PAYMENT_CENTS,
+    is_valid_loan_record,
 )
 from economy import Economy
 from financial_history import INCOME_LOAN, EXPENSE_LOAN_REPAYMENT
@@ -26,6 +27,18 @@ class BankSystemTests(unittest.TestCase):
         self.assertEqual(LOAN_TOTAL_REPAYMENT_CENTS, 1_160_000)
         self.assertEqual(LOAN_TERM_WEEKS, 80)
         self.assertEqual(LOAN_WEEKLY_PAYMENT_CENTS, 14_500)
+        self.assertEqual(
+            [
+                (tier.principal_cents, tier.total_repayment_cents,
+                 tier.duration_weeks, tier.weekly_payment_cents)
+                for tier in LOAN_TIERS.values()
+            ],
+            [
+                (1_000_000, 1_160_000, 80, 14_500),
+                (2_500_000, 2_950_000, 100, 29_500),
+                (5_000_000, 6_000_000, 120, 50_000),
+            ],
+        )
 
     def test_offer_appears_only_on_new_negative_transition(self):
         economy = Economy(100)
@@ -82,6 +95,75 @@ class BankSystemTests(unittest.TestCase):
         self.assertEqual(
             summary["expense"][EXPENSE_LOAN_REPAYMENT]["total"], 145,
         )
+
+    def test_tiers_unlock_in_order_and_lower_tiers_remain_available(self):
+        economy = Economy(100000)
+        bank = BankSystem(economy)
+        self.assertTrue(bank.is_tier_unlocked(1))
+        self.assertFalse(bank.is_tier_unlocked(2))
+        self.assertFalse(bank.is_tier_unlocked(3))
+        self.assertFalse(bank.take_loan(2))
+
+        self.assertTrue(bank.take_loan(1))
+        for _ in range(80):
+            bank.apply_weekly_repayment()
+        self.assertTrue(bank.is_tier_unlocked(1))
+        self.assertTrue(bank.is_tier_unlocked(2))
+        self.assertFalse(bank.is_tier_unlocked(3))
+
+        self.assertTrue(bank.take_loan(2))
+        self.assertEqual(bank.loan.active_loan_tier, 2)
+        self.assertEqual(bank.loan.weekly_payment_cents, 29_500)
+        self.assertFalse(bank.take_loan(1))
+        for _ in range(100):
+            bank.apply_weekly_repayment()
+        self.assertTrue(bank.is_tier_unlocked(3))
+        self.assertTrue(bank.take_loan(3))
+        self.assertEqual(bank.loan.active_loan_tier, 3)
+        self.assertEqual(bank.loan.weekly_payment_cents, 50_000)
+        repaid_before = bank.loan.total_repaid_cents
+        for _ in range(120):
+            self.assertEqual(bank.apply_weekly_repayment(), 500.0)
+        self.assertEqual(
+            bank.loan.total_repaid_cents - repaid_before, 6_000_000,
+        )
+        self.assertFalse(bank.active_loan)
+        self.assertEqual(bank.loan.completed_tiers, [1, 2, 3])
+
+    def test_progression_save_load_round_trip(self):
+        original = SimulationBot(21)
+        original.economy.money = 100000
+        original.bank_system.take_loan(1)
+        for _ in range(80):
+            original.bank_system.apply_weekly_repayment()
+        original.bank_system.take_loan(2)
+        original.bank_system.apply_weekly_repayment()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "tiered_bank_save.json"
+            self.assertTrue(save_game(original.state, path))
+            loaded = SimulationBot(22)
+            self.assertTrue(load_game(loaded.state, path))
+        self.assertEqual(loaded.bank_system.loan.completed_tiers, [1])
+        self.assertEqual(loaded.bank_system.loan.active_loan_tier, 2)
+        self.assertEqual(loaded.bank_system.loan.remaining_weeks, 99)
+        self.assertEqual(
+            loaded.bank_system.loan.remaining_balance_cents, 2_920_500,
+        )
+
+    def test_legacy_active_loan_migrates_to_tier_one_without_unlock(self):
+        economy = Economy(0)
+        bank = BankSystem(economy)
+        bank.take_loan(1)
+        legacy = bank.to_save_record()
+        legacy.pop("active_loan_tier")
+        legacy.pop("completed_tiers")
+        self.assertTrue(is_valid_loan_record(legacy))
+
+        restored = BankSystem(Economy(0))
+        restored.load_save_record(legacy)
+        self.assertEqual(restored.loan.active_loan_tier, 1)
+        self.assertEqual(restored.loan.completed_tiers, [])
+        self.assertFalse(restored.is_tier_unlocked(2))
 
     def test_eighty_installments_repay_exactly_even_with_insufficient_money(self):
         economy = Economy(0)
