@@ -217,7 +217,7 @@ def main():
         vehicles.synchronize_time()
         animal_movement.synchronize()
 
-    def open_bank_panel():
+    def open_bank_panel(emergency_mode=False):
         """Modálisan megnyitja a közös Bank panelt és szünetelteti a játékot."""
         previous_time_speed = game_time.current_time_speed
         game_time.set_time_speed(TIME_PAUSED)
@@ -226,7 +226,9 @@ def main():
         camera.cancel_drag()
         road_drag.cancel()
         financial_summary_panel.close()
-        bank_panel.open(previous_time_speed)
+        bank_panel.open(
+            previous_time_speed, emergency_mode=emergency_mode,
+        )
 
     def handle_info_panel_event(event):
         """Egy helyen kezeli az információs panelek minden műveletét."""
@@ -554,7 +556,10 @@ def main():
                             "Bank",
                         )
                 elif bank_decision == "accept":
-                    bank_system.accept_offer()
+                    if bank_panel.emergency_mode:
+                        bank_system.accept_offer()
+                    else:
+                        bank_system.take_loan()
                 elif bank_decision == "decline":
                     bank_system.decline_offer()
                 if bank_decision in ("accept", "decline"):
@@ -863,7 +868,7 @@ def main():
             calendar_panel.close()
             financial_summary_panel.close()
             game_menu.close()
-            open_bank_panel()
+            open_bank_panel(emergency_mode=True)
     
         quest_manager.update()
     

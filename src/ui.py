@@ -770,11 +770,16 @@ class BankPanel(PopupWindow):
         self.previous_time_speed = None
         self.button_rects = {}
         self.market_active = False
+        self.emergency_mode = True
+        self.accept_enabled = True
 
-    def open(self, previous_time_speed):
+    def open(self, previous_time_speed, emergency_mode=True):
         self.pending_decision = None
         self.previous_time_speed = previous_time_speed
         self.market_active = False
+        self.emergency_mode = emergency_mode
+        self.accept_enabled = True
+        self.button_rects = {}
         self.rect.center = get_screen_center()
         super().open()
 
@@ -794,7 +799,12 @@ class BankPanel(PopupWindow):
                 self.close()
             elif self.button_rects.get("market", pygame.Rect(0, 0, 0, 0)).collidepoint(event.pos):
                 self.pending_decision = "market"
-            elif self.button_rects.get("accept", pygame.Rect(0, 0, 0, 0)).collidepoint(event.pos):
+            elif (
+                self.accept_enabled
+                and self.button_rects.get(
+                    "accept", pygame.Rect(0, 0, 0, 0),
+                ).collidepoint(event.pos)
+            ):
                 self.pending_decision = "accept"
                 self.close()
             elif self.button_rects.get("decline", pygame.Rect(0, 0, 0, 0)).collidepoint(event.pos):
@@ -815,11 +825,15 @@ class BankPanel(PopupWindow):
         self.pending_decision = None
         return decision
 
-    def _draw_button(self, screen, font, rect, label):
-        color = CROP_CARD_HOVER if rect.collidepoint(pygame.mouse.get_pos()) else CROP_CARD_BACKGROUND
+    def _draw_button(self, screen, font, rect, label, enabled=True):
+        if not enabled:
+            color = (205, 205, 200)
+        else:
+            color = CROP_CARD_HOVER if rect.collidepoint(pygame.mouse.get_pos()) else CROP_CARD_BACKGROUND
         pygame.draw.rect(screen, color, rect)
         pygame.draw.rect(screen, INFO_PANEL_BORDER, rect, 1)
-        rendered = font.render(label, True, COLOR_TEXT)
+        text_color = COLOR_TEXT if enabled else (125, 125, 120)
+        rendered = font.render(label, True, text_color)
         screen.blit(rendered, rendered.get_rect(center=rect.center))
 
     def draw(self, screen, font, bank_system):
@@ -830,41 +844,65 @@ class BankPanel(PopupWindow):
         left = self.rect.left + INFO_PANEL_PADDING
         top = self.rect.top + INFO_PANEL_PADDING
         loan = bank_system.loan
-        lines = (
-            "Bank",
-            "A gazdaság pénzegyenlege negatívba fordult.",
-            "",
-            f"Hitelösszeg: {format_money(loan.principal_cents / 100)}",
-            f"Kamat: {loan.interest_percent}%",
-            f"Teljes visszafizetés: {format_money(loan.total_repayment_cents / 100)}",
-            f"Futamidő: {LOAN_TERM_WEEKS} hét",
-            f"Heti törlesztőrészlet: {format_money(loan.weekly_payment_cents / 100)}",
-        )
+        self.accept_enabled = not loan.active_loan
+        if loan.active_loan:
+            lines = (
+                "Bank",
+                "Aktív hitel",
+                "Már van aktív hiteled.",
+                "",
+                f"Hátralévő tartozás: {format_money(loan.remaining_balance_cents / 100)}",
+                f"Hátralévő futamidő: {loan.remaining_weeks} hét",
+                f"Heti törlesztőrészlet: {format_money(loan.weekly_payment_cents / 100)}",
+            )
+        else:
+            context_text = (
+                "A gazdaság pénzegyenlege negatívba fordult."
+                if self.emergency_mode
+                else "Finanszírozd gazdaságod fejlesztését hitelből."
+            )
+            lines = (
+                "Bank",
+                context_text,
+                "",
+                f"Hitelösszeg: {format_money(loan.principal_cents / 100)}",
+                f"Kamat: {loan.interest_percent}%",
+                f"Teljes visszafizetés: {format_money(loan.total_repayment_cents / 100)}",
+                f"Futamidő: {LOAN_TERM_WEEKS} hét",
+                f"Heti törlesztőrészlet: {format_money(loan.weekly_payment_cents / 100)}",
+            )
         for index, line in enumerate(lines):
             self.draw_text(screen, font, line, left, top + index * 28)
+        button_count = 3 if self.emergency_mode else 2
         button_width = (
-            self.rect.width - INFO_PANEL_PADDING * 2 - self.BUTTON_GAP * 2
-        ) // 3
+            self.rect.width - INFO_PANEL_PADDING * 2
+            - self.BUTTON_GAP * (button_count - 1)
+        ) // button_count
         button_y = self.rect.bottom - INFO_PANEL_PADDING - self.BUTTON_HEIGHT
-        self.button_rects = {
-            "market": pygame.Rect(left, button_y, button_width, self.BUTTON_HEIGHT),
-            "accept": pygame.Rect(
-                left + button_width + self.BUTTON_GAP,
-                button_y, button_width, self.BUTTON_HEIGHT,
-            ),
-            "decline": pygame.Rect(
-                left + (button_width + self.BUTTON_GAP) * 2, button_y,
-                button_width, self.BUTTON_HEIGHT,
-            ),
-        }
-        self._draw_button(
-            screen, font, self.button_rects["market"], "Piac",
+        self.button_rects = {}
+        accept_index = 1 if self.emergency_mode else 0
+        if self.emergency_mode:
+            self.button_rects["market"] = pygame.Rect(
+                left, button_y, button_width, self.BUTTON_HEIGHT,
+            )
+            self._draw_button(
+                screen, font, self.button_rects["market"], "Piac",
+            )
+        self.button_rects["accept"] = pygame.Rect(
+            left + (button_width + self.BUTTON_GAP) * accept_index,
+            button_y, button_width, self.BUTTON_HEIGHT,
+        )
+        self.button_rects["decline"] = pygame.Rect(
+            left + (button_width + self.BUTTON_GAP) * (accept_index + 1),
+            button_y, button_width, self.BUTTON_HEIGHT,
         )
         self._draw_button(
             screen, font, self.button_rects["accept"], "Hitel felvétele",
+            enabled=self.accept_enabled,
         )
         self._draw_button(
-            screen, font, self.button_rects["decline"], "Elutasítás",
+            screen, font, self.button_rects["decline"],
+            "Elutasítás" if self.emergency_mode else "Bezárás",
         )
 
 

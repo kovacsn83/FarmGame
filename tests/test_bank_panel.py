@@ -86,6 +86,34 @@ class BankPanelTests(unittest.TestCase):
         self.assertFalse(panel.visible)
         self.assertEqual(panel.take_decision(), "decline")
 
+    def test_manual_mode_hides_market_and_uses_close_button(self):
+        panel = BankPanel()
+        panel.open(previous_time_speed=1, emergency_mode=False)
+        panel.draw(
+            pygame.Surface((900, 600)), self.font, BankSystem(Economy(8500)),
+        )
+        self.assertNotIn("market", panel.button_rects)
+        self.assertIn("accept", panel.button_rects)
+        self.assertIn("decline", panel.button_rects)
+        self.assertTrue(panel.accept_enabled)
+
+    def test_active_loan_disables_accept_button(self):
+        economy = Economy(8500)
+        bank = BankSystem(economy)
+        bank.take_loan()
+        panel = BankPanel()
+        panel.open(previous_time_speed=1, emergency_mode=False)
+        panel.draw(pygame.Surface((900, 600)), self.font, bank)
+        self.assertFalse(panel.accept_enabled)
+
+        event = pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN,
+            {"button": 1, "pos": panel.button_rects["accept"].center},
+        )
+        self.assertTrue(panel.handle_event(event))
+        self.assertIsNone(panel.take_decision())
+        self.assertTrue(panel.visible)
+
 
 if __name__ == "__main__":
     unittest.main()

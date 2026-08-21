@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- A Bank manuálisan, pozitív egyenleg mellett is használható gazdaságfejlesztési hitel felvételére; egyszerre továbbra is csak egy aktív hitel engedélyezett.
+
 - A Pénzügyi összesítő új Bank gombot kapott, amelyről a meglévő Bank popup manuálisan is megnyitható.
 
 - A Farmház III. fenntartási alapértéke $15 000-ra változott; az egységes 10%-os szabály alapján éves fenntartása $1 500, heti költsége pedig ennek 1/52 része.

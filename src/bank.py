@@ -82,8 +82,9 @@ class BankSystem:
             )
         return should_offer
 
-    def accept_offer(self):
-        if self.loan.active_loan or not self.offer_pending:
+    def take_loan(self):
+        """Folyósítja a közös hitelkonstrukciót, ha nincs aktív hitel."""
+        if self.loan.active_loan:
             return False
         self.economy.earn(cents_to_dollars(LOAN_PRINCIPAL_CENTS))
         self.economy.record_income(
@@ -96,8 +97,20 @@ class BankSystem:
         self.loan.loans_taken += 1
         self.offer_pending = False
         self.last_observed_money = float(self.economy.money)
-        log(f"Hitel felvéve: {format_money(cents_to_dollars(LOAN_PRINCIPAL_CENTS))}.", "Bank")
+        log(
+            f"{format_money(cents_to_dollars(LOAN_PRINCIPAL_CENTS))} "
+            "hitel felvéve. Teljes visszafizetés: "
+            f"{format_money(cents_to_dollars(LOAN_TOTAL_REPAYMENT_CENTS))} "
+            f"/ {LOAN_TERM_WEEKS} hét.",
+            "Bank",
+        )
         return True
+
+    def accept_offer(self):
+        """A negatív egyenleg miatt létrejött ajánlatot fogadja el."""
+        if not self.offer_pending:
+            return False
+        return self.take_loan()
 
     def decline_offer(self):
         if not self.offer_pending:

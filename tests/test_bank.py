@@ -14,6 +14,7 @@ from bank import (
     LOAN_TOTAL_REPAYMENT_CENTS, LOAN_WEEKLY_PAYMENT_CENTS,
 )
 from economy import Economy
+from financial_history import INCOME_LOAN, EXPENSE_LOAN_REPAYMENT
 from game_logger import GameLogger
 from save_system import load_game, save_game
 from simulation import SimulationBot, run_simulation
@@ -48,6 +49,39 @@ class BankSystemTests(unittest.TestCase):
         self.assertEqual(economy.money, 9999.0)
         self.assertEqual(bank.loan.remaining_balance_cents, 1_160_000)
         self.assertFalse(bank.accept_offer())
+
+    def test_manual_loan_works_with_positive_balance_and_is_atomic(self):
+        economy = Economy(8500)
+        bank = BankSystem(economy)
+        self.assertTrue(bank.take_loan())
+        self.assertEqual(economy.money, 18500)
+        self.assertTrue(bank.active_loan)
+        self.assertEqual(bank.loan.remaining_balance_cents, 1_160_000)
+        self.assertEqual(bank.loan.remaining_weeks, 80)
+        self.assertFalse(bank.take_loan())
+        self.assertEqual(economy.money, 18500)
+
+    def test_manual_loan_can_be_taken_again_after_full_repayment(self):
+        economy = Economy(15000)
+        bank = BankSystem(economy)
+        self.assertTrue(bank.take_loan())
+        for _ in range(80):
+            bank.apply_weekly_repayment()
+        self.assertFalse(bank.active_loan)
+        self.assertTrue(bank.take_loan())
+        self.assertTrue(bank.active_loan)
+        self.assertEqual(bank.loan.loans_taken, 2)
+
+    def test_manual_loan_uses_financial_history_categories(self):
+        economy = Economy(15000)
+        bank = BankSystem(economy)
+        bank.take_loan()
+        bank.apply_weekly_repayment()
+        summary = economy.get_financial_summary(52)
+        self.assertEqual(summary["income"][INCOME_LOAN]["total"], 10000)
+        self.assertEqual(
+            summary["expense"][EXPENSE_LOAN_REPAYMENT]["total"], 145,
+        )
 
     def test_eighty_installments_repay_exactly_even_with_insufficient_money(self):
         economy = Economy(0)
