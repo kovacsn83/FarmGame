@@ -4,11 +4,14 @@ from enum import Enum
 import pygame
 
 from game_logger import log
+from financial_history import INCOME_QUEST_REWARD
+from money_format import format_money
 
 
 QUEST_APPEAR_DELAY_MS = 2000
 QUEST_COMPLETED_DISPLAY_MS = 2000
 QUEST_NEXT_APPEAR_DELAY_MS = 2000
+QUEST_DEFAULT_REWARD = 100
 
 QUEST_EVENT_ROAD_BUILT = "road_built"
 QUEST_EVENT_FARMHOUSE_BUILT = "farmhouse_built"
@@ -63,18 +66,22 @@ class Quest:
     completed: bool = False
     completed_at: int | None = None
     unique_progress: bool = False
+    reward: float = QUEST_DEFAULT_REWARD
+    reward_granted: bool = False
 
     def reset(self):
         self.progress = 0
         self.state = QuestState.HIDDEN
         self.completed = False
         self.completed_at = None
+        self.reward_granted = False
 
 
 class QuestManager:
     """A küldetések sorrendjét, állapotát és időzített váltását kezeli."""
 
-    def __init__(self, appear_delay_ms=QUEST_APPEAR_DELAY_MS):
+    def __init__(self, economy=None, appear_delay_ms=QUEST_APPEAR_DELAY_MS):
+        self.economy = economy
         self.appear_delay_ms = appear_delay_ms
         self.quests = [
             Quest(
@@ -422,12 +429,22 @@ class QuestManager:
 
     def _complete_current_quest(self, current_ticks):
         quest = self.current_quest
-        if quest is None:
+        if quest is None or quest.completed:
             return
         quest.completed = True
         quest.state = QuestState.COMPLETED
         quest.completed_at = current_ticks
-        log(f"Quest teljesítve: {quest.title}", "Quest")
+        if self.economy is not None and quest.reward > 0:
+            quest.reward_granted = self.economy.credit_income(
+                INCOME_QUEST_REWARD,
+                quest.reward,
+                description=quest.title,
+            )
+        reward_text = (
+            f". Jutalom: {format_money(quest.reward)}"
+            if quest.reward_granted else ""
+        )
+        log(f"Quest teljesítve: {quest.title}{reward_text}", "Quest")
 
     @staticmethod
     def _get_ticks(current_ticks):

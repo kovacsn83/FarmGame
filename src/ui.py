@@ -34,6 +34,7 @@ from financial_history import (
     EXPENSE_UPGRADE, EXPENSE_VEHICLE,
     INCOME_CROP_SALES, INCOME_LIVESTOCK_SALES, INCOME_LOAN,
     INCOME_ORCHARD_SALES, INCOME_PROCESSED_PRODUCT_SALES,
+    INCOME_QUEST_REWARD,
 )
 from orchards import TREE_TYPES
 from processing import (
@@ -410,6 +411,8 @@ class QuestPanel:
         display_text = quest.title
         if quest.target and quest.target > 1 and not quest.completed:
             display_text += f"\n{quest.progress} / {quest.target}"
+        if quest.completed and quest.reward_granted:
+            display_text += f"\nJutalom: +{format_money(quest.reward)}"
         quest_lines = self._render_text_lines(font, display_text)
         text_width = max(line.get_width() for line in quest_lines)
         text_height = (
@@ -1010,6 +1013,7 @@ class FinancialSummaryPanel(PopupWindow):
             "Feldolgozott termékek értékesítése",
         ),
         (INCOME_LOAN, "Felvett hitel"),
+        (INCOME_QUEST_REWARD, "Quest jutalmak"),
     )
     EXPENSE_LABELS = (
         (EXPENSE_MAINTENANCE, "Fenntartási költségek"),

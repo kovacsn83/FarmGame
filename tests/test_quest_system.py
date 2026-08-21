@@ -9,7 +9,8 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from quest_system import (
-    QUEST_COMPLETED_DISPLAY_MS, QUEST_NEXT_APPEAR_DELAY_MS,
+    QUEST_COMPLETED_DISPLAY_MS, QUEST_DEFAULT_REWARD,
+    QUEST_NEXT_APPEAR_DELAY_MS,
     QUEST_EVENT_ALFALFA_HARVESTED, QUEST_EVENT_ALFALFA_PLANTED,
     QUEST_EVENT_ANIMAL_PEN_BUILT, QUEST_EVENT_CALENDAR_OPENED,
     QUEST_EVENT_CATTLE_COUNT_CHANGED, QUEST_EVENT_COMBINE_PURCHASED,
@@ -23,6 +24,8 @@ from quest_system import (
     QUEST_EVENT_WATER_TANK_PURCHASED, QUEST_EVENT_WATER_TROUGH_FILLED,
     QuestManager, QuestState,
 )
+from financial_history import INCOME_QUEST_REWARD
+from game_logger import get_logger
 from constants import ROAD
 from economy import Economy
 from vehicle_manager import VehicleManager
@@ -58,6 +61,69 @@ class QuestSystemTests(unittest.TestCase):
     def test_quest_order_and_titles_are_exact(self):
         manager = QuestManager()
         self.assertEqual([quest.title for quest in manager.quests], EXPECTED_TITLES)
+
+    def test_completion_grants_and_records_the_central_reward_once(self):
+        economy = Economy(starting_money=1000)
+        manager = QuestManager(economy, appear_delay_ms=0)
+        manager.start_new_game(current_ticks=0)
+        manager.update(current_ticks=0)
+        get_logger().reset()
+
+        manager.record_event(QUEST_EVENT_ROAD_BUILT, amount=5, current_ticks=0)
+        manager.record_event(QUEST_EVENT_ROAD_BUILT, amount=5, current_ticks=0)
+
+        self.assertEqual(QUEST_DEFAULT_REWARD, 100)
+        self.assertEqual(economy.money, 1100)
+        summary = economy.get_financial_summary()
+        self.assertEqual(
+            summary["income"][INCOME_QUEST_REWARD]["total"], 100,
+        )
+        self.assertTrue(manager.current_quest.reward_granted)
+        self.assertIn("Jutalom: $100", get_logger().entries[-1].message)
+
+    def test_rewards_from_multiple_quests_are_aggregated(self):
+        economy = Economy(starting_money=0)
+        manager = QuestManager(economy, appear_delay_ms=0)
+        manager.start_new_game(current_ticks=0)
+        manager.update(current_ticks=0)
+        manager.record_event(QUEST_EVENT_ROAD_BUILT, amount=5, current_ticks=0)
+        manager.update(current_ticks=QUEST_COMPLETED_DISPLAY_MS)
+        manager.update(
+            current_ticks=(
+                QUEST_COMPLETED_DISPLAY_MS + QUEST_NEXT_APPEAR_DELAY_MS
+            ),
+        )
+        manager.record_event(
+            QUEST_EVENT_FARMHOUSE_BUILT,
+            current_ticks=(
+                QUEST_COMPLETED_DISPLAY_MS + QUEST_NEXT_APPEAR_DELAY_MS
+            ),
+        )
+
+        self.assertEqual(economy.money, 200)
+        self.assertEqual(
+            economy.get_financial_summary()["income"]
+            [INCOME_QUEST_REWARD]["total"],
+            200,
+        )
+
+    def test_loaded_completed_quest_does_not_receive_a_retroactive_reward(self):
+        source = QuestManager(appear_delay_ms=0)
+        source.start_new_game(current_ticks=0)
+        source.update(current_ticks=0)
+        source.record_event(QUEST_EVENT_ROAD_BUILT, amount=5, current_ticks=0)
+        record = source.to_save_record()
+
+        economy = Economy(starting_money=500)
+        restored = QuestManager(economy, appear_delay_ms=0)
+        self.assertTrue(restored.load_save_record(record, current_ticks=10))
+        restored.record_event(
+            QUEST_EVENT_ROAD_BUILT, amount=5, current_ticks=10,
+        )
+
+        self.assertEqual(economy.money, 500)
+        self.assertEqual(economy.get_financial_summary()["income_total"], 0)
+        self.assertFalse(restored.current_quest.reward_granted)
 
     def test_all_twenty_one_conditions_advance_in_order(self):
         manager = QuestManager(appear_delay_ms=0)

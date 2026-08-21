@@ -157,7 +157,7 @@ def main():
         economy = Economy()
         bank_system = BankSystem(economy)
         vehicles = VehicleManager()
-        quest_manager = QuestManager()
+        quest_manager = QuestManager(economy)
         game_state = GameState(
             world, fields, buildings, economy, game_time,
             tractor=vehicles, vehicles=vehicles, animals=animals,

@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Minden teljesített Quest mostantól $100 pénzjutalmat ad; a jóváírás egyszeri, és a Quest jutalmak külön bevételi kategóriaként jelennek meg a Pénzügyi összesítőben.
+
 - Növényhozam-balansz frissítés: a Búza 10, a Kukorica 12, a Paradicsom két szedése 5 + 3, a Lucerna pedig aratásonként 4 termést ad; a meglévő locsolási, trágyázási és pótaratási módosítók változatlanul ezekre az új alapértékekre épülnek.
 
 - Elkészült a háromszintű, adatvezérelt hitelrendszer: Hitel I. $10 000, Hitel II. $25 000, Hitel III. $50 000 összeggel. A magasabb szintek az előző hitel teljes visszafizetésével tartósan oldódnak fel, miközben egyszerre továbbra is csak egy hitel lehet aktív.

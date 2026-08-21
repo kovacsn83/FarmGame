@@ -13,7 +13,9 @@ if str(SRC) not in sys.path:
 import pygame
 
 from economy import Economy
-from financial_history import INCOME_CROP_SALES, EXPENSE_CONSTRUCTION
+from financial_history import (
+    EXPENSE_CONSTRUCTION, INCOME_CROP_SALES, INCOME_QUEST_REWARD,
+)
 from screen_layout import set_screen_size
 from ui import FinancialSummaryPanel
 
@@ -48,6 +50,13 @@ class FinancialSummaryPanelTests(unittest.TestCase):
         self.assertLess(income.right, expense.left)
         self.assertEqual(income.top, expense.top)
         self.assertEqual(income.width, expense.width)
+
+    def test_quest_rewards_have_their_own_income_row(self):
+        self.economy.credit_income(INCOME_QUEST_REWARD, 700)
+        summary = self.economy.get_financial_summary(52)
+        rows = self.panel._column_rows(summary, "income")
+        reward_row = next(row for row in rows if row[1] == "Quest jutalmak")
+        self.assertEqual(reward_row[2], 700)
 
     def test_totals_are_kept_in_their_own_columns(self):
         summary = self.economy.get_financial_summary(52)

@@ -10,6 +10,7 @@ INCOME_LIVESTOCK_SALES = "livestock_sales"
 INCOME_ORCHARD_SALES = "orchard_sales"
 INCOME_PROCESSED_PRODUCT_SALES = "processed_product_sales"
 INCOME_LOAN = "loan_income"
+INCOME_QUEST_REWARD = "quest_reward"
 
 EXPENSE_MAINTENANCE = "maintenance"
 EXPENSE_SHIPPING = "shipping"

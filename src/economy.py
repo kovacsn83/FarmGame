@@ -151,6 +151,16 @@ class Economy:
     def earn(self, amount):
         self.money += amount
 
+    def credit_income(
+            self, category, amount, subcategory=None, description=None):
+        """Egy lépésben jóváír és rögzít egy bevételi tranzakciót."""
+        amount = float(amount)
+        if amount <= 0:
+            return False
+        self.earn(amount)
+        self.record_income(category, amount, subcategory, description)
+        return True
+
     def charge(self, amount):
         """Fedezettől független kötelező terhelést hajt végre."""
         self.money -= amount
