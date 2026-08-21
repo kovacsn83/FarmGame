@@ -3,10 +3,8 @@
 import math
 
 from buildings import BUILDING_TYPES, get_total_inventory, store_item
-from financial_history import EXPENSE_PROCESSING_INPUT
 from game_logger import log
 from inventory import get_inventory_item_data, get_inventory_item_name
-from market_procurement import purchase_automatically
 
 
 PROCESSING_STORAGE_CAPACITY = 200
@@ -332,23 +330,14 @@ def run_weekly_processing_cycle(
             if item_data is None:
                 plant["processing_status"] = PROCESSING_STATUS_WAITING
                 continue
-            quote = purchase_automatically(
-                economy, item_data["name"], item_data["price"], market_missing,
-                EXPENSE_PROCESSING_INPUT, input_id,
+            transported = vehicle_manager.start_processing_market_supply(
+                world, buildings, plant, input_id, market_missing, economy,
+                current_ticks=current_ticks,
             )
-            if quote is None:
-                plant["processing_status"] = PROCESSING_STATUS_NO_MONEY
-            else:
-                plant["processing_inventory"][input_id] = local + quote.quantity
-                log(
-                    f"{quote.quantity} db {item_data['name']} automatikusan "
-                    "megvásárolva a Piacról.", "Processing",
-                )
-                log(f"Szállítási költség: ${quote.delivery_cost:.0f}.", "Processing")
-                if get_processing_in_transit(plant, input_id):
-                    plant["processing_status"] = PROCESSING_STATUS_IN_TRANSIT
-                else:
-                    start_processing_batch(plant, elapsed_week)
+            if transported > 0:
+                plant["processing_status"] = PROCESSING_STATUS_IN_TRANSIT
+            elif plant.get("processing_status") != PROCESSING_STATUS_NO_MONEY:
+                plant["processing_status"] = PROCESSING_STATUS_WAITING
         elif transported:
             plant["processing_status"] = PROCESSING_STATUS_IN_TRANSIT
         elif missing:

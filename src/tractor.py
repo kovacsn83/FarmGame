@@ -1200,7 +1200,14 @@ class Vehicle:
                         self.current_task.loading_duration_ms
                     )
                     if self.current_task.task_type == TASK_PROCESSING_SUPPLY:
-                        log("Traktor megérkezett a Raktárhoz.", "Processing")
+                        source_name = (
+                            "Piac" if self.current_task.source_type == "market"
+                            else "Raktár"
+                        )
+                        log(
+                            f"Traktor megérkezett a {source_name}hoz.",
+                            "Processing",
+                        )
                     elif self.current_task.task_type == TASK_SUPPLY_FEED:
                         log("Traktor megérkezett a Raktárhoz.", "Supply")
                     else:

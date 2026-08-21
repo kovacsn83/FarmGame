@@ -10,7 +10,8 @@ from buildings import place_building, remove_item
 from constants import GRASS, ROAD
 from economy import Economy
 from financial_history import EXPENSE_PROCESSING_INPUT, EXPENSE_SHIPPING
-from inventory import get_marketable_item_ids
+from inventory import get_inventory_item_data, get_marketable_item_ids
+from market_procurement import purchase_automatically
 from processing import (
     PROCESSING_STATUS_NO_MONEY, PROCESSING_STATUS_STOPPED,
     PROCESSING_STORAGE_CAPACITY,
@@ -33,6 +34,25 @@ class _ReservationManager:
             plant["processing_in_transit"].get(item_id, 0) + amount
         )
         return amount
+
+    def start_processing_market_supply(
+            self, world, buildings, plant, item_id, amount, economy,
+            current_ticks=None):
+        item_data = get_inventory_item_data(item_id)
+        quote = purchase_automatically(
+            economy, item_data["name"], item_data["price"], amount,
+            EXPENSE_PROCESSING_INPUT, item_id,
+        )
+        if quote is None:
+            plant["processing_status"] = PROCESSING_STATUS_NO_MONEY
+            return 0
+        # A termelési egységtesztek az azonnali kézbesítést helyettesítik;
+        # a valódi VehicleManager tesztje külön igazolja a fizikai fuvart.
+        inventory = plant["processing_inventory"]
+        inventory[item_id] = inventory.get(item_id, 0) + quote.quantity
+        if not any(plant["processing_in_transit"].values()):
+            start_processing_batch(plant)
+        return quote.quantity
 
 
 class _CountingReservationManager(_ReservationManager):
@@ -256,6 +276,39 @@ class ProcessingProductionTests(unittest.TestCase):
         self.assertEqual(0, warehouse["inventory"]["milk"])
         self.assertEqual(0, get_processing_in_transit(plant, "milk"))
         self.assertEqual(5, plant["processing_batch"]["outputs"]["cheese"])
+
+    def test_market_purchase_waits_for_physical_tractor_delivery(self):
+        world = [[ROAD for _ in range(40)] for _ in range(40)]
+        garage = {"type": "garage", "row": 2, "col": 2, "width": 4, "height": 4}
+        market = {"type": "market", "row": 2, "col": 10, "width": 4, "height": 3}
+        plant = self._plant()
+        buildings = [garage, market, plant]
+        manager = VehicleManager()
+        tractor = manager._create_managed_asset(VehicleType.TRACTOR, garage, 0)
+        manager._create_managed_asset(VehicleType.TRAILER, garage, 1)
+        manager.ensure_idle_positions(world, buildings)
+        economy = Economy(starting_money=1000)
+        game_time = GameTime(current_time_speed=TIME_SLOW, start_ticks=0)
+
+        run_weekly_processing_cycle(
+            world, buildings, economy, manager, 1, current_ticks=0,
+        )
+
+        self.assertIsNone(plant["processing_batch"])
+        self.assertEqual(0, plant["processing_inventory"]["tomato"])
+        self.assertEqual(5, get_processing_in_transit(plant, "tomato"))
+        self.assertEqual("market", tractor.current_task.source_type)
+        self.assertEqual(905, economy.money)
+
+        for tick in range(100, 30000, 100):
+            manager.update(world, buildings, economy, game_time, current_ticks=tick)
+            if tractor.is_idle and tick > 100:
+                break
+        else:
+            self.fail("A piaci feldolgozóüzemi szállítás nem fejeződött be.")
+
+        self.assertEqual(0, get_processing_in_transit(plant, "tomato"))
+        self.assertEqual(5, plant["processing_batch"]["outputs"]["canned_tomato"])
 
 
 if __name__ == "__main__":

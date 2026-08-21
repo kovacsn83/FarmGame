@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- A Feldolgozó üzem Piacról vásárolt alapanyagait mostantól Traktor és Pótkocsi szállítja el fizikailag a Piactól az üzemig; a gyártás csak a rakomány megérkezése után indul el.
+
 - A hitel teljes visszafizetéséről mostantól rendszerértesítés jelenik meg; az üzenet a hitel nevét és – ha van – a következő feloldott hitelszintet is jelzi.
 
 - Minden teljesített Quest mostantól $100 pénzjutalmat ad; a jóváírás egyszeri, és a Quest jutalmak külön bevételi kategóriaként jelennek meg a Pénzügyi összesítőben.

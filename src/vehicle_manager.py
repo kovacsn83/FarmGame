@@ -27,7 +27,8 @@ from orchards import (
     TREE_TYPES, get_tree_age_years, get_tree_in_slot, is_tree_harvestable,
 )
 from processing import (
-    PROCESSING_STATUS_IN_TRANSIT, cancel_processing_delivery,
+    PROCESSING_STATUS_IN_TRANSIT, PROCESSING_STATUS_NO_MONEY,
+    cancel_processing_delivery,
     initialize_processing_plant,
 )
 from quest_system import (
@@ -54,7 +55,9 @@ from tractor import (
 from vehicle_types import (
     VEHICLE_TYPE_DEFINITIONS, VehicleType, normalize_vehicle_type,
 )
-from financial_history import EXPENSE_VEHICLE
+from financial_history import EXPENSE_PROCESSING_INPUT, EXPENSE_VEHICLE
+from inventory import get_inventory_item_data
+from market_procurement import purchase_automatically
 
 
 DEBUG_TRACTOR_DISPATCH = False
@@ -1087,6 +1090,77 @@ class VehicleManager:
         )
         return amount
 
+    def start_processing_market_supply(
+            self, world, buildings, plant, item_id, amount, economy,
+            current_ticks=None):
+        """Piacról vásárol, majd Traktor + Pótkocsi fuvart indít az üzemhez."""
+        initialize_processing_plant(plant)
+        amount = max(0, int(amount))
+        if amount <= 0 or plant not in buildings:
+            return 0
+        if self._has_equivalent_task(TASK_PROCESSING_SUPPLY, plant):
+            return 0
+        trailers = [
+            implement for implement in self.implements
+            if implement.vehicle_type == VehicleType.TRAILER
+        ]
+        markets = [
+            building for building in buildings
+            if building.get("type") == "market"
+        ]
+        if not self.tractors or not trailers or not markets:
+            return 0
+        assignment = self._find_supply_assignment(
+            world, buildings, [plant], self.tractors, trailers, markets,
+            use_parking_start=True,
+        )
+        if assignment is None:
+            return 0
+        item_data = get_inventory_item_data(item_id)
+        if item_data is None:
+            return 0
+        quote = purchase_automatically(
+            economy, item_data["name"], item_data["price"], amount,
+            EXPENSE_PROCESSING_INPUT, item_id,
+        )
+        if quote is None:
+            plant["processing_status"] = PROCESSING_STATUS_NO_MONEY
+            return 0
+        task = FieldTask(
+            field=plant,
+            task_type=TASK_PROCESSING_SUPPLY,
+            buildings=buildings,
+            target_group=[plant],
+            required_implement_type=VehicleType.TRAILER,
+            source_type="market",
+            manually_initiated=False,
+            creation_order=self._take_task_order(),
+            loading_duration_ms=FEED_LOAD_DURATION_MS,
+            unloading_duration_ms=FEED_UNLOAD_DURATION_MS,
+            resource_reserved=True,
+            resource_amount=quote.quantity,
+            cargo_type=item_id,
+        )
+        plant["processing_in_transit"][item_id] = (
+            plant["processing_in_transit"].get(item_id, 0) + quote.quantity
+        )
+        plant["processing_status"] = PROCESSING_STATUS_IN_TRANSIT
+        self.task_queue.append(task)
+        self._set_waiting_statuses()
+        self._dispatch_tasks(
+            world, buildings, economy, current_ticks=current_ticks,
+        )
+        log(
+            f"{quote.quantity} db {item_data['name']} automatikusan "
+            "megvásárolva a Piacról.", "Processing",
+        )
+        log(f"Szállítási költség: ${quote.delivery_cost:.0f}.", "Processing")
+        log(
+            f"{quote.quantity} db alapanyag szállítása elindult a Piacról.",
+            "Processing",
+        )
+        return quote.quantity
+
     @staticmethod
     def _find_supply_assignment(
             world, buildings, group, tractors, implements, sources,
@@ -1278,7 +1352,7 @@ class VehicleManager:
                 return (
                     task.field in buildings
                     and task.field.get("type") == "processing_plant"
-                    and any(b.get("type") == "warehouse" for b in buildings)
+                    and any(b.get("type") == task.source_type for b in buildings)
                     and any(i.vehicle_type == VehicleType.TRAILER for i in self.implements)
                     and bool(self.tractors)
                     and task.resource_amount > 0
@@ -1727,6 +1801,10 @@ class VehicleManager:
                 if (task.task_type == TASK_WATERING
                         and building.get("type") == "pond"):
                     return "A Tó várakozó locsolási feladat közben nem bontható."
+                if (task.task_type == TASK_PROCESSING_SUPPLY
+                        and (building is task.field
+                             or building.get("type") == task.source_type)):
+                    return "Az épület alapanyag-szállítás közben nem bontható."
         return None
 
     def can_save(self, world, buildings):
