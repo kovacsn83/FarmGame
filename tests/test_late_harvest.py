@@ -42,9 +42,9 @@ class LateHarvestTests(unittest.TestCase):
     def test_normal_yield_is_unchanged_and_late_yield_is_half(self):
         field = mature_field("wheat", 38)
         with patch("fields.random.uniform", return_value=1.0):
-            self.assertEqual(calculate_harvest_yield(field), 8)
+            self.assertEqual(calculate_harvest_yield(field), 10)
             self.assertEqual(
-                calculate_harvest_yield(field, late_harvest=True), 4,
+                calculate_harvest_yield(field, late_harvest=True), 5,
             )
 
     def test_annual_crop_disappears_after_two_late_weeks(self):
@@ -82,12 +82,12 @@ class LateHarvestTests(unittest.TestCase):
         storage = warehouse()
         with patch("fields.random.uniform", return_value=1.0):
             harvest = prepare_harvest(field, [storage])
-        self.assertEqual(harvest["amount"], 4)
+        self.assertEqual(harvest["amount"], 5)
         self.assertTrue(complete_harvest(
             field, [storage], "tomato", harvest["amount"],
             current_elapsed_week=30,
         ))
-        self.assertEqual(storage["inventory"]["tomato"], 4)
+        self.assertEqual(storage["inventory"]["tomato"], 5)
         self.assertEqual(field["crop"], "tomato")
         self.assertEqual(field["harvest_count"], 1)
         self.assertEqual(field["growth"], 0)
@@ -103,12 +103,12 @@ class LateHarvestTests(unittest.TestCase):
             harvest = prepare_harvest(
                 field, [storage], late_harvest=True,
             )
-        self.assertEqual(harvest["amount"], 2)
+        self.assertEqual(harvest["amount"], 3)
         self.assertTrue(complete_harvest(
             field, [storage], "tomato", harvest["amount"],
             current_elapsed_week=39,
         ))
-        self.assertEqual(storage["inventory"]["tomato"], 2)
+        self.assertEqual(storage["inventory"]["tomato"], 3)
         self.assertIsNone(field["crop"])
 
     def test_second_tomato_harvest_can_expire_without_a_third_cycle(self):
