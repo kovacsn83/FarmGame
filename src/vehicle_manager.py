@@ -1507,7 +1507,9 @@ class VehicleManager:
                 f"queue={len(self.task_queue)} "
                 "decision=no_available_task", "Dispatcher",
             )
-        vehicle.begin_return_home(world, current_ticks=current_ticks)
+        vehicle.begin_return_home(
+            world, buildings, current_ticks=current_ticks,
+        )
         return False
 
     def _set_waiting_statuses(self):

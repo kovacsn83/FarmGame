@@ -350,6 +350,43 @@ def _find_tile_path(start, targets, allowed_tiles, blocked_tiles):
     return None
 
 
+def _find_orchard_recovery_route(world, buildings, start, parking_tile):
+    """Sérült kijárati állapotnál biztonságos útvonalat keres a közútig.
+
+    A normál szüreti munkamenet eltárolja a pontos gyümölcsös-kijáratot. Ez a
+    helyreállító ág csak akkor fut, ha ez az adat hiányzik (például egy korábbi,
+    hibás mentésben). A fatörzsek itt is tiltott csempék maradnak.
+    """
+    if start is None or parking_tile is None or buildings is None:
+        return None
+    group = next(
+        (
+            group for group in get_orchard_groups(buildings)
+            if any(
+                orchard["row"] <= start[0] < orchard["row"] + orchard["height"]
+                and orchard["col"] <= start[1] < orchard["col"] + orchard["width"]
+                for orchard in group
+            )
+        ),
+        None,
+    )
+    if group is None:
+        return None
+    allowed = _orchard_group_tiles(group)
+    blocked = _orchard_tree_centers(group)
+    candidates = []
+    for orchard in group:
+        for road_tile, entry_tile in iter_perimeter_connections(orchard, world):
+            road_row, road_col = road_tile
+            if world[road_row][road_col] != ROAD or entry_tile in blocked:
+                continue
+            inside_route = _find_tile_path(start, {entry_tile}, allowed, blocked)
+            road_route = find_road_path(world, road_tile, parking_tile)
+            if inside_route is not None and road_route is not None:
+                candidates.append(inside_route + road_route)
+    return min(candidates, key=len) if candidates else None
+
+
 def _orchard_approach_path(group, orchard, tree_slot, start):
     """A jelenlegi helytől a konkrét fa legközelebbi biztonságos oldaláig vezet."""
     tree = get_tree_in_slot(orchard, tree_slot)
@@ -877,15 +914,16 @@ class Vehicle:
             self.last_update_ticks = now
             self._last_time_speed = None
         self.protected_road_tiles = set(route) | set(return_route or [])
-        self._orchard_exit_road = connection_road
+        # Láncolt szüretnél az eredeti közúti kijárat végig megmarad. Egy
+        # pillanatnyi belső újratervezési hiba nem törölheti a már ismert
+        # kijáratot, mert arra az utolsó fa után még szükség lesz.
+        if connection_road is not None:
+            self._orchard_exit_road = connection_road
         exit_inside = _find_tile_path(
             route[-1], {entry_tile}, group_tiles, blocked,
         )
-        self._orchard_exit_path = (
-            exit_inside + [connection_road]
-            if exit_inside is not None and connection_road is not None
-            else None
-        )
+        if exit_inside is not None and self._orchard_exit_road is not None:
+            self._orchard_exit_path = exit_inside + [self._orchard_exit_road]
         if self.parking_tile is not None:
             self.protected_road_tiles.add(self.parking_tile)
         return True
@@ -1025,6 +1063,11 @@ class Vehicle:
         speed_multiplier = game_time.time_speed_multiplier
         if speed_multiplier <= 0:
             return False
+
+        # Korábbi hibás mentésből visszatérő, útvonal nélkül maradt
+        # gyümölcsszüretelő automatikus helyreállítása.
+        if self.state == TRACTOR_RETURNING_HOME and not self.path:
+            self._begin_return_home(world, now, buildings)
 
         self.movement_accumulator_ms += elapsed_ms * speed_multiplier
         completed_work = False
@@ -1460,7 +1503,7 @@ class Vehicle:
             parking_building, parking_tile,
         )
 
-    def _begin_return_home(self, world, now):
+    def _begin_return_home(self, world, now, buildings=None):
         vehicle_name = VEHICLE_TYPE_DEFINITIONS[self.vehicle_type]["name"]
         if self._orchard_exit_path and self._orchard_exit_road is not None:
             road_route = find_road_path(
@@ -1474,6 +1517,16 @@ class Vehicle:
             self._orchard_exit_road = None
         else:
             route = find_road_path(world, (self.row, self.col), self.parking_tile)
+            if route is None and self.vehicle_type == VehicleType.FRUIT_HARVESTER:
+                route = _find_orchard_recovery_route(
+                    world, buildings, (self.row, self.col), self.parking_tile,
+                )
+                if route is not None:
+                    log(
+                        "A Gyümölcs szüretelőgép kijárati útvonala "
+                        "helyreállítva.",
+                        "Vehicle",
+                    )
         if route is None:
             # Az aktív feladathoz a visszautat végig védjük, ezért ez csak
             # sérült külső állapotnál fordulhat elő.
@@ -1494,10 +1547,10 @@ class Vehicle:
         if len(route) == 1:
             self._arrive_home(world, None, now)
 
-    def begin_return_home(self, world, current_ticks=None):
+    def begin_return_home(self, world, buildings=None, current_ticks=None):
         """A Dispatcher döntése után elindítja a saját parkolóhoz visszatérést."""
         now = pygame.time.get_ticks() if current_ticks is None else current_ticks
-        self._begin_return_home(world, now)
+        self._begin_return_home(world, now, buildings)
 
     def _arrive_home(self, world, economy, now):
         if self.state != TRACTOR_RELOCATING_TO_PARKING:

@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Javítva a Gyümölcs szüretelőgép visszatérése: a láncolt szüret alatt megmarad a Gyümölcsös kijárata, a korábbi hibás mentésekből pedig automatikusan helyreáll a Garázshoz vezető útvonal.
+
 - Az Étterem felvásárlási prémiuma mostantól szintfüggő: az 1. szint +20%-os prémiumától indul, szintenként 2 százalékponttal nő, és a 10. szinten +38%-ot ér el.
 
 - Az Étterem 10 szintes felvásárlási rendszert kapott: a heti igény szintenként 1–10 db termékenként, az értékelés pedig 13 hetes időszakokban történik. Legalább 75% teljesítés szintlépést, 40% alatti teljesítés szintcsökkenést okoz; az igénybe minden elérhető éttermi termék beleszámít a checkbox állapotától függetlenül.

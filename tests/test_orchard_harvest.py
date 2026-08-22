@@ -159,6 +159,23 @@ class OrchardHarvestWorkflowTests(unittest.TestCase):
             for row, col in self.harvester.path
         ))
 
+        self._run_until_idle(start_tick=tick)
+        self.assertEqual(TRACTOR_IDLE, self.harvester.state)
+
+    def test_missing_orchard_exit_state_is_recovered_before_returning_home(self):
+        self.harvester._set_tile_position(12, 15)
+        self.harvester._orchard_exit_path = None
+        self.harvester._orchard_exit_road = None
+        self.harvester.state = TRACTOR_RETURNING_HOME
+
+        self._run_until_idle()
+
+        self.assertEqual(TRACTOR_IDLE, self.harvester.state)
+        self.assertEqual(
+            self.harvester.parking_tile,
+            (self.harvester.row, self.harvester.col),
+        )
+
     def test_orchard_entry_and_exit_routes_continue_after_save_and_load(self):
         self.manager.start_orchard_harvest(
             self.world, self.buildings, self.economy,
