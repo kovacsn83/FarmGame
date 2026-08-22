@@ -48,8 +48,8 @@ from processing import (
     select_processing_recipe,
 )
 from restaurant import (
-    get_restaurant_period, get_restaurant_sellable_item_ids,
-    get_restaurant_unit_price,
+    get_restaurant_bonus_percent, get_restaurant_period,
+    get_restaurant_sellable_item_ids, get_restaurant_unit_price,
 )
 from time_system import (
     SEASON_PERIODS, TIME_NORMAL, WEEKS_PER_YEAR, Season, format_game_time,
@@ -966,6 +966,12 @@ class RestaurantPanel(PopupWindow):
         y += 24
         self.draw_text(
             screen, font,
+            f"Felvásárlási prémium: +{get_restaurant_bonus_percent(level)}%",
+            x, y,
+        )
+        y += 24
+        self.draw_text(
+            screen, font,
             f"Értékelési időszak: {start_week}–{end_week}. hét", x, y,
         )
         y += 24
@@ -1014,7 +1020,7 @@ class RestaurantPanel(PopupWindow):
             lines = (
                 f"Raktárkészlet: {get_marketable_item_amount(buildings, item_id)} db",
                 f"Piaci ár: {format_money(item['price'])}",
-                f"Éttermi ár: {format_money(get_restaurant_unit_price(item_id))}",
+                f"Éttermi ár: {format_money(get_restaurant_unit_price(item_id, level))}",
                 f"Heti felvásárlás: {level} db",
             )
             line_y = card.top + 50

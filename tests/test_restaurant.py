@@ -17,8 +17,9 @@ from economy import Economy
 from financial_history import EXPENSE_SHIPPING, INCOME_PROCESSED_PRODUCT_SALES
 from processing import initialize_processing_plant
 from restaurant import (
-    RESTAURANT_MAX_LEVEL, RestaurantSystem, get_restaurant_period,
-    get_restaurant_sellable_item_ids, get_restaurant_unit_price,
+    RESTAURANT_MAX_LEVEL, RestaurantSystem, get_restaurant_bonus_percent,
+    get_restaurant_period, get_restaurant_sellable_item_ids,
+    get_restaurant_unit_price,
 )
 from notification_system import NotificationManager
 from screen_layout import set_screen_size
@@ -45,6 +46,17 @@ class RestaurantSystemTests(unittest.TestCase):
         )
         self.assertEqual(19.2, get_restaurant_unit_price("cheese"))
         self.assertEqual(38.4, get_restaurant_unit_price("canned_tomato"))
+
+    def test_bonus_grows_two_percentage_points_per_level(self):
+        self.assertEqual(20, get_restaurant_bonus_percent(1))
+        self.assertEqual(22, get_restaurant_bonus_percent(2))
+        self.assertEqual(28, get_restaurant_bonus_percent(5))
+        self.assertEqual(38, get_restaurant_bonus_percent(10))
+
+    def test_unit_price_uses_current_level_bonus(self):
+        self.assertAlmostEqual(19.2, get_restaurant_unit_price("cheese", 1))
+        self.assertAlmostEqual(20.48, get_restaurant_unit_price("cheese", 5))
+        self.assertAlmostEqual(22.08, get_restaurant_unit_price("cheese", 10))
 
     def test_selected_products_sell_one_each_and_book_shipping_separately(self):
         system = RestaurantSystem()
@@ -85,7 +97,17 @@ class RestaurantSystemTests(unittest.TestCase):
         self.assertEqual(10, system.period_requested_units)
         self.assertEqual(3, system.period_fulfilled_units)
         self.assertEqual(0, plant["processing_inventory"]["cheese"])
-        self.assertAlmostEqual(48.6, economy.money)
+        self.assertAlmostEqual(52.44, economy.money)
+        income_records = [
+            item for item in economy.financial_history
+            if item["category"] == INCOME_PROCESSED_PRODUCT_SALES
+        ]
+        shipping_records = [
+            item for item in economy.financial_history
+            if item["category"] == EXPENSE_SHIPPING
+        ]
+        self.assertAlmostEqual(61.44, income_records[0]["amount"])
+        self.assertEqual(9, shipping_records[0]["amount"])
 
     def test_weekly_quantity_matches_levels_one_five_and_ten(self):
         system = RestaurantSystem()
@@ -122,6 +144,7 @@ class RestaurantSystemTests(unittest.TestCase):
                 [plant], economy, elapsed_week, notifications,
             )
         self.assertEqual(2, system.level)
+        self.assertEqual(22, get_restaurant_bonus_percent(system.level))
         self.assertEqual(0, system.period_requested_units)
         self.assertIn("2. szintre fejlődött", notifications.current_message)
         history_size = len(economy.financial_history)
@@ -166,6 +189,7 @@ class RestaurantSystemTests(unittest.TestCase):
         notifications = NotificationManager(start_ticks=0)
         system._evaluate_period(7, notifications)
         self.assertEqual(4, system.level)
+        self.assertEqual(26, get_restaurant_bonus_percent(system.level))
         self.assertIn("4. szintre csökkent", notifications.current_message)
 
     def test_settings_round_trip_and_legacy_default_is_off(self):
@@ -212,6 +236,11 @@ class RestaurantSystemTests(unittest.TestCase):
         self.assertEqual(13, loaded.state.restaurant_system.period_fulfilled_units)
         self.assertEqual(2, loaded.state.restaurant_system.current_period_id)
         self.assertEqual(30, loaded.state.restaurant_system.last_processed_week)
+        self.assertEqual(
+            26, get_restaurant_bonus_percent(
+                loaded.state.restaurant_system.level,
+            ),
+        )
 
 
 class RestaurantPanelTests(unittest.TestCase):

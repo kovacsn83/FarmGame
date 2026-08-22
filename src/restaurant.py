@@ -9,7 +9,8 @@ from inventory import get_inventory_item_data
 from money_format import format_money
 
 
-RESTAURANT_PRICE_MULTIPLIER = 1.20
+RESTAURANT_BASE_BONUS_PERCENT = 20
+RESTAURANT_BONUS_PERCENT_PER_LEVEL = 2
 RESTAURANT_MIN_LEVEL = 1
 RESTAURANT_MAX_LEVEL = 10
 RESTAURANT_PERIOD_WEEKS = 13
@@ -26,12 +27,27 @@ def get_restaurant_sellable_item_ids():
     )
 
 
-def get_restaurant_unit_price(item_id):
-    """Mindig az aktuális katalógusárból számítja a 20%-os prémiumot."""
+def get_restaurant_bonus_percent(level):
+    """Az 1–10 közé szorított szint központi felvásárlási prémiuma."""
+    normalized_level = (
+        max(RESTAURANT_MIN_LEVEL, min(RESTAURANT_MAX_LEVEL, level))
+        if isinstance(level, int) and not isinstance(level, bool)
+        else RESTAURANT_MIN_LEVEL
+    )
+    return (
+        RESTAURANT_BASE_BONUS_PERCENT
+        + (normalized_level - RESTAURANT_MIN_LEVEL)
+        * RESTAURANT_BONUS_PERCENT_PER_LEVEL
+    )
+
+
+def get_restaurant_unit_price(item_id, level=RESTAURANT_MIN_LEVEL):
+    """Az aktuális katalógusárból és Étterem-szintből számít árat."""
     item = get_inventory_item_data(item_id)
     if item is None or not item.get("restaurant_sellable", False):
         return None
-    return float(item["price"]) * RESTAURANT_PRICE_MULTIPLIER
+    bonus_percent = get_restaurant_bonus_percent(level)
+    return float(item["price"]) * (1 + bonus_percent / 100)
 
 
 def get_restaurant_period(elapsed_week):
@@ -120,7 +136,7 @@ class RestaurantSystem:
         if quantity <= 0:
             return 0
         item = get_inventory_item_data(item_id)
-        unit_price = get_restaurant_unit_price(item_id)
+        unit_price = get_restaurant_unit_price(item_id, self.level)
         if unit_price is None or not remove_marketable_item(
                 buildings, item_id, quantity):
             return 0

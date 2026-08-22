@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Az Étterem felvásárlási prémiuma mostantól szintfüggő: az 1. szint +20%-os prémiumától indul, szintenként 2 százalékponttal nő, és a 10. szinten +38%-ot ér el.
+
 - Az Étterem 10 szintes felvásárlási rendszert kapott: a heti igény szintenként 1–10 db termékenként, az értékelés pedig 13 hetes időszakokban történik. Legalább 75% teljesítés szintlépést, 40% alatti teljesítés szintcsökkenést okoz; az igénybe minden elérhető éttermi termék beleszámít a checkbox állapotától függetlenül.
 
 - Elkészült az Étterem első működő verziója: a Paradicsomkonzerv és a Sajt kijelölés alapján, hetente 1 db-os mennyiségben, a mindenkori piaci ár 120%-áért automatikusan értékesíthető; az eladásokra a közös szállítási költség vonatkozik.
