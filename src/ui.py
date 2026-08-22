@@ -7,7 +7,8 @@ from asset_loader import (
     load_toolbar_icons, toolbar_icon_path,
 )
 from buildings import (
-    BUILD_OPTIONS, BUILDING_TYPES, get_total_capacity, get_total_inventory,
+    BUILD_OPTIONS, BUILDING_TYPES, get_marketable_item_amount,
+    get_total_capacity, get_total_inventory,
 )
 from bank import LOAN_TIERS
 from constants import (
@@ -23,7 +24,8 @@ from game_rules import (
     UPGRADES, get_upgrade_status, is_build_option_unlocked,
 )
 from inventory import (
-    get_inventory_item_ids, get_inventory_item_name, get_marketable_item_ids,
+    get_inventory_item_data, get_inventory_item_ids, get_inventory_item_name,
+    get_marketable_item_ids,
 )
 from maintenance import format_annual_maintenance_rate
 from money_format import format_money
@@ -44,6 +46,10 @@ from processing import (
     get_processing_inventory_used, get_processing_output_ids,
     get_processing_recipe_ids, initialize_processing_plant,
     select_processing_recipe,
+)
+from restaurant import (
+    RESTAURANT_WEEKLY_QUANTITY, get_restaurant_sellable_item_ids,
+    get_restaurant_unit_price,
 )
 from time_system import (
     SEASON_PERIODS, TIME_NORMAL, WEEKS_PER_YEAR, Season, format_game_time,
@@ -187,6 +193,7 @@ UPGRADE_INFO_BORDER = (95, 95, 88)
 
 POPUP_TITLES = {
     "city": "Város",
+    "restaurant": "Étterem",
     "warehouse": "Raktár",
     "market": "Piac",
     "crop_selection": "Ültetés",
@@ -790,7 +797,7 @@ class CityPanel(PopupWindow):
     SERVICES = (
         {"id": "bank", "label": "Bank", "enabled": True},
         {"id": "market", "label": "Piac", "enabled": True},
-        {"id": "restaurant", "label": "Étterem", "enabled": False},
+        {"id": "restaurant", "label": "Étterem", "enabled": True},
     )
 
     def __init__(self):
@@ -872,6 +879,114 @@ class CityPanel(PopupWindow):
             screen.blit(message, message.get_rect(
                 center=(self.rect.centerx, self.rect.bottom - 28),
             ))
+
+
+class RestaurantPanel(PopupWindow):
+    """Az adatvezérelt éttermi automatikus értékesítés beállítófelülete."""
+
+    WIDTH = 620
+    HEIGHT = 560
+    PADDING = 24
+    CARD_HEIGHT = 160
+    CARD_GAP = 14
+    CHECKBOX_SIZE = 22
+
+    def __init__(self):
+        super().__init__(self.WIDTH, self.HEIGHT)
+        self.restaurant_system = None
+        self.checkbox_rects = {}
+
+    def open(self, restaurant_system):
+        self.rect.width = responsive_panel_width(self.WIDTH, 420)
+        self.rect.height = min(self.HEIGHT, get_screen_size()[1] - 80)
+        self.rect.center = get_screen_center()
+        self.restaurant_system = restaurant_system
+        self.checkbox_rects = {}
+        super().open()
+
+    def handle_event(self, event):
+        if not self.visible:
+            return False
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+            self.close()
+            return True
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if is_outside_popup_click(event, self.rect):
+                self.close()
+                return True
+            if event.button == 1 and self.restaurant_system is not None:
+                for item_id, rect in self.checkbox_rects.items():
+                    if rect.collidepoint(event.pos):
+                        self.restaurant_system.toggle(item_id)
+                        return True
+            return True
+        return False
+
+    @staticmethod
+    def _draw_checkbox(screen, rect, checked):
+        pygame.draw.rect(screen, INFO_PANEL_BACKGROUND, rect)
+        pygame.draw.rect(screen, INFO_PANEL_BORDER, rect, 2)
+        if checked:
+            pygame.draw.line(
+                screen, (45, 125, 70),
+                (rect.left + 4, rect.centery),
+                (rect.centerx - 1, rect.bottom - 5), 3,
+            )
+            pygame.draw.line(
+                screen, (45, 125, 70),
+                (rect.centerx - 1, rect.bottom - 5),
+                (rect.right - 4, rect.top + 4), 3,
+            )
+
+    def draw(self, screen, font, buildings):
+        if not self.visible:
+            return
+        self.draw_frame(screen)
+        x = self.rect.left + self.PADDING
+        y = self.rect.top + self.PADDING
+        self.draw_text(screen, font, POPUP_TITLES["restaurant"], x, y)
+        y += 42
+        description = (
+            "Az Étterem a piaci árnál 20%-kal magasabb áron vásárol."
+        )
+        self.draw_text(screen, font, description, x, y)
+        y += 26
+        self.draw_text(
+            screen, font,
+            "A kijelölt termékekből hetente 1 db-ot vásárol.", x, y,
+        )
+        y += 38
+        self.checkbox_rects = {}
+        for item_id in get_restaurant_sellable_item_ids():
+            item = get_inventory_item_data(item_id)
+            card = pygame.Rect(
+                x, y, self.rect.width - 2 * self.PADDING, self.CARD_HEIGHT,
+            )
+            pygame.draw.rect(screen, CROP_CARD_BACKGROUND, card)
+            pygame.draw.rect(screen, INFO_PANEL_BORDER, card, 1)
+            checkbox = pygame.Rect(
+                card.left + 14, card.top + 14,
+                self.CHECKBOX_SIZE, self.CHECKBOX_SIZE,
+            )
+            self.checkbox_rects[item_id] = checkbox
+            checked = (
+                self.restaurant_system is not None
+                and self.restaurant_system.is_enabled(item_id)
+            )
+            self._draw_checkbox(screen, checkbox, checked)
+            title = font.render(item["name"], True, COLOR_TEXT)
+            screen.blit(title, (checkbox.right + 10, card.top + 15))
+            lines = (
+                f"Raktárkészlet: {get_marketable_item_amount(buildings, item_id)} db",
+                f"Piaci ár: {format_money(item['price'])}",
+                f"Éttermi ár: {format_money(get_restaurant_unit_price(item_id))}",
+                f"Heti felvásárlás: {RESTAURANT_WEEKLY_QUANTITY} db",
+            )
+            line_y = card.top + 50
+            for line in lines:
+                self.draw_text(screen, font, line, card.left + 14, line_y)
+                line_y += 24
+            y += self.CARD_HEIGHT + self.CARD_GAP
 
 
 class BankPanel(PopupWindow):

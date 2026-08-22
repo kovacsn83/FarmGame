@@ -15,6 +15,7 @@ PRODUCTS = {
         "income_category": INCOME_PROCESSED_PRODUCT_SALES,
         "inventory_source": "processing_plant",
         "marketable": True,
+        "restaurant_sellable": True,
     },
     "canned_tomato": {
         "product_id": "canned_tomato",
@@ -24,6 +25,7 @@ PRODUCTS = {
         "income_category": INCOME_PROCESSED_PRODUCT_SALES,
         "inventory_source": "processing_plant",
         "marketable": True,
+        "restaurant_sellable": True,
     },
     "apple": {
         "name": "Alma",

@@ -1,6 +1,8 @@
 # CHANGELOG
 
-- Elkészültek a Város popup első szolgáltatásai: innen közvetlenül elérhető a meglévő Bank és Piac, az Étterem pedig későbbi funkcióként előkészítésre került.
+- Elkészült az Étterem első működő verziója: a Paradicsomkonzerv és a Sajt kijelölés alapján, hetente 1 db-os mennyiségben, a mindenkori piaci ár 120%-áért automatikusan értékesíthető; az eladásokra a közös szállítási költség vonatkozik.
+
+- Elkészültek a Város popup első szolgáltatásai: innen közvetlenül elérhető a Bank, a Piac és az Étterem.
 
 - Új Város gomb került a Toolbar bal szélére; elkészült a Város popup első, későbbi városi szolgáltatásokkal bővíthető változata.
 

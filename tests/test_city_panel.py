@@ -69,7 +69,7 @@ class CityPanelTests(unittest.TestCase):
                 self.assertEqual(service_id, panel.take_action())
                 self.assertTrue(panel.visible)
 
-    def test_restaurant_only_shows_coming_soon_message(self):
+    def test_restaurant_emits_action(self):
         panel = CityPanel()
         panel.open()
         self._draw_panel(panel)
@@ -78,8 +78,8 @@ class CityPanelTests(unittest.TestCase):
             {"button": 1, "pos": panel.button_rects["restaurant"].center},
         )
         self.assertTrue(panel.handle_event(event))
-        self.assertIsNone(panel.take_action())
-        self.assertEqual("Hamarosan elérhető.", panel.status_message)
+        self.assertEqual("restaurant", panel.take_action())
+        self.assertIsNone(panel.status_message)
         self.assertTrue(panel.visible)
 
     def test_escape_closes_panel_and_consumes_event(self):

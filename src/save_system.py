@@ -191,6 +191,7 @@ def _migrate_save_schema(data):
     if version == SAVE_VERSION:
         data.setdefault("vehicle_runtime", None)
         data.setdefault("financial_history", [])
+        data.setdefault("restaurant_auto_sell", {})
         return True
     if version in LEGACY_SAVE_VERSIONS:
         _migrate_farmhouse_footprints(data)
@@ -198,6 +199,7 @@ def _migrate_save_schema(data):
         data["save_version"] = SAVE_VERSION
         data.setdefault("vehicle_runtime", None)
         data.setdefault("financial_history", [])
+        data.setdefault("restaurant_auto_sell", {})
         return True
     return False
 
@@ -326,6 +328,7 @@ def _create_save_data(game_state):
     vehicles = getattr(game_state, "vehicles", None)
     bank_system = getattr(game_state, "bank_system", None)
     quest_manager = getattr(game_state, "quest_manager", None)
+    restaurant_system = getattr(game_state, "restaurant_system", None)
     return {
         "save_version": SAVE_VERSION,
         "day": game_state.game_time.day,
@@ -347,6 +350,10 @@ def _create_save_data(game_state):
         "bank": bank_system.to_save_record() if bank_system is not None else None,
         "quest": (
             quest_manager.to_save_record() if quest_manager is not None else None
+        ),
+        "restaurant_auto_sell": (
+            restaurant_system.to_save_record()
+            if restaurant_system is not None else {}
         ),
     }
 
@@ -370,6 +377,11 @@ def _is_valid_save_data(data):
     history = data.get("financial_history", [])
     if not isinstance(history, list) or not all(
             is_valid_transaction(item) for item in history):
+        return False
+    restaurant_auto_sell = data.get("restaurant_auto_sell", {})
+    if not isinstance(restaurant_auto_sell, dict) or not all(
+            isinstance(item_id, str) and isinstance(enabled, bool)
+            for item_id, enabled in restaurant_auto_sell.items()):
         return False
     if not _validate_tiles(data):
         return False
@@ -965,6 +977,9 @@ def _apply_game_data(game_state, data):
     quest_manager = getattr(game_state, "quest_manager", None)
     if quest_manager is not None:
         quest_manager.load_save_record(data.get("quest"))
+    restaurant_system = getattr(game_state, "restaurant_system", None)
+    if restaurant_system is not None:
+        restaurant_system.load_save_record(data.get("restaurant_auto_sell"))
     vehicles = getattr(game_state, "vehicles", None)
     if vehicles is not None:
         vehicles.reset_for_loaded_game(

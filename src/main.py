@@ -46,6 +46,7 @@ from orchards import (
     draw_orchard_trees, find_tree_at, plant_tree, run_weekly_orchard_cycle,
 )
 from processing import run_weekly_processing_cycle
+from restaurant import RestaurantSystem
 from quest_system import (
     QUEST_EVENT_ANIMAL_PEN_BUILT, QUEST_EVENT_CALENDAR_OPENED,
     QUEST_EVENT_CATTLE_COUNT_CHANGED, QUEST_EVENT_FARMHOUSE_BUILT,
@@ -71,7 +72,7 @@ from time_system import (
 from vehicle_manager import VehicleManager
 from ui import (
     AnimalHusbandryPanel, BankPanel, BuildingSelectionPanel, CalendarPanel,
-    CityPanel,
+    CityPanel, RestaurantPanel,
     CropSelectionPanel, InfoPanel, OrchardSelectionPanel, QuestPanel, clicked_tool,
     FinancialSummaryPanel,
     create_buttons, create_calendar_button, create_calendar_icon,
@@ -115,7 +116,7 @@ def main():
     economy = bank_system = vehicles = game_state = None
     info_panel = crop_selection_panel = building_selection_panel = None
     animal_husbandry_panel = orchard_selection_panel = calendar_panel = bank_panel = None
-    city_panel = None
+    city_panel = restaurant_panel = None
     financial_summary_panel = economy_hud_rect = None
     game_menu = save_slots_menu = quest_manager = quest_panel = road_drag = None
 
@@ -130,7 +131,7 @@ def main():
         nonlocal economy, bank_system, vehicles, game_state
         nonlocal info_panel, crop_selection_panel, building_selection_panel
         nonlocal animal_husbandry_panel, orchard_selection_panel
-        nonlocal calendar_panel, bank_panel, city_panel
+        nonlocal calendar_panel, bank_panel, city_panel, restaurant_panel
         nonlocal financial_summary_panel, economy_hud_rect
         nonlocal game_menu, save_slots_menu, quest_manager, quest_panel, road_drag
 
@@ -160,10 +161,12 @@ def main():
         bank_system = BankSystem(economy, notification_manager)
         vehicles = VehicleManager()
         quest_manager = QuestManager(economy)
+        restaurant_system = RestaurantSystem()
         game_state = GameState(
             world, fields, buildings, economy, game_time,
             tractor=vehicles, vehicles=vehicles, animals=animals,
             bank_system=bank_system, quest_manager=quest_manager,
+            restaurant_system=restaurant_system,
         )
         info_panel = InfoPanel()
         crop_selection_panel = CropSelectionPanel()
@@ -172,6 +175,7 @@ def main():
         orchard_selection_panel = OrchardSelectionPanel()
         calendar_panel = CalendarPanel()
         city_panel = CityPanel()
+        restaurant_panel = RestaurantPanel()
         bank_panel = BankPanel()
         financial_summary_panel = FinancialSummaryPanel()
         economy_hud_rect = None
@@ -230,6 +234,7 @@ def main():
         road_drag.cancel()
         financial_summary_panel.close()
         city_panel.close()
+        restaurant_panel.close()
         bank_panel.open(
             previous_time_speed, emergency_mode=emergency_mode,
         )
@@ -599,6 +604,9 @@ def main():
             if calendar_panel.handle_event(event):
                 continue
 
+            if restaurant_panel.handle_event(event):
+                continue
+
             city_handled = city_panel.handle_event(event)
             city_action = city_panel.take_action()
             if city_action == "bank":
@@ -616,6 +624,10 @@ def main():
                     city_panel.show_message(
                         "A Piac használatához előbb építs egy Piacot.",
                     )
+                continue
+            if city_action == "restaurant":
+                city_panel.close()
+                restaurant_panel.open(game_state.restaurant_system)
                 continue
             if city_handled:
                 continue
@@ -642,6 +654,7 @@ def main():
                 orchard_selection_panel.close()
                 calendar_panel.close()
                 city_panel.close()
+                restaurant_panel.close()
                 financial_summary_panel.open()
                 continue
 
@@ -683,6 +696,7 @@ def main():
                     orchard_selection_panel.close()
                     calendar_panel.close()
                     city_panel.close()
+                    restaurant_panel.close()
                     financial_summary_panel.close()
                 continue
     
@@ -796,6 +810,7 @@ def main():
                             orchard_selection_panel.close()
                             calendar_panel.close()
                             financial_summary_panel.close()
+                            restaurant_panel.close()
                             city_panel.open()
                         else:
                             selected_tool = tool
@@ -877,6 +892,7 @@ def main():
                     world, buildings, economy, vehicles, elapsed_week,
                     current_ticks=pygame.time.get_ticks(),
                 )
+                game_state.restaurant_system.run_weekly(buildings, economy)
                 run_weekly_animal_supply_automation(
                     world, buildings, economy, animals, vehicles,
                     game_state.purchased_upgrades,
@@ -991,6 +1007,7 @@ def main():
         orchard_selection_panel.draw(screen, font)
         calendar_panel.draw(screen, font, game_time.elapsed_weeks)
         city_panel.draw(screen, font)
+        restaurant_panel.draw(screen, font, buildings)
         financial_summary_panel.draw(screen, font, economy)
         game_menu.draw(screen, font)
         save_slots_menu.draw(screen, font)
