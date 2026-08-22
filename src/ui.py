@@ -782,19 +782,65 @@ class CityPanel(PopupWindow):
     """A későbbi városi szolgáltatások bővíthető nyitófelülete."""
 
     WIDTH = 520
-    HEIGHT = 220
+    HEIGHT = 360
     PADDING = 24
+    BUTTON_WIDTH = 300
+    BUTTON_HEIGHT = 48
+    BUTTON_GAP = 16
+    SERVICES = (
+        {"id": "bank", "label": "Bank", "enabled": True},
+        {"id": "market", "label": "Piac", "enabled": True},
+        {"id": "restaurant", "label": "Étterem", "enabled": False},
+    )
 
     def __init__(self):
         super().__init__(self.WIDTH, self.HEIGHT)
-        self.services = []
-        self.empty_message = "A városi szolgáltatások hamarosan elérhetők."
+        self.services = self.SERVICES
+        self.button_rects = {}
+        self.pending_action = None
+        self.status_message = None
 
     def open(self):
         self.rect.width = responsive_panel_width(self.WIDTH, 320)
         self.rect.height = self.HEIGHT
         self.rect.center = get_screen_center()
+        self.button_rects = {}
+        self.pending_action = None
+        self.status_message = None
         super().open()
+
+    def _handle_content_click(self, position):
+        for service in self.services:
+            rect = self.button_rects.get(service["id"])
+            if rect is None or not rect.collidepoint(position):
+                continue
+            if service["enabled"]:
+                self.pending_action = service["id"]
+            else:
+                self.status_message = "Hamarosan elérhető."
+            return True
+        return True
+
+    def take_action(self):
+        action = self.pending_action
+        self.pending_action = None
+        return action
+
+    def show_message(self, message):
+        self.status_message = message
+
+    @staticmethod
+    def _draw_service_button(screen, font, rect, label, enabled):
+        hovered = rect.collidepoint(pygame.mouse.get_pos())
+        fill_color = (
+            CROP_CARD_HOVER if hovered and enabled
+            else CROP_CARD_BACKGROUND
+        )
+        pygame.draw.rect(screen, fill_color, rect)
+        pygame.draw.rect(screen, INFO_PANEL_BORDER, rect, 1)
+        text_color = COLOR_TEXT if enabled else (105, 105, 100)
+        rendered = font.render(label, True, text_color)
+        screen.blit(rendered, rendered.get_rect(center=rect.center))
 
     def draw(self, screen, font):
         if not self.visible:
@@ -808,10 +854,24 @@ class CityPanel(PopupWindow):
             (self.rect.left + self.PADDING, self.rect.top + 62),
             (self.rect.right - self.PADDING, self.rect.top + 62),
         )
-        message = font.render(self.empty_message, True, COLOR_TEXT)
-        screen.blit(message, message.get_rect(center=(
-            self.rect.centerx, self.rect.top + 125,
-        )))
+        button_width = min(self.BUTTON_WIDTH, self.rect.width - 2 * self.PADDING)
+        button_x = self.rect.centerx - button_width // 2
+        button_y = self.rect.top + 84
+        self.button_rects = {}
+        for service in self.services:
+            rect = pygame.Rect(
+                button_x, button_y, button_width, self.BUTTON_HEIGHT,
+            )
+            self.button_rects[service["id"]] = rect
+            self._draw_service_button(
+                screen, font, rect, service["label"], service["enabled"],
+            )
+            button_y += self.BUTTON_HEIGHT + self.BUTTON_GAP
+        if self.status_message:
+            message = font.render(self.status_message, True, COLOR_TEXT)
+            screen.blit(message, message.get_rect(
+                center=(self.rect.centerx, self.rect.bottom - 28),
+            ))
 
 
 class BankPanel(PopupWindow):

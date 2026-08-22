@@ -29,8 +29,58 @@ class CityPanelTests(unittest.TestCase):
 
     def test_panel_has_expandable_empty_service_catalog(self):
         panel = CityPanel()
-        self.assertEqual([], panel.services)
-        self.assertIn("hamarosan", panel.empty_message)
+        self.assertEqual(
+            ["bank", "market", "restaurant"],
+            [service["id"] for service in panel.services],
+        )
+
+    def _draw_panel(self, panel):
+        surface = pygame.display.get_surface()
+        font = pygame.font.SysFont(None, 24)
+        panel.draw(surface, font)
+
+    def test_three_equal_buttons_are_stacked_evenly(self):
+        panel = CityPanel()
+        panel.open()
+        self._draw_panel(panel)
+        rects = [panel.button_rects[key] for key in (
+            "bank", "market", "restaurant",
+        )]
+        self.assertEqual(3, len(rects))
+        self.assertEqual(1, len({rect.size for rect in rects}))
+        self.assertEqual(
+            CityPanel.BUTTON_GAP, rects[1].top - rects[0].bottom,
+        )
+        self.assertEqual(
+            CityPanel.BUTTON_GAP, rects[2].top - rects[1].bottom,
+        )
+
+    def test_bank_and_market_emit_actions(self):
+        for service_id in ("bank", "market"):
+            with self.subTest(service=service_id):
+                panel = CityPanel()
+                panel.open()
+                self._draw_panel(panel)
+                event = pygame.event.Event(
+                    pygame.MOUSEBUTTONDOWN,
+                    {"button": 1, "pos": panel.button_rects[service_id].center},
+                )
+                self.assertTrue(panel.handle_event(event))
+                self.assertEqual(service_id, panel.take_action())
+                self.assertTrue(panel.visible)
+
+    def test_restaurant_only_shows_coming_soon_message(self):
+        panel = CityPanel()
+        panel.open()
+        self._draw_panel(panel)
+        event = pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN,
+            {"button": 1, "pos": panel.button_rects["restaurant"].center},
+        )
+        self.assertTrue(panel.handle_event(event))
+        self.assertIsNone(panel.take_action())
+        self.assertEqual("Hamarosan elérhető.", panel.status_message)
+        self.assertTrue(panel.visible)
 
     def test_escape_closes_panel_and_consumes_event(self):
         panel = CityPanel()

@@ -229,6 +229,7 @@ def main():
         camera.cancel_drag()
         road_drag.cancel()
         financial_summary_panel.close()
+        city_panel.close()
         bank_panel.open(
             previous_time_speed, emergency_mode=emergency_mode,
         )
@@ -598,7 +599,25 @@ def main():
             if calendar_panel.handle_event(event):
                 continue
 
-            if city_panel.handle_event(event):
+            city_handled = city_panel.handle_event(event)
+            city_action = city_panel.take_action()
+            if city_action == "bank":
+                city_panel.close()
+                open_bank_panel()
+                continue
+            if city_action == "market":
+                market = next(
+                    (item for item in buildings if item["type"] == "market"),
+                    None,
+                )
+                if market is not None and info_panel.open_for_building(market):
+                    city_panel.close()
+                else:
+                    city_panel.show_message(
+                        "A Piac használatához előbb építs egy Piacot.",
+                    )
+                continue
+            if city_handled:
                 continue
 
             financial_handled = financial_summary_panel.handle_event(event)

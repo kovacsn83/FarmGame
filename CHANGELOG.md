@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Elkészültek a Város popup első szolgáltatásai: innen közvetlenül elérhető a meglévő Bank és Piac, az Étterem pedig későbbi funkcióként előkészítésre került.
+
 - Új Város gomb került a Toolbar bal szélére; elkészült a Város popup első, későbbi városi szolgáltatásokkal bővíthető változata.
 
 - A Feldolgozó üzem Piacról vásárolt alapanyagait mostantól Traktor és Pótkocsi szállítja el fizikailag a Piactól az üzemig; a gyártás csak a rakomány megérkezése után indul el.
