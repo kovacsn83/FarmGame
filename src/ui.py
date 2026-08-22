@@ -14,7 +14,7 @@ from constants import (
     BOTTOM_BAR_HEIGHT, COLOR_BUTTON, COLOR_BUTTON_ACTIVE, COLOR_BUTTON_BORDER,
     COLOR_FIELD, COLOR_ROAD, COLOR_TEXT, COLOR_TOOLBAR, COLOR_TOOLBAR_LINE,
     TOOL_ANIMAL_HUSBANDRY, TOOL_BUILD, TOOL_BULLDOZER, TOOL_HARVEST,
-    TOOL_FERTILIZE, TOOL_INSPECT, TOOL_ORCHARD, TOOL_PLANT, TOOL_ROAD,
+    TOOL_CITY, TOOL_FERTILIZE, TOOL_INSPECT, TOOL_ORCHARD, TOOL_PLANT, TOOL_ROAD,
     TOOL_WATERING,
     TOP_BAR_HEIGHT,
 )
@@ -58,6 +58,8 @@ ICON_SIZE = 24
 PLACEHOLDER_SIZE = 20
 BUTTON_GAP = 10
 TOOLBAR_GROUP_SPACING = 18
+TOOLBAR_CITY_LEFT_MARGIN = 12
+TOOLBAR_CITY_MIN_GAP = 36
 TOOLBAR_UTILITY_RIGHT_MARGIN = 12
 TOOLBAR_UTILITY_MIN_GAP = 36
 TOOLTIP_PADDING_X = 8
@@ -184,6 +186,7 @@ UPGRADE_INFO_FILL = (218, 220, 213)
 UPGRADE_INFO_BORDER = (95, 95, 88)
 
 POPUP_TITLES = {
+    "city": "Város",
     "warehouse": "Raktár",
     "market": "Piac",
     "crop_selection": "Ültetés",
@@ -195,6 +198,14 @@ POPUP_TITLES = {
     "orchard_selection": "Gyümölcsös",
     "processing_plant": "Feldolgozó üzem",
 }
+
+CITY_TOOL_GROUPS = [
+    [
+        {"name": "Város", "icon_color": (95, 105, 115),
+         "icon_path": toolbar_icon_path("city_24.png"),
+         "tool": TOOL_CITY},
+    ],
+]
 
 PRIMARY_TOOL_GROUPS = [
     [
@@ -245,7 +256,7 @@ UTILITY_TOOL_GROUPS = [
 ]
 
 # Kompatibilis, lapos bejárási sorrend a közös ikon-, rajzoló- és tooltip-rendszerhez.
-TOOL_GROUPS = PRIMARY_TOOL_GROUPS + UTILITY_TOOL_GROUPS
+TOOL_GROUPS = CITY_TOOL_GROUPS + PRIMARY_TOOL_GROUPS + UTILITY_TOOL_GROUPS
 
 # Az ikonbetöltés és kirajzolás továbbra is egyetlen lapos definíciólistát kap.
 TOOLS = [tool for group in TOOL_GROUPS for tool in group]
@@ -294,22 +305,30 @@ def _position_toolbar_groups(buttons, groups, start_x, button_y):
 
 def create_buttons():
     screen_width, _ = get_screen_size()
+    city_width = _toolbar_groups_width(CITY_TOOL_GROUPS)
     primary_width = _toolbar_groups_width(PRIMARY_TOOL_GROUPS)
     utility_width = _toolbar_groups_width(UTILITY_TOOL_GROUPS)
     primary_start_x = (screen_width - primary_width) // 2
     utility_start_x = (
         screen_width - TOOLBAR_UTILITY_RIGHT_MARGIN - utility_width
     )
+    city_start_x = TOOLBAR_CITY_LEFT_MARGIN
 
     # Keskeny ablaknál is megmarad a két csoport jól látható elkülönítése.
     primary_start_x = min(
         primary_start_x,
         utility_start_x - TOOLBAR_UTILITY_MIN_GAP - primary_width,
     )
-    primary_start_x = max(0, primary_start_x)
+    primary_start_x = max(
+        city_start_x + city_width + TOOLBAR_CITY_MIN_GAP,
+        primary_start_x,
+    )
     toolbar_top = get_toolbar_top()
     button_y = toolbar_top + (BOTTOM_BAR_HEIGHT - BUTTON_SIZE) // 2
     buttons = {}
+    _position_toolbar_groups(
+        buttons, CITY_TOOL_GROUPS, city_start_x, button_y,
+    )
     _position_toolbar_groups(
         buttons, PRIMARY_TOOL_GROUPS, primary_start_x, button_y,
     )
@@ -757,6 +776,42 @@ class PopupWindow:
     def draw_text(screen, font, text, x, y):
         rendered_text = font.render(text, True, COLOR_TEXT)
         screen.blit(rendered_text, (x, y))
+
+
+class CityPanel(PopupWindow):
+    """A későbbi városi szolgáltatások bővíthető nyitófelülete."""
+
+    WIDTH = 520
+    HEIGHT = 220
+    PADDING = 24
+
+    def __init__(self):
+        super().__init__(self.WIDTH, self.HEIGHT)
+        self.services = []
+        self.empty_message = "A városi szolgáltatások hamarosan elérhetők."
+
+    def open(self):
+        self.rect.width = responsive_panel_width(self.WIDTH, 320)
+        self.rect.height = self.HEIGHT
+        self.rect.center = get_screen_center()
+        super().open()
+
+    def draw(self, screen, font):
+        if not self.visible:
+            return
+        self.draw_frame(screen)
+        title = font.render(POPUP_TITLES["city"], True, COLOR_TEXT)
+        screen.blit(title, (self.rect.left + self.PADDING,
+                            self.rect.top + self.PADDING))
+        pygame.draw.line(
+            screen, INFO_PANEL_SEPARATOR,
+            (self.rect.left + self.PADDING, self.rect.top + 62),
+            (self.rect.right - self.PADDING, self.rect.top + 62),
+        )
+        message = font.render(self.empty_message, True, COLOR_TEXT)
+        screen.blit(message, message.get_rect(center=(
+            self.rect.centerx, self.rect.top + 125,
+        )))
 
 
 class BankPanel(PopupWindow):

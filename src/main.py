@@ -25,7 +25,7 @@ from buildings import (
 from constants import (
     COLOR_GRASS, GRASS, TILE_SIZE,
     TOOL_ANIMAL_HUSBANDRY, TOOL_BUILD, TOOL_BULLDOZER, TOOL_HARVEST,
-    TOOL_FERTILIZE, TOOL_INSPECT, TOOL_ORCHARD, TOOL_PLANT, TOOL_ROAD,
+    TOOL_CITY, TOOL_FERTILIZE, TOOL_INSPECT, TOOL_ORCHARD, TOOL_PLANT, TOOL_ROAD,
     TOOL_WATERING,
     WINDOW_HEIGHT, WINDOW_WIDTH,
 )
@@ -71,6 +71,7 @@ from time_system import (
 from vehicle_manager import VehicleManager
 from ui import (
     AnimalHusbandryPanel, BankPanel, BuildingSelectionPanel, CalendarPanel,
+    CityPanel,
     CropSelectionPanel, InfoPanel, OrchardSelectionPanel, QuestPanel, clicked_tool,
     FinancialSummaryPanel,
     create_buttons, create_calendar_button, create_calendar_icon,
@@ -114,6 +115,7 @@ def main():
     economy = bank_system = vehicles = game_state = None
     info_panel = crop_selection_panel = building_selection_panel = None
     animal_husbandry_panel = orchard_selection_panel = calendar_panel = bank_panel = None
+    city_panel = None
     financial_summary_panel = economy_hud_rect = None
     game_menu = save_slots_menu = quest_manager = quest_panel = road_drag = None
 
@@ -128,7 +130,7 @@ def main():
         nonlocal economy, bank_system, vehicles, game_state
         nonlocal info_panel, crop_selection_panel, building_selection_panel
         nonlocal animal_husbandry_panel, orchard_selection_panel
-        nonlocal calendar_panel, bank_panel
+        nonlocal calendar_panel, bank_panel, city_panel
         nonlocal financial_summary_panel, economy_hud_rect
         nonlocal game_menu, save_slots_menu, quest_manager, quest_panel, road_drag
 
@@ -169,6 +171,7 @@ def main():
         animal_husbandry_panel = AnimalHusbandryPanel()
         orchard_selection_panel = OrchardSelectionPanel()
         calendar_panel = CalendarPanel()
+        city_panel = CityPanel()
         bank_panel = BankPanel()
         financial_summary_panel = FinancialSummaryPanel()
         economy_hud_rect = None
@@ -595,6 +598,9 @@ def main():
             if calendar_panel.handle_event(event):
                 continue
 
+            if city_panel.handle_event(event):
+                continue
+
             financial_handled = financial_summary_panel.handle_event(event)
             if financial_summary_panel.take_bank_request():
                 open_bank_panel()
@@ -616,6 +622,7 @@ def main():
                 animal_husbandry_panel.close()
                 orchard_selection_panel.close()
                 calendar_panel.close()
+                city_panel.close()
                 financial_summary_panel.open()
                 continue
 
@@ -656,6 +663,7 @@ def main():
                     animal_husbandry_panel.close()
                     orchard_selection_panel.close()
                     calendar_panel.close()
+                    city_panel.close()
                     financial_summary_panel.close()
                 continue
     
@@ -760,6 +768,16 @@ def main():
                             animal_husbandry_panel.open()
                         elif tool == TOOL_ORCHARD:
                             orchard_selection_panel.open()
+                        elif tool == TOOL_CITY:
+                            camera.cancel_drag()
+                            info_panel.close()
+                            crop_selection_panel.close()
+                            building_selection_panel.close()
+                            animal_husbandry_panel.close()
+                            orchard_selection_panel.close()
+                            calendar_panel.close()
+                            financial_summary_panel.close()
+                            city_panel.open()
                         else:
                             selected_tool = tool
                         continue
@@ -953,6 +971,7 @@ def main():
         animal_husbandry_panel.draw(screen, font)
         orchard_selection_panel.draw(screen, font)
         calendar_panel.draw(screen, font, game_time.elapsed_weeks)
+        city_panel.draw(screen, font)
         financial_summary_panel.draw(screen, font, economy)
         game_menu.draw(screen, font)
         save_slots_menu.draw(screen, font)

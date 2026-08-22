@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Új Város gomb került a Toolbar bal szélére; elkészült a Város popup első, későbbi városi szolgáltatásokkal bővíthető változata.
+
 - A Feldolgozó üzem Piacról vásárolt alapanyagait mostantól Traktor és Pótkocsi szállítja el fizikailag a Piactól az üzemig; a gyártás csak a rakomány megérkezése után indul el.
 
 - A hitel teljes visszafizetéséről mostantól rendszerértesítés jelenik meg; az üzenet a hitel nevét és – ha van – a következő feloldott hitelszintet is jelzi.
