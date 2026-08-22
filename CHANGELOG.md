@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Az Étterem 10 szintes felvásárlási rendszert kapott: a heti igény szintenként 1–10 db termékenként, az értékelés pedig 13 hetes időszakokban történik. Legalább 75% teljesítés szintlépést, 40% alatti teljesítés szintcsökkenést okoz; az igénybe minden elérhető éttermi termék beleszámít a checkbox állapotától függetlenül.
+
 - Elkészült az Étterem első működő verziója: a Paradicsomkonzerv és a Sajt kijelölés alapján, hetente 1 db-os mennyiségben, a mindenkori piaci ár 120%-áért automatikusan értékesíthető; az eladásokra a közös szállítási költség vonatkozik.
 
 - Elkészültek a Város popup első szolgáltatásai: innen közvetlenül elérhető a Bank, a Piac és az Étterem.

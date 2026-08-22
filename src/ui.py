@@ -48,7 +48,7 @@ from processing import (
     select_processing_recipe,
 )
 from restaurant import (
-    RESTAURANT_WEEKLY_QUANTITY, get_restaurant_sellable_item_ids,
+    get_restaurant_period, get_restaurant_sellable_item_ids,
     get_restaurant_unit_price,
 )
 from time_system import (
@@ -885,7 +885,7 @@ class RestaurantPanel(PopupWindow):
     """Az adatvezérelt éttermi automatikus értékesítés beállítófelülete."""
 
     WIDTH = 620
-    HEIGHT = 560
+    HEIGHT = 680
     PADDING = 24
     CARD_HEIGHT = 160
     CARD_GAP = 14
@@ -938,14 +938,49 @@ class RestaurantPanel(PopupWindow):
                 (rect.right - 4, rect.top + 4), 3,
             )
 
-    def draw(self, screen, font, buildings):
+    def draw(self, screen, font, buildings, elapsed_week=0):
         if not self.visible:
             return
         self.draw_frame(screen)
         x = self.rect.left + self.PADDING
         y = self.rect.top + self.PADDING
-        self.draw_text(screen, font, POPUP_TITLES["restaurant"], x, y)
-        y += 42
+        level = self.restaurant_system.level if self.restaurant_system else 1
+        self.draw_text(
+            screen, font,
+            f"{POPUP_TITLES['restaurant']} – {level}. szint", x, y,
+        )
+        y += 36
+        _period_id, start_week, end_week = get_restaurant_period(elapsed_week)
+        requested = (
+            self.restaurant_system.period_requested_units
+            if self.restaurant_system else 0
+        )
+        fulfilled = (
+            self.restaurant_system.period_fulfilled_units
+            if self.restaurant_system else 0
+        )
+        ratio = fulfilled / requested if requested else 0.0
+        self.draw_text(
+            screen, font, f"Heti felvásárlás: {level} db / termék", x, y,
+        )
+        y += 24
+        self.draw_text(
+            screen, font,
+            f"Értékelési időszak: {start_week}–{end_week}. hét", x, y,
+        )
+        y += 24
+        self.draw_text(
+            screen, font,
+            f"Időszak teljesítése: {fulfilled} / {requested} db "
+            f"({ratio * 100:.2f}%)", x, y,
+        )
+        y += 24
+        self.draw_text(
+            screen, font,
+            "≥75%: szintlépés | 40–74,9%: marad | <40%: csökkenés",
+            x, y,
+        )
+        y += 34
         description = (
             "Az Étterem a piaci árnál 20%-kal magasabb áron vásárol."
         )
@@ -955,7 +990,7 @@ class RestaurantPanel(PopupWindow):
             screen, font,
             "A kijelölt termékekből hetente 1 db-ot vásárol.", x, y,
         )
-        y += 38
+        y += 32
         self.checkbox_rects = {}
         for item_id in get_restaurant_sellable_item_ids():
             item = get_inventory_item_data(item_id)
@@ -980,7 +1015,7 @@ class RestaurantPanel(PopupWindow):
                 f"Raktárkészlet: {get_marketable_item_amount(buildings, item_id)} db",
                 f"Piaci ár: {format_money(item['price'])}",
                 f"Éttermi ár: {format_money(get_restaurant_unit_price(item_id))}",
-                f"Heti felvásárlás: {RESTAURANT_WEEKLY_QUANTITY} db",
+                f"Heti felvásárlás: {level} db",
             )
             line_y = card.top + 50
             for line in lines:

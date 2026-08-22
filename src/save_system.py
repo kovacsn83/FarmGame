@@ -29,6 +29,7 @@ from processing import (
     PROCESSING_RECIPES, PROCESSING_STORAGE_CAPACITY,
     initialize_processing_plant,
 )
+from restaurant import is_valid_restaurant_save_record
 from time_system import TIME_FAST, TIME_NORMAL, TIME_WEEK_LENGTHS_MS
 from vehicle_types import (
     VEHICLE_TYPE_DEFINITIONS, VehicleType, normalize_vehicle_type,
@@ -379,9 +380,7 @@ def _is_valid_save_data(data):
             is_valid_transaction(item) for item in history):
         return False
     restaurant_auto_sell = data.get("restaurant_auto_sell", {})
-    if not isinstance(restaurant_auto_sell, dict) or not all(
-            isinstance(item_id, str) and isinstance(enabled, bool)
-            for item_id, enabled in restaurant_auto_sell.items()):
+    if not is_valid_restaurant_save_record(restaurant_auto_sell):
         return False
     if not _validate_tiles(data):
         return False

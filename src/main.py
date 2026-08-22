@@ -892,7 +892,9 @@ def main():
                     world, buildings, economy, vehicles, elapsed_week,
                     current_ticks=pygame.time.get_ticks(),
                 )
-                game_state.restaurant_system.run_weekly(buildings, economy)
+                game_state.restaurant_system.run_weekly(
+                    buildings, economy, elapsed_week, notification_manager,
+                )
                 run_weekly_animal_supply_automation(
                     world, buildings, economy, animals, vehicles,
                     game_state.purchased_upgrades,
@@ -1007,7 +1009,9 @@ def main():
         orchard_selection_panel.draw(screen, font)
         calendar_panel.draw(screen, font, game_time.elapsed_weeks)
         city_panel.draw(screen, font)
-        restaurant_panel.draw(screen, font, buildings)
+        restaurant_panel.draw(
+            screen, font, buildings, game_time.elapsed_weeks,
+        )
         financial_summary_panel.draw(screen, font, economy)
         game_menu.draw(screen, font)
         save_slots_menu.draw(screen, font)
