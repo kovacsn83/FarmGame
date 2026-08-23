@@ -179,7 +179,7 @@ MARKET_LIST_TOP = 58
 MARKET_LIST_BOTTOM_PADDING = 20
 MARKET_SCROLL_STEP = 60
 SALE_DIALOG_WIDTH = 430
-SALE_DIALOG_HEIGHT = 300
+SALE_DIALOG_HEIGHT = 330
 SALE_DIALOG_PADDING = 24
 SALE_INPUT_HEIGHT = 38
 SALE_BUTTON_WIDTH = 116
@@ -1780,6 +1780,8 @@ class MarketSaleDialog(PopupWindow):
         self.max_rect = pygame.Rect(0, 0, 0, 0)
         self.sell_rect = pygame.Rect(0, 0, 0, 0)
         self.cancel_rect = pygame.Rect(0, 0, 0, 0)
+        self.unit_price_y = 0
+        self.quantity_label_y = 0
 
     def open_for_item(self, item_id, amount, unit_price):
         self.item_id = item_id
@@ -1823,7 +1825,9 @@ class MarketSaleDialog(PopupWindow):
 
     def _update_layout(self):
         content_left = self.rect.left + SALE_DIALOG_PADDING
-        input_top = self.rect.top + 137
+        self.unit_price_y = self.rect.top + 103
+        input_top = self.rect.top + 151
+        self.quantity_label_y = input_top - 23
         self.max_rect = pygame.Rect(
             self.rect.right - SALE_DIALOG_PADDING - SALE_MAX_BUTTON_WIDTH,
             input_top, SALE_MAX_BUTTON_WIDTH, SALE_INPUT_HEIGHT,
@@ -1906,11 +1910,11 @@ class MarketSaleDialog(PopupWindow):
         )
         self.draw_text(
             screen, font, f"Egységár: {format_money(self.unit_price)}",
-            left, self.rect.top + 103,
+            left, self.unit_price_y,
         )
         self.draw_text(
             screen, font, "Eladni kívánt mennyiség:", left,
-            self.input_rect.top - 23,
+            self.quantity_label_y,
         )
         pygame.draw.rect(screen, (255, 255, 252), self.input_rect)
         pygame.draw.rect(screen, SALE_INPUT_ACTIVE_BORDER, self.input_rect, 2)

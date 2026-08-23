@@ -176,6 +176,19 @@ class MarketPanelLayoutTests(unittest.TestCase):
         ))
         self.assertEqual("346", panel.sale_dialog.quantity_text)
 
+    def test_unit_price_and_quantity_label_have_visible_vertical_spacing(self):
+        screen = pygame.display.set_mode((1000, 800))
+        set_screen_size(1000, 800)
+        font = pygame.font.Font(None, 20)
+        dialog = MarketSaleDialog()
+        dialog.open_for_item("milk", 346, 8)
+        dialog.draw(screen, font)
+
+        unit_price_bottom = dialog.unit_price_y + font.get_linesize()
+        self.assertGreaterEqual(dialog.quantity_label_y - unit_price_bottom, 4)
+        self.assertLess(dialog.quantity_label_y, dialog.input_rect.top)
+        self.assertLess(dialog.input_rect.bottom, dialog.sell_rect.top)
+
     def test_invalid_quantities_cannot_be_confirmed(self):
         dialog = MarketSaleDialog()
         dialog.open_for_item("milk", 346, 8)
