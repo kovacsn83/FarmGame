@@ -182,6 +182,8 @@ def _migrate_legacy_crop_data(data):
                     production["counter_key"],
                     legacy_counter if legacy_counter is not None else 0,
                 )
+            if animal.get("slaughter_state") != "waiting_for_storage":
+                animal.pop("slaughter_state", None)
 
 
 def _migrate_save_schema(data):
@@ -754,9 +756,11 @@ def _validate_animals(data):
             if (
                 not isinstance(counter, int)
                 or isinstance(counter, bool)
-                or not 0 <= counter < production["interval_weeks"]
+                or not 0 <= counter <= production["interval_weeks"]
             ):
                 return False
+        if animal.get("slaughter_state") not in (None, "waiting_for_storage"):
+            return False
     if len({(animal["row"], animal["col"]) for animal in animals}) != len(animals):
         return False
     if len({animal.get("visual_id") for animal in animals}) != len(animals):

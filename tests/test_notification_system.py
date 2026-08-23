@@ -13,6 +13,16 @@ from notification_system import NotificationManager
 
 
 class NotificationManagerTests(unittest.TestCase):
+    def test_priority_message_preempts_and_preserves_current_message(self):
+        manager = NotificationManager(start_ticks=0)
+        manager.enqueue("Korábbi üzenet")
+
+        self.assertTrue(manager.enqueue_priority("Kritikus üzenet"))
+
+        self.assertEqual(manager.current_message, "Kritikus üzenet")
+        manager.update(10_000, time_running=True)
+        self.assertEqual(manager.current_message, "Korábbi üzenet")
+
     def test_message_expires_after_ten_running_seconds(self):
         manager = NotificationManager(start_ticks=0)
         manager.enqueue("Teszt")

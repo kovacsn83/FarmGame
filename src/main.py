@@ -3,7 +3,8 @@ import pygame
 from app_state import AppState, AppStateManager
 from animals import (
     ANIMAL_TYPES, AnimalMovementSystem, animal_pen_demolition_block_reason, draw_animals,
-    purchase_and_place_animal, run_weekly_animal_cycle,
+    purchase_and_place_animal, retry_waiting_animal_slaughters,
+    run_weekly_animal_cycle,
 )
 from animal_troughs import (
     draw_pen_troughs, find_trough_at, get_trough_tooltip,
@@ -65,6 +66,7 @@ from save_system import (
 )
 from screen_layout import set_camera, set_screen_size, world_to_screen
 from startup_ui import MainMenu, SplashScreen
+from storage_blocking import StorageBlockManager
 from time_system import (
     TIME_NORMAL, TIME_PAUSED, TIME_SLOW, GameTime,
     format_game_time,
@@ -107,7 +109,7 @@ def main():
 
     # A tényleges farmállapot kizárólag Új játék vagy Betöltés választásakor készül el.
     world = fields = buildings = animals = None
-    animal_movement = None
+    animal_movement = storage_block_manager = None
     selected_tool = selected_crop = selected_building = selected_animal = None
     selected_tree = None
     buttons = toolbar_icons = time_speed_icons = None
@@ -123,6 +125,7 @@ def main():
     def initialize_game_session(start_quest):
         """Egyetlen helyen hozza létre az új vagy betöltendő farm teljes állapotát."""
         nonlocal world, fields, buildings, animals, animal_movement
+        nonlocal storage_block_manager
         nonlocal selected_tool, selected_crop, selected_building, selected_animal
         nonlocal selected_tree
         nonlocal buttons, toolbar_icons, time_speed_icons
@@ -158,6 +161,15 @@ def main():
             start_ticks=pygame.time.get_ticks(),
         )
         economy = Economy()
+        storage_block_manager = StorageBlockManager(
+            notification_manager, game_time,
+        )
+        economy.bind_storage_capacity_changed(
+            lambda: retry_waiting_animal_slaughters(
+                animals, buildings, notification_manager,
+                storage_block_manager,
+            )
+        )
         bank_system = BankSystem(economy, notification_manager)
         vehicles = VehicleManager()
         quest_manager = QuestManager(economy)
@@ -211,6 +223,10 @@ def main():
         camera.update_world_size(len(world[0]) if world else 0, len(world))
         camera.reset()
         animal_movement.reset()
+        storage_block_manager.reset()
+        retry_waiting_animal_slaughters(
+            animals, buildings, notification_manager, storage_block_manager,
+        )
         run_field_automation(
             world, buildings, economy, fields, vehicles,
             game_state.purchased_upgrades,
@@ -886,6 +902,7 @@ def main():
                 grow_crops(fields, elapsed_week, notification_manager)
                 run_weekly_animal_cycle(
                     animals, buildings, economy, notification_manager,
+                    storage_block_manager,
                 )
                 run_weekly_orchard_cycle(buildings, elapsed_week)
                 run_weekly_processing_cycle(

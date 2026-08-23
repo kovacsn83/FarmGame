@@ -5,7 +5,8 @@ import pygame
 from financial_history import EXPENSE_ANIMAL_PURCHASE
 
 from buildings import (
-    find_building_data, get_animal_pen_groups, store_items,
+    find_building_data, get_animal_pen_groups, get_free_capacity,
+    get_total_capacity, get_total_inventory, store_items,
 )
 from animal_troughs import (
     get_forbidden_movement_rects, supply_animals_from_troughs,
@@ -41,6 +42,8 @@ PIG_PORK_PER_CYCLE = 10
 CHICKEN_EGGS_PER_WEEK = 1
 CHICKEN_FATTENING_WEEKS = 26
 CHICKEN_MEAT_PER_CYCLE = 6
+SLAUGHTER_STATE_KEY = "slaughter_state"
+SLAUGHTER_WAITING_FOR_STORAGE = "waiting_for_storage"
 
 # Az állattípusok központi katalógusa később további állatokkal bővíthető.
 ANIMAL_TYPES = {
@@ -471,72 +474,21 @@ def purchase_and_place_animal(
     return True
 
 
-def produce_weekly_animal_products(
-        animals, buildings, animal_registry=None, notification_manager=None):
-    """A heti és az önálló időközű állati termékeket raktárba helyezi."""
-    animal_registry = animals if animal_registry is None else animal_registry
-    produced_animals = 0
-    produced_totals = {}
-    storage_failed = False
-    animals_to_remove = []
-    for animal in list(animals):
-        definition = ANIMAL_TYPES.get(animal.get("type"))
-        if definition is None:
-            continue
-
-        animal_produced = False
-        weekly_products = definition.get("weekly_products", {})
-        if weekly_products:
-            if store_items(buildings, weekly_products):
-                animal_produced = True
-                for item_id, amount in weekly_products.items():
-                    produced_totals[item_id] = (
-                        produced_totals.get(item_id, 0) + amount
-                    )
-            else:
-                storage_failed = True
-
-        for item_id, production in definition.get(
-                "periodic_products", {}).items():
-            counter_key = production["counter_key"]
-            elapsed_weeks = animal.get(counter_key, 0) + 1
-            if elapsed_weeks < production["interval_weeks"]:
-                animal[counter_key] = elapsed_weeks
-                continue
-
-            # Az esedékes ciklus tárolási eredménytől függetlenül lezárul,
-            # ezért telt raktár után sem halmozódik későbbi túltermelés.
-            animal[counter_key] = 0
-            amount = production["amount"]
-            if store_items(buildings, {item_id: amount}):
-                animal_produced = True
-                produced_totals[item_id] = (
-                    produced_totals.get(item_id, 0) + amount
-                )
-                if production.get("remove_animal_after_production"):
-                    animals_to_remove.append((animal, item_id, amount))
-            else:
-                storage_failed = True
-
-        if animal_produced:
-            produced_animals += 1
-
+def _finalize_slaughtered_animals(
+        animals_to_remove, animal_registry, notification_manager=None):
+    """A sikeresen eltárolt hús után eltávolít és fajonként értesít."""
     removed_animal_counts = {}
     removed_product_totals = {}
-    # Csak a sikeresen eltárolt végtermék után szűnik meg az állat minden állapota.
     for animal, item_id, amount in animals_to_remove:
-        if animal in animal_registry:
-            animal_registry.remove(animal)
-            animal_type = animal.get("type")
-            removed_animal_counts[animal_type] = (
-                removed_animal_counts.get(animal_type, 0) + 1
-            )
-            animal_products = removed_product_totals.setdefault(
-                animal_type, {},
-            )
-            animal_products[item_id] = (
-                animal_products.get(item_id, 0) + amount
-            )
+        if animal not in animal_registry:
+            continue
+        animal_registry.remove(animal)
+        animal_type = animal.get("type")
+        removed_animal_counts[animal_type] = (
+            removed_animal_counts.get(animal_type, 0) + 1
+        )
+        animal_products = removed_product_totals.setdefault(animal_type, {})
+        animal_products[item_id] = animal_products.get(item_id, 0) + amount
 
     for animal_type, slaughtered_count in removed_animal_counts.items():
         definition = ANIMAL_TYPES.get(animal_type, {})
@@ -561,6 +513,74 @@ def produce_weekly_animal_products(
         )
         if notification_manager is not None:
             notification_manager.enqueue(public_message)
+    return removed_animal_counts
+
+
+def produce_weekly_animal_products(
+        animals, buildings, animal_registry=None, notification_manager=None,
+        storage_block_manager=None):
+    """A heti és az önálló időközű állati termékeket raktárba helyezi."""
+    animal_registry = animals if animal_registry is None else animal_registry
+    produced_animals = 0
+    produced_totals = {}
+    storage_failed = False
+    animals_to_remove = []
+    for animal in list(animals):
+        definition = ANIMAL_TYPES.get(animal.get("type"))
+        if definition is None:
+            continue
+        if animal.get(SLAUGHTER_STATE_KEY) == SLAUGHTER_WAITING_FOR_STORAGE:
+            continue
+
+        animal_produced = False
+        weekly_products = definition.get("weekly_products", {})
+        if weekly_products:
+            if store_items(buildings, weekly_products):
+                animal_produced = True
+                for item_id, amount in weekly_products.items():
+                    produced_totals[item_id] = (
+                        produced_totals.get(item_id, 0) + amount
+                    )
+            else:
+                storage_failed = True
+
+        for item_id, production in definition.get(
+                "periodic_products", {}).items():
+            counter_key = production["counter_key"]
+            elapsed_weeks = animal.get(counter_key, 0) + 1
+            if elapsed_weeks < production["interval_weeks"]:
+                animal[counter_key] = elapsed_weeks
+                continue
+
+            # A számláló a levágási életkoron marad mindaddig, amíg a teljes
+            # húshozam biztonságosan el nem fér a Raktárban.
+            animal[counter_key] = production["interval_weeks"]
+            amount = production["amount"]
+            if store_items(buildings, {item_id: amount}):
+                animal_produced = True
+                produced_totals[item_id] = (
+                    produced_totals.get(item_id, 0) + amount
+                )
+                if production.get("remove_animal_after_production"):
+                    animals_to_remove.append((animal, item_id, amount))
+                else:
+                    animal[counter_key] = 0
+            else:
+                storage_failed = True
+                if production.get("remove_animal_after_production"):
+                    animal[SLAUGHTER_STATE_KEY] = SLAUGHTER_WAITING_FOR_STORAGE
+
+        if animal_produced:
+            produced_animals += 1
+
+    # Csak a sikeresen eltárolt végtermék után szűnik meg az állat minden állapota.
+    _finalize_slaughtered_animals(
+        animals_to_remove, animal_registry, notification_manager,
+    )
+
+    _report_waiting_slaughter_blocks(
+        animal_registry, buildings, storage_block_manager,
+    )
 
     if produced_animals:
         product_names = ", ".join(
@@ -579,24 +599,130 @@ def produce_weekly_animal_products(
     return produced_animals
 
 
+def _slaughter_production(animal):
+    definition = ANIMAL_TYPES.get(animal.get("type"), {})
+    return next(
+        (
+            (item_id, production)
+            for item_id, production in definition.get(
+                "periodic_products", {},
+            ).items()
+            if production.get("remove_animal_after_production")
+        ),
+        (None, None),
+    )
+
+
+def _storage_block_event_id(animal_type):
+    return f"storage:animal_slaughter:{animal_type}"
+
+
+def _report_waiting_slaughter_blocks(animals, buildings, storage_block_manager):
+    if storage_block_manager is None:
+        return
+    waiting_by_type = {}
+    for animal in animals:
+        if animal.get(SLAUGHTER_STATE_KEY) == SLAUGHTER_WAITING_FOR_STORAGE:
+            waiting_by_type.setdefault(animal.get("type"), []).append(animal)
+
+    for animal_type in ANIMAL_TYPES:
+        event_id = _storage_block_event_id(animal_type)
+        waiting = waiting_by_type.get(animal_type, [])
+        if not waiting:
+            storage_block_manager.resolve(event_id)
+            continue
+        item_id, production = _slaughter_production(waiting[0])
+        if production is None:
+            continue
+        definition = ANIMAL_TYPES[animal_type]
+        required = production["amount"]
+        capacity = get_total_capacity(buildings)
+        used = sum(get_total_inventory(buildings).values())
+        free = get_free_capacity(buildings)
+        animal_name = definition["name"]
+        message = (
+            "Nincs elegendő hely a Raktárban!\n"
+            f"Kapacitás: {used} / {capacity}\n"
+            f"{len(waiting)} {animal_name.lower()} levágása várakozik.\n"
+            f"Egy állat levágásához legalább {required} szabad hely szükséges."
+        )
+        sample_id = waiting[0].get("visual_id", "?")
+        storage_block_manager.report(
+            event_id,
+            message,
+            log_message=(
+                f"Slaughter blocked: {animal_name} #{sample_id}. "
+                f"Required: {required}, free: {free}."
+            ),
+        )
+
+
+def retry_waiting_animal_slaughters(
+        animals, buildings, notification_manager=None,
+        storage_block_manager=None):
+    """Kapacitásváltozáskor állatonként újrapróbálja a várakozó vágásokat."""
+    resumed = []
+    for animal in list(animals):
+        if animal.get(SLAUGHTER_STATE_KEY) != SLAUGHTER_WAITING_FOR_STORAGE:
+            continue
+        item_id, production = _slaughter_production(animal)
+        if production is None:
+            animal.pop(SLAUGHTER_STATE_KEY, None)
+            continue
+        amount = production["amount"]
+        if not store_items(buildings, {item_id: amount}):
+            continue
+        animal.pop(SLAUGHTER_STATE_KEY, None)
+        resumed.append((animal, item_id, amount))
+
+    if resumed:
+        _finalize_slaughtered_animals(
+            resumed, animals, notification_manager,
+        )
+        for animal_type in {animal.get("type") for animal, _, _ in resumed}:
+            remaining = any(
+                animal.get("type") == animal_type
+                and animal.get(SLAUGHTER_STATE_KEY) == SLAUGHTER_WAITING_FOR_STORAGE
+                for animal in animals
+            )
+            if not remaining and storage_block_manager is not None:
+                storage_block_manager.resolve(
+                    _storage_block_event_id(animal_type),
+                    log_message=(
+                        f"Capacity available. "
+                        f"{ANIMAL_TYPES[animal_type]['name']} slaughter resumed."
+                    ),
+                )
+    _report_waiting_slaughter_blocks(
+        animals, buildings, storage_block_manager,
+    )
+    return len(resumed)
+
+
 def feed_animals(animals, buildings, economy):
     """A Karámcsoport közös Etető- és Itatóvályújából biztosít ellátást."""
     return supply_animals_from_troughs(animals, buildings), 0.0
 
 
 def run_weekly_animal_cycle(
-        animals, buildings, economy, notification_manager=None):
+        animals, buildings, economy, notification_manager=None,
+        storage_block_manager=None):
     """Az etetést és az arra épülő termelést egyetlen heti ciklusba fogja."""
+    resumed_slaughters = retry_waiting_animal_slaughters(
+        animals, buildings, notification_manager, storage_block_manager,
+    )
     fed_animals, purchase_cost = feed_animals(
         animals, buildings, economy,
     )
     produced_animals = produce_weekly_animal_products(
         fed_animals, buildings, animal_registry=animals,
         notification_manager=notification_manager,
+        storage_block_manager=storage_block_manager,
     )
     return {
         "fed_animals": len(fed_animals),
         "produced_animals": produced_animals,
+        "resumed_slaughters": resumed_slaughters,
         "feed_purchase_cost": purchase_cost,
     }
 

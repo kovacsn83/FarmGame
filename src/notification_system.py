@@ -57,6 +57,17 @@ class NotificationManager:
             self.queue.append(notification)
         return True
 
+    def enqueue_priority(self, message):
+        """Kritikus üzenetet azonnal láthatóvá tesz, a jelenlegit megőrzi."""
+        if not message:
+            return False
+        notification = Notification(str(message))
+        if self.current is not None:
+            self.queue.appendleft(self.current)
+        self.current = notification
+        self.remaining_ms = self.duration_ms
+        return True
+
     def update(self, current_ticks, time_running=True):
         """Valós időt fogyaszt, de szünetben nem csökkenti a láthatósági időt."""
         current_ticks = int(current_ticks)

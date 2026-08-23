@@ -156,6 +156,7 @@ class RestaurantSystem:
             f"{format_money(income)}. Szállítás: {format_money(shipping)}.",
             "Restaurant",
         )
+        economy.notify_storage_capacity_changed()
         return quantity
 
     def _evaluate_period(self, period_id, notification_manager=None):

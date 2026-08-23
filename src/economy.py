@@ -32,9 +32,18 @@ class Economy:
         self._next_transaction_id = 1
         self._game_time = None
         self._seed_purchase_transactions = {}
+        self._storage_capacity_changed_handler = None
 
     def bind_game_time(self, game_time):
         self._game_time = game_time
+
+    def bind_storage_capacity_changed(self, handler):
+        """Eseményalapú újrapróbálást köt a készletcsökkenésekhez."""
+        self._storage_capacity_changed_handler = handler
+
+    def notify_storage_capacity_changed(self):
+        if self._storage_capacity_changed_handler is not None:
+            self._storage_capacity_changed_handler()
 
     def _current_week(self):
         return max(0, int(getattr(self._game_time, "elapsed_weeks", 0)))
@@ -405,6 +414,7 @@ class Economy:
             f"Eladva: {amount} db {item_name}. "
             f"Bevétel: {format_money(revenue)}.", "Market",
         )
+        self.notify_storage_capacity_changed()
         return True
 
     def sell_crop(self, buildings, crop):

@@ -615,19 +615,19 @@ def draw_notification_bar(screen, font, notification_manager, bottom_y):
         min(NEWS_BAR_MAX_WIDTH, screen_width - NEWS_BAR_LEFT_MARGIN * 2)
         - NEWS_BAR_PADDING_X * 2,
     )
-    words = message.split()
     text_lines = []
-    current_line = ""
-    for word in words:
-        candidate = word if not current_line else f"{current_line} {word}"
-        if font.size(candidate)[0] <= max_content_width or not current_line:
-            current_line = candidate
-        else:
+    for paragraph in message.splitlines() or (message,):
+        current_line = ""
+        for word in paragraph.split():
+            candidate = word if not current_line else f"{current_line} {word}"
+            if font.size(candidate)[0] <= max_content_width or not current_line:
+                current_line = candidate
+            else:
+                text_lines.append(current_line)
+                current_line = word
+        if current_line:
             text_lines.append(current_line)
-            current_line = word
-    if current_line:
-        text_lines.append(current_line)
-    text_lines = text_lines[:2]
+    text_lines = text_lines[:4]
     rendered = [font.render(line, True, NEWS_BAR_TEXT_COLOR) for line in text_lines]
     width = max(line.get_width() for line in rendered) + NEWS_BAR_PADDING_X * 2
     height = sum(line.get_height() for line in rendered) + NEWS_BAR_PADDING_Y * 2

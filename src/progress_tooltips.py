@@ -152,6 +152,13 @@ def get_animal_progress_lines(animal, animal_types):
     )
     if not completed:
         progress.append(f"Még {max(0, required - current)} hét a levágásig")
+    elif animal.get("slaughter_state") == "waiting_for_storage":
+        progress.extend((
+            "Állapot:",
+            "Levágásra vár",
+            "Ok:",
+            "Nincs elegendő hely a Raktárban",
+        ))
 
     weekly_lines = []
     for item_id, label in definition.get(
