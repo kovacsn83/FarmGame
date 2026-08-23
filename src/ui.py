@@ -178,6 +178,15 @@ MARKET_CARD_GAP = 12
 MARKET_LIST_TOP = 58
 MARKET_LIST_BOTTOM_PADDING = 20
 MARKET_SCROLL_STEP = 60
+SALE_DIALOG_WIDTH = 430
+SALE_DIALOG_HEIGHT = 300
+SALE_DIALOG_PADDING = 24
+SALE_INPUT_HEIGHT = 38
+SALE_BUTTON_WIDTH = 116
+SALE_BUTTON_HEIGHT = 38
+SALE_MAX_BUTTON_WIDTH = 72
+SALE_INVALID_COLOR = (165, 55, 45)
+SALE_INPUT_ACTIVE_BORDER = (75, 115, 75)
 
 BUILDING_PANEL_WIDTH = 760
 BUILDING_CARD_HEIGHT = 112
@@ -1757,6 +1766,181 @@ class SelectionPanel(PopupWindow):
         raise NotImplementedError
 
 
+class MarketSaleDialog(PopupWindow):
+    """Modális, billentyűzettel szerkeszthető piaci mennyiségválasztó."""
+
+    def __init__(self):
+        super().__init__(SALE_DIALOG_WIDTH, SALE_DIALOG_HEIGHT)
+        self.item_id = None
+        self.available_amount = 0
+        self.unit_price = 0
+        self.quantity_text = ""
+        self.pending_sale = None
+        self.input_rect = pygame.Rect(0, 0, 0, 0)
+        self.max_rect = pygame.Rect(0, 0, 0, 0)
+        self.sell_rect = pygame.Rect(0, 0, 0, 0)
+        self.cancel_rect = pygame.Rect(0, 0, 0, 0)
+
+    def open_for_item(self, item_id, amount, unit_price):
+        self.item_id = item_id
+        self.available_amount = max(0, int(amount))
+        self.unit_price = unit_price
+        self.quantity_text = ""
+        self.pending_sale = None
+        self.rect.size = (
+            responsive_panel_width(SALE_DIALOG_WIDTH), SALE_DIALOG_HEIGHT,
+        )
+        self.rect.center = get_screen_center()
+        self._update_layout()
+        self.open()
+
+    def update_quote(self, amount, unit_price):
+        self.available_amount = max(0, int(amount))
+        self.unit_price = unit_price
+
+    def _quantity(self):
+        if not self.quantity_text:
+            return None
+        try:
+            return int(self.quantity_text)
+        except (TypeError, ValueError):
+            return None
+
+    def is_quantity_valid(self):
+        quantity = self._quantity()
+        return quantity is not None and 0 < quantity <= self.available_amount
+
+    def take_sale(self):
+        sale = self.pending_sale
+        self.pending_sale = None
+        return sale
+
+    def _confirm(self):
+        if not self.is_quantity_valid():
+            return
+        self.pending_sale = (self.item_id, self._quantity())
+        self.close()
+
+    def _update_layout(self):
+        content_left = self.rect.left + SALE_DIALOG_PADDING
+        input_top = self.rect.top + 137
+        self.max_rect = pygame.Rect(
+            self.rect.right - SALE_DIALOG_PADDING - SALE_MAX_BUTTON_WIDTH,
+            input_top, SALE_MAX_BUTTON_WIDTH, SALE_INPUT_HEIGHT,
+        )
+        self.input_rect = pygame.Rect(
+            content_left, input_top,
+            max(80, self.max_rect.left - 10 - content_left),
+            SALE_INPUT_HEIGHT,
+        )
+        buttons_top = self.rect.bottom - SALE_DIALOG_PADDING - SALE_BUTTON_HEIGHT
+        self.cancel_rect = pygame.Rect(
+            self.rect.right - SALE_DIALOG_PADDING - SALE_BUTTON_WIDTH,
+            buttons_top, SALE_BUTTON_WIDTH, SALE_BUTTON_HEIGHT,
+        )
+        self.sell_rect = pygame.Rect(
+            self.cancel_rect.left - 12 - SALE_BUTTON_WIDTH,
+            buttons_top, SALE_BUTTON_WIDTH, SALE_BUTTON_HEIGHT,
+        )
+
+    def handle_event(self, event):
+        if not self.visible:
+            return False
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                self.close()
+            elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                self._confirm()
+            elif event.key == pygame.K_BACKSPACE:
+                self.quantity_text = self.quantity_text[:-1]
+            else:
+                character = getattr(event, "unicode", "")
+                if not character or not character.isdecimal():
+                    return True
+                candidate = self.quantity_text + character
+                # Ésszerű hosszkorlát, amely nem csonkol érvényes készletet.
+                if len(candidate) <= max(1, len(str(self.available_amount)) + 1):
+                    self.quantity_text = candidate.lstrip("0") or "0"
+            return True
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button != 1:
+                return True
+            if is_outside_popup_click(event, self.rect):
+                self.close()
+                return True
+            if self.max_rect.collidepoint(event.pos):
+                self.quantity_text = str(self.available_amount)
+            elif self.sell_rect.collidepoint(event.pos):
+                self._confirm()
+            elif self.cancel_rect.collidepoint(event.pos):
+                self.close()
+            return True
+        # A modális input minden billentyű- és egéreseményt elnyel.
+        return event.type in (
+            pygame.KEYUP, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION,
+            pygame.MOUSEWHEEL,
+        )
+
+    @staticmethod
+    def _draw_button(screen, font, rect, label, enabled=True):
+        fill = COLOR_BUTTON if enabled else (205, 205, 198)
+        text_color = COLOR_TEXT if enabled else (125, 125, 120)
+        pygame.draw.rect(screen, fill, rect)
+        pygame.draw.rect(screen, COLOR_BUTTON_BORDER, rect, 1)
+        text_surface = font.render(label, True, text_color)
+        screen.blit(text_surface, text_surface.get_rect(center=rect.center))
+
+    def draw(self, screen, font):
+        if not self.visible:
+            return
+        self.rect.center = get_screen_center()
+        self._update_layout()
+        self.draw_frame(screen)
+        left = self.rect.left + SALE_DIALOG_PADDING
+        self.draw_text(screen, font, "Eladás", left, self.rect.top + 18)
+        item_name = get_inventory_item_name(self.item_id)
+        self.draw_text(screen, font, item_name, left, self.rect.top + 51)
+        self.draw_text(
+            screen, font, f"Raktárkészlet: {self.available_amount} db",
+            left, self.rect.top + 78,
+        )
+        self.draw_text(
+            screen, font, f"Egységár: {format_money(self.unit_price)}",
+            left, self.rect.top + 103,
+        )
+        self.draw_text(
+            screen, font, "Eladni kívánt mennyiség:", left,
+            self.input_rect.top - 23,
+        )
+        pygame.draw.rect(screen, (255, 255, 252), self.input_rect)
+        pygame.draw.rect(screen, SALE_INPUT_ACTIVE_BORDER, self.input_rect, 2)
+        input_surface = font.render(self.quantity_text, True, COLOR_TEXT)
+        screen.blit(
+            input_surface,
+            (self.input_rect.left + 9,
+             self.input_rect.centery - input_surface.get_height() // 2),
+        )
+        self._draw_button(screen, font, self.max_rect, "Max")
+
+        quantity = self._quantity() or 0
+        revenue = quantity * self.unit_price if self.is_quantity_valid() else 0
+        self.draw_text(
+            screen, font, f"Teljes bevétel: {format_money(revenue)}",
+            left, self.input_rect.bottom + 17,
+        )
+        if self.quantity_text and not self.is_quantity_valid():
+            message = (
+                "A mennyiség 1 és "
+                f"{self.available_amount} közötti egész szám lehet."
+            )
+            error_surface = font.render(message, True, SALE_INVALID_COLOR)
+            screen.blit(error_surface, (left, self.input_rect.bottom + 43))
+        self._draw_button(
+            screen, font, self.sell_rect, "Eladás", self.is_quantity_valid(),
+        )
+        self._draw_button(screen, font, self.cancel_rect, "Mégse")
+
+
 class InfoPanel(PopupWindow):
     """Később további épülettípusokkal bővíthető információs panel."""
 
@@ -1769,6 +1953,8 @@ class InfoPanel(PopupWindow):
         self.market_max_scroll = 0
         self.market_column_count = 1
         self.pending_sale_selection = None
+        self.market_quotes = {}
+        self.sale_dialog = MarketSaleDialog()
         self.upgrade_card_rects = {}
         self.upgrade_info_rects = {}
         self.pending_upgrade_selection = None
@@ -1796,10 +1982,18 @@ class InfoPanel(PopupWindow):
         self.processing_recipe_scroll = 0
         self.market_card_rects = {}
         self.market_scroll_offset = 0
+        self.market_quotes = {}
+        self.sale_dialog.close()
         self.open()
         return True
 
     def handle_event(self, event):
+        if self.sale_dialog.visible:
+            handled = self.sale_dialog.handle_event(event)
+            sale = self.sale_dialog.take_sale()
+            if sale is not None:
+                self.pending_sale_selection = sale
+            return handled
         if self.visible and self.building_type == "market":
             if event.type == pygame.MOUSEWHEEL:
                 self._scroll_market(-event.y * MARKET_SCROLL_STEP)
@@ -1871,7 +2065,11 @@ class InfoPanel(PopupWindow):
         if self.building_type == "market":
             for item_id, card_rect in self.market_card_rects.items():
                 if card_rect.collidepoint(position):
-                    self.pending_sale_selection = item_id
+                    quote = self.market_quotes.get(item_id)
+                    if quote is not None and quote["amount"] > 0:
+                        self.sale_dialog.open_for_item(
+                            item_id, quote["amount"], quote["unit_price"],
+                        )
                     return True
         elif self.building_type == "farmhouse":
             for upgrade_id, card_rect in self.upgrade_card_rects.items():
@@ -1902,6 +2100,8 @@ class InfoPanel(PopupWindow):
         self.market_max_scroll = 0
         self.market_column_count = 1
         self.pending_sale_selection = None
+        self.market_quotes = {}
+        self.sale_dialog.close()
         self.upgrade_card_rects = {}
         self.upgrade_info_rects = {}
         self.pending_upgrade_selection = None
@@ -2261,6 +2461,7 @@ class InfoPanel(PopupWindow):
             )
             if quote is not None and quote["amount"] > 0:
                 quotes[item_id] = quote
+        self.market_quotes = quotes
 
         _, screen_height = get_screen_size()
         panel_width = responsive_panel_width(MARKET_PANEL_WIDTH)
@@ -2330,6 +2531,11 @@ class InfoPanel(PopupWindow):
             self.draw_text(
                 screen, font, "Nincs eladható termék.", x, self.rect.y + 62
             )
+            if self.sale_dialog.visible:
+                self.sale_dialog.update_quote(
+                    0, self.sale_dialog.unit_price,
+                )
+                self.sale_dialog.draw(screen, font)
             return
 
         mouse_position = pygame.mouse.get_pos()
@@ -2364,6 +2570,15 @@ class InfoPanel(PopupWindow):
                 text_x, text_y + 72,
             )
         screen.set_clip(previous_clip)
+        if self.sale_dialog.visible:
+            quote = quotes.get(self.sale_dialog.item_id)
+            if quote is None:
+                self.sale_dialog.update_quote(0, self.sale_dialog.unit_price)
+            else:
+                self.sale_dialog.update_quote(
+                    quote["amount"], quote["unit_price"],
+                )
+            self.sale_dialog.draw(screen, font)
 
     def _draw_farmhouse(self, screen, font, game_state):
         farmhouse = self.building

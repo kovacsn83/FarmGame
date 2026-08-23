@@ -18,7 +18,7 @@ from inventory import get_marketable_item_ids
 from processing import initialize_processing_plant
 from screen_layout import set_screen_size
 from time_system import GameTime
-from ui import InfoPanel
+from ui import InfoPanel, MarketSaleDialog
 
 
 class MarketPanelLayoutTests(unittest.TestCase):
@@ -125,7 +125,7 @@ class MarketPanelLayoutTests(unittest.TestCase):
             ))
         self.assertEqual(0, panel.market_scroll_offset)
 
-    def test_only_left_button_can_select_a_visible_card(self):
+    def test_only_left_button_opens_sale_dialog_without_immediate_sale(self):
         items = get_marketable_item_ids()[:2]
         panel, _, _ = self._draw(1000, 800, items)
         card_center = panel.market_card_rects[items[0]].center
@@ -141,7 +141,66 @@ class MarketPanelLayoutTests(unittest.TestCase):
             pygame.MOUSEBUTTONDOWN,
             {"pos": card_center, "button": 1},
         ))
-        self.assertEqual(items[0], panel.take_sale_selection())
+        self.assertTrue(panel.sale_dialog.visible)
+        self.assertEqual(items[0], panel.sale_dialog.item_id)
+        self.assertIsNone(panel.take_sale_selection())
+
+    def test_quantity_input_max_and_enter_create_partial_sale_request(self):
+        items = get_marketable_item_ids()[:1]
+        panel, state, screen = self._draw(1000, 800, items)
+        item_id = items[0]
+        state.buildings[0]["inventory"][item_id] = 346
+        panel.draw(screen, pygame.font.Font(None, 20), state)
+        panel.handle_event(pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN,
+            {"pos": panel.market_card_rects[item_id].center, "button": 1},
+        ))
+
+        for character in "300":
+            self.assertTrue(panel.handle_event(pygame.event.Event(
+                pygame.KEYDOWN,
+                {"key": ord(character), "unicode": character},
+            )))
+        self.assertTrue(panel.sale_dialog.is_quantity_valid())
+        self.assertTrue(panel.handle_event(pygame.event.Event(
+            pygame.KEYDOWN,
+            {"key": pygame.K_RETURN, "unicode": "\r"},
+        )))
+        self.assertEqual((item_id, 300), panel.take_sale_selection())
+        self.assertFalse(panel.sale_dialog.visible)
+
+        panel.sale_dialog.open_for_item(item_id, 346, 8)
+        panel.handle_event(pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN,
+            {"pos": panel.sale_dialog.max_rect.center, "button": 1},
+        ))
+        self.assertEqual("346", panel.sale_dialog.quantity_text)
+
+    def test_invalid_quantities_cannot_be_confirmed(self):
+        dialog = MarketSaleDialog()
+        dialog.open_for_item("milk", 346, 8)
+        for quantity in ("", "0", "347", "500"):
+            dialog.quantity_text = quantity
+            self.assertFalse(dialog.is_quantity_valid())
+            dialog.handle_event(pygame.event.Event(
+                pygame.KEYDOWN,
+                {"key": pygame.K_RETURN, "unicode": "\r"},
+            ))
+            self.assertIsNone(dialog.take_sale())
+            self.assertTrue(dialog.visible)
+
+    def test_sale_dialog_consumes_shortcuts_and_closes_without_click_through(self):
+        dialog = MarketSaleDialog()
+        dialog.open_for_item("milk", 10, 8)
+        self.assertTrue(dialog.handle_event(pygame.event.Event(
+            pygame.KEYDOWN, {"key": pygame.K_0, "unicode": "0"},
+        )))
+        self.assertEqual("0", dialog.quantity_text)
+        outside = (dialog.rect.left - 1, dialog.rect.top)
+        self.assertTrue(dialog.handle_event(pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN, {"pos": outside, "button": 1},
+        )))
+        self.assertFalse(dialog.visible)
 
 
 if __name__ == "__main__":

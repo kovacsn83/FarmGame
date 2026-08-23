@@ -383,8 +383,12 @@ class Economy:
             world, buildings, fields, vehicle_count=tractor_count,
         )
 
-    def sell_item(self, buildings, item_id):
-        """A kiválasztott piacképes készletelem teljes mennyiségét értékesíti."""
+    def sell_item(self, buildings, item_id, amount=None):
+        """A piacképes készletelemből a kért, pozitív egész mennyiséget eladja.
+
+        Az ``amount=None`` megtartja a korábbi, teljes készletet értékesítő
+        programozott hívások működését (például az automatikus szimulációban).
+        """
         item_data = get_inventory_item_data(item_id)
         if item_data is None or not item_data.get("marketable", False):
             log(f"Ez a készletelem nem értékesíthető: {item_id}", "Inventory")
@@ -393,12 +397,27 @@ class Economy:
             log("Az eladáshoz legalább egy piac szükséges.", "Economy")
             return False
 
-        amount = get_marketable_item_amount(buildings, item_id)
+        available_amount = get_marketable_item_amount(buildings, item_id)
         item_name = get_inventory_item_name(item_id)
-        if amount <= 0:
+        if available_amount <= 0:
             log(
                 f"Nincs eladható {item_name.lower()} a raktárban.",
                 "Inventory",
+            )
+            return False
+
+        if amount is None:
+            amount = available_amount
+        if (
+            not isinstance(amount, int)
+            or isinstance(amount, bool)
+            or amount <= 0
+            or amount > available_amount
+        ):
+            log(
+                f"Érvénytelen eladási mennyiség: {amount!r} "
+                f"(elérhető: {available_amount} db).",
+                "Market",
             )
             return False
 

@@ -258,9 +258,10 @@ def main():
     def handle_info_panel_event(event):
         """Egy helyen kezeli az információs panelek minden műveletét."""
         handled = info_panel.handle_event(event)
-        item_to_sell = info_panel.take_sale_selection()
-        if item_to_sell is not None:
-            if economy.sell_item(buildings, item_to_sell):
+        sale_request = info_panel.take_sale_selection()
+        if sale_request is not None:
+            item_to_sell, sale_amount = sale_request
+            if economy.sell_item(buildings, item_to_sell, sale_amount):
                 if item_to_sell == "milk":
                     quest_manager.record_event(QUEST_EVENT_MILK_SOLD)
         upgrade_to_purchase = info_panel.take_upgrade_selection()

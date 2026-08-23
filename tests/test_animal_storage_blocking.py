@@ -140,10 +140,11 @@ class AnimalStorageBlockingTests(unittest.TestCase):
             )
         )
 
-        self.assertTrue(economy.sell_item(self.buildings, "wheat"))
+        self.assertTrue(economy.sell_item(self.buildings, "wheat", 10))
 
         self.assertEqual(animals, [])
         self.assertEqual(self.warehouse["inventory"]["pork"], 10)
+        self.assertEqual(self.warehouse["inventory"]["wheat"], 10)
 
     def test_waiting_state_is_visible_in_tooltip(self):
         lines = get_animal_progress_lines(
