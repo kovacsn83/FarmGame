@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Javítva az aktív Alma-szállítás közbeni mentés: a Pótkocsi Alma rakománya most már érvényes, így az ilyen állapotban készült mentések betölthetők maradnak.
+
 - Az Almalé bekerült az Étterem által felvásárolható feldolgozott termékek közé, a Sajttal és a Paradicsomkonzervvel közös értékesítési szabályok szerint.
 
 - Új Feldolgozó üzem recept készült: hetente legfeljebb 5 Alma dolgozható fel 5 Almalévé; az Almalé $20/db áron értékesíthető a Piacon.
