@@ -58,7 +58,10 @@ class ProcessingPlantTests(unittest.TestCase):
         self.assertEqual(3000.0, definition["build_cost"])
         self.assertEqual(PROCESSING_PLANT_BUILD_COST, definition["build_cost"])
         self.assertEqual(300.0, calculate_annual_maintenance(3000.0))
-        self.assertEqual(("canned_tomato", "cheese"), definition["recipes"])
+        self.assertEqual(
+            ("canned_tomato", "cheese", "apple_juice"),
+            definition["recipes"],
+        )
 
         panel = BuildingSelectionPanel()
         panel.open()
@@ -155,7 +158,8 @@ class ProcessingPlantTests(unittest.TestCase):
         )
         info.draw(surface, font, state)
         self.assertEqual(
-            {"canned_tomato", "cheese"}, set(info.processing_recipe_rects),
+            {"canned_tomato", "cheese", "apple_juice"},
+            set(info.processing_recipe_rects),
         )
         cheese_row = info.processing_recipe_rects["cheese"]
         info.handle_event(pygame.event.Event(
@@ -172,6 +176,7 @@ class ProcessingPlantTests(unittest.TestCase):
         self.assertIn("  Tej: 0 db", captured_text)
         self.assertIn("  Paradicsomkonzerv: 0 db", captured_text)
         self.assertIn("  Sajt: 0 db", captured_text)
+        self.assertIn("  Almalé: 0 db", captured_text)
 
     def test_product_rows_select_the_next_recipe_without_stopping_active_batch(self):
         second_recipe = {

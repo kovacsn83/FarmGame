@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Új Feldolgozó üzem recept készült: hetente legfeljebb 5 Alma dolgozható fel 5 Almalévé; az Almalé $20/db áron értékesíthető a Piacon.
+
 - A Piacon mostantól szabadon megadható az eladandó termék mennyisége; a teljes készlethez Max gomb használható, részleges értékesítéskor pedig a fennmaradó készlet a Raktárban marad.
 
 - Javítva az állatok levágási ciklusának Raktárkapacitás miatti újraindulása: a Sertés, Csirke és Szarvasmarha most levágásra váró állapotban marad, felszabaduló hely esetén automatikusan újrapróbálkozik, a kritikus kapacitásblokkolás pedig kiemelt értesítést jelenít meg és megállítja a játékidőt.

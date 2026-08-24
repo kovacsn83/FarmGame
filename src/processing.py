@@ -33,6 +33,14 @@ PROCESSING_RECIPES = {
         "output_amount": 5,
         "weekly_capacity": 5,
     },
+    "apple_juice": {
+        "name": "Almalé",
+        "input_product": "apple",
+        "input_amount": 5,
+        "output_product": "apple_juice",
+        "output_amount": 5,
+        "weekly_capacity": 5,
+    },
 }
 DEFAULT_PROCESSING_RECIPE = "canned_tomato"
 
