@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Az Almalé bekerült az Étterem által felvásárolható feldolgozott termékek közé, a Sajttal és a Paradicsomkonzervvel közös értékesítési szabályok szerint.
+
 - Új Feldolgozó üzem recept készült: hetente legfeljebb 5 Alma dolgozható fel 5 Almalévé; az Almalé $20/db áron értékesíthető a Piacon.
 
 - A Piacon mostantól szabadon megadható az eladandó termék mennyisége; a teljes készlethez Max gomb használható, részleges értékesítéskor pedig a fennmaradó készlet a Raktárban marad.
