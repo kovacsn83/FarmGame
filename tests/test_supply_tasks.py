@@ -649,6 +649,27 @@ class SupplyTaskIntegrationTests(unittest.TestCase):
             ).cargo_type,
         )
 
+    def test_attached_trailer_with_egg_cargo_is_a_valid_save(self):
+        """Az üzemnek Tojást szállító Pótkocsi menthető és betölthető."""
+        state = self._prepare_valid_save_state()
+        self.trailer.cargo_type = "egg"
+        self.trailer.cargo_amount = 5
+        self.trailer.attached_to = self.tractor
+        self.tractor.attached_implement = self.trailer
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "egg-trailer.json"
+            self.assertTrue(save_game(state, path))
+            self.assertTrue(load_game(state, path))
+
+        self.assertEqual(
+            "egg",
+            next(
+                asset for asset in self.manager.implements
+                if asset.vehicle_type == VehicleType.TRAILER
+            ).cargo_type,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -41,6 +41,14 @@ PROCESSING_RECIPES = {
         "output_amount": 5,
         "weekly_capacity": 5,
     },
+    "mayonnaise": {
+        "name": "Majonéz",
+        "input_product": "egg",
+        "input_amount": 5,
+        "output_product": "mayonnaise",
+        "output_amount": 5,
+        "weekly_capacity": 5,
+    },
 }
 DEFAULT_PROCESSING_RECIPE = "canned_tomato"
 
