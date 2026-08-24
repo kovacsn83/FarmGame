@@ -894,7 +894,7 @@ class RestaurantPanel(PopupWindow):
     """Az adatvezérelt éttermi automatikus értékesítés beállítófelülete."""
 
     WIDTH = 620
-    HEIGHT = 800
+    HEIGHT = 920
     PADDING = 24
     CARD_HEIGHT = 160
     CARD_GAP = 14

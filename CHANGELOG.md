@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- A Majonéz bekerült az Étterem által felvásárolható feldolgozott termékek közé, a Sajt, a Paradicsomkonzerv és az Almalé közös értékesítési szabályai szerint.
+
 - Új Feldolgozó üzem recept készült: 5 Tojásból legfeljebb heti 5 Majonéz gyártható; a Majonéz $12/db áron értékesíthető a Piacon.
 
 - Javítva az aktív Alma-szállítás közbeni mentés: a Pótkocsi Alma rakománya most már érvényes, így az ilyen állapotban készült mentések betölthetők maradnak.

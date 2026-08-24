@@ -15,6 +15,7 @@ PRODUCTS = {
         "income_category": INCOME_PROCESSED_PRODUCT_SALES,
         "inventory_source": "processing_plant",
         "marketable": True,
+        "restaurant_sellable": True,
     },
     "apple_juice": {
         "product_id": "apple_juice",

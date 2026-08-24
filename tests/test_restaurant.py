@@ -28,7 +28,7 @@ from simulation import SimulationBot
 from ui import CityPanel, RestaurantPanel
 
 
-def _plant(canned_tomato=0, cheese=0, apple_juice=0):
+def _plant(canned_tomato=0, cheese=0, apple_juice=0, mayonnaise=0):
     plant = initialize_processing_plant({
         "type": "processing_plant", "row": 0, "col": 0,
         "width": 6, "height": 5,
@@ -36,15 +36,17 @@ def _plant(canned_tomato=0, cheese=0, apple_juice=0):
     plant["processing_inventory"]["canned_tomato"] = canned_tomato
     plant["processing_inventory"]["cheese"] = cheese
     plant["processing_inventory"]["apple_juice"] = apple_juice
+    plant["processing_inventory"]["mayonnaise"] = mayonnaise
     return plant
 
 
 class RestaurantSystemTests(unittest.TestCase):
     def test_catalog_and_dynamic_twenty_percent_premium(self):
         self.assertEqual(
-            ("apple_juice", "cheese", "canned_tomato"),
+            ("mayonnaise", "apple_juice", "cheese", "canned_tomato"),
             get_restaurant_sellable_item_ids(),
         )
+        self.assertAlmostEqual(14.4, get_restaurant_unit_price("mayonnaise"))
         self.assertEqual(24.0, get_restaurant_unit_price("apple_juice"))
         self.assertEqual(19.2, get_restaurant_unit_price("cheese"))
         self.assertEqual(38.4, get_restaurant_unit_price("canned_tomato"))
@@ -96,6 +98,22 @@ class RestaurantSystemTests(unittest.TestCase):
             [entry["category"] for entry in economy.financial_history],
         )
 
+    def test_selected_mayonnaise_uses_the_shared_restaurant_sale_flow(self):
+        system = RestaurantSystem()
+        system.toggle("mayonnaise")
+        plant = _plant(mayonnaise=2)
+        economy = Economy(starting_money=0)
+
+        self.assertEqual(
+            ("mayonnaise",), system.run_weekly([plant], economy, 1),
+        )
+        self.assertEqual(1, plant["processing_inventory"]["mayonnaise"])
+        self.assertAlmostEqual(11.4, economy.money)
+        self.assertEqual(
+            [INCOME_PROCESSED_PRODUCT_SALES, EXPENSE_SHIPPING],
+            [entry["category"] for entry in economy.financial_history],
+        )
+
     def test_no_stock_keeps_checkbox_enabled_without_transaction(self):
         system = RestaurantSystem()
         system.toggle("cheese")
@@ -112,7 +130,7 @@ class RestaurantSystemTests(unittest.TestCase):
         plant = _plant(cheese=3)
         economy = Economy(starting_money=0)
         self.assertEqual(("cheese",), system.run_weekly([plant], economy, 1))
-        self.assertEqual(15, system.period_requested_units)
+        self.assertEqual(20, system.period_requested_units)
         self.assertEqual(3, system.period_fulfilled_units)
         self.assertEqual(0, plant["processing_inventory"]["cheese"])
         self.assertAlmostEqual(52.44, economy.money)
@@ -139,7 +157,7 @@ class RestaurantSystemTests(unittest.TestCase):
         system.level = 2
         system.toggle("canned_tomato")
         system.run_weekly([_plant(canned_tomato=10, cheese=10)], Economy(0), 1)
-        self.assertEqual(6, system.period_requested_units)
+        self.assertEqual(8, system.period_requested_units)
         self.assertEqual(2, system.period_fulfilled_units)
 
     def test_calendar_periods_are_four_fixed_thirteen_week_ranges(self):
@@ -155,7 +173,10 @@ class RestaurantSystemTests(unittest.TestCase):
         system.toggle("cheese")
         system.toggle("canned_tomato")
         system.toggle("apple_juice")
-        plant = _plant(canned_tomato=100, cheese=100, apple_juice=100)
+        system.toggle("mayonnaise")
+        plant = _plant(
+            canned_tomato=100, cheese=100, apple_juice=100, mayonnaise=100,
+        )
         notifications = NotificationManager(start_ticks=0)
         economy = Economy(0)
         for elapsed_week in range(1, 14):
@@ -198,7 +219,7 @@ class RestaurantSystemTests(unittest.TestCase):
         self.assertEqual(1, system.level)
         system.run_weekly([_plant()], economy, 53)
         self.assertEqual(4, system.current_period_id)
-        self.assertEqual(3, system.period_requested_units)
+        self.assertEqual(4, system.period_requested_units)
 
     def test_level_down_notification_is_emitted(self):
         system = RestaurantSystem()
@@ -229,6 +250,7 @@ class RestaurantSystemTests(unittest.TestCase):
         self.assertTrue(restored.is_enabled("cheese"))
         self.assertFalse(restored.is_enabled("canned_tomato"))
         self.assertFalse(restored.is_enabled("apple_juice"))
+        self.assertFalse(restored.is_enabled("mayonnaise"))
         self.assertEqual(1, restored.level)
         self.assertEqual(0, restored.period_requested_units)
 
@@ -313,13 +335,14 @@ class RestaurantPanelTests(unittest.TestCase):
         self.assertEqual(expected_cards_top, panel.cards_top)
         self.assertEqual(
             panel.cards_top + 14,
-            panel.checkbox_rects["apple_juice"].top,
+            panel.checkbox_rects["mayonnaise"].top,
         )
         self.assertEqual(
             panel.cards_top + panel.CARD_HEIGHT + panel.CARD_GAP + 14,
-            panel.checkbox_rects["cheese"].top,
+            panel.checkbox_rects["apple_juice"].top,
         )
-        self.assertEqual(800, panel.HEIGHT)
+        self.assertEqual(920, panel.HEIGHT)
+        self.assertIn("mayonnaise", panel.checkbox_rects)
         self.assertIn("apple_juice", panel.checkbox_rects)
 
     def test_escape_and_outside_click_close_and_consume(self):
