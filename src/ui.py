@@ -894,7 +894,7 @@ class RestaurantPanel(PopupWindow):
     """Az adatvezérelt éttermi automatikus értékesítés beállítófelülete."""
 
     WIDTH = 620
-    HEIGHT = 680
+    HEIGHT = 620
     PADDING = 24
     CARD_HEIGHT = 160
     CARD_GAP = 14
@@ -904,6 +904,7 @@ class RestaurantPanel(PopupWindow):
         super().__init__(self.WIDTH, self.HEIGHT)
         self.restaurant_system = None
         self.checkbox_rects = {}
+        self.cards_top = 0
 
     def open(self, restaurant_system):
         self.rect.width = responsive_panel_width(self.WIDTH, 420)
@@ -996,16 +997,7 @@ class RestaurantPanel(PopupWindow):
             x, y,
         )
         y += 34
-        description = (
-            "Az Étterem a piaci árnál 20%-kal magasabb áron vásárol."
-        )
-        self.draw_text(screen, font, description, x, y)
-        y += 26
-        self.draw_text(
-            screen, font,
-            "A kijelölt termékekből hetente 1 db-ot vásárol.", x, y,
-        )
-        y += 32
+        self.cards_top = y
         self.checkbox_rects = {}
         for item_id in get_restaurant_sellable_item_ids():
             item = get_inventory_item_data(item_id)

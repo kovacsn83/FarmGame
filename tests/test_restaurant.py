@@ -279,6 +279,21 @@ class RestaurantPanelTests(unittest.TestCase):
         ))
         self.assertTrue(system.is_enabled("cheese"))
 
+    def test_cards_follow_dynamic_level_summary_without_legacy_text_gap(self):
+        system = RestaurantSystem()
+        system.level = 9
+        panel = RestaurantPanel()
+        panel.open(system)
+        panel.draw(
+            pygame.display.get_surface(), pygame.font.SysFont(None, 24),
+            [_plant()],
+        )
+
+        expected_cards_top = panel.rect.top + 190
+        self.assertEqual(expected_cards_top, panel.cards_top)
+        self.assertEqual(panel.cards_top + 14, panel.checkbox_rects["cheese"].top)
+        self.assertEqual(620, panel.HEIGHT)
+
     def test_escape_and_outside_click_close_and_consume(self):
         panel = RestaurantPanel()
         panel.open(RestaurantSystem())
