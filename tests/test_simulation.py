@@ -19,6 +19,9 @@ class FiveYearSimulationTests(unittest.TestCase):
         self.assertEqual(
             SimulationBot._sale_income_category("apple"), "fruit_sales",
         )
+        self.assertEqual(
+            SimulationBot._sale_income_category("cherry"), "fruit_sales",
+        )
 
     def test_processed_products_use_their_own_report_category(self):
         self.assertEqual(

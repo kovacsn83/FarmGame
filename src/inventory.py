@@ -53,6 +53,12 @@ PRODUCTS = {
         "price": 10.00,
         "income_category": INCOME_ORCHARD_SALES,
     },
+    "cherry": {
+        "name": "Cseresznye",
+        "marketable": True,
+        "price": 20.00,
+        "income_category": INCOME_ORCHARD_SALES,
+    },
     "milk": {
         "name": "Tej",
         "marketable": True,

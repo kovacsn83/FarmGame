@@ -11,7 +11,7 @@ from market_procurement import purchase_automatically
 from financial_history import EXPENSE_FRUIT_TREE
 from inventory import get_inventory_item_name
 from screen_layout import world_to_screen
-from constants import TILE_SIZE
+from constants import AUTO_PURCHASE_DELIVERY_COST_PER_UNIT, TILE_SIZE
 from calendar_utils import get_year_and_week
 
 
@@ -32,6 +32,26 @@ TREE_TYPES = {
         "canopy_color": (62, 132, 58),
         "canopy_light_color": (82, 154, 72),
         "fruit_color": (176, 55, 45),
+        "delivery_cost_per_unit": AUTO_PURCHASE_DELIVERY_COST_PER_UNIT,
+    },
+    "cherry": {
+        "name": "Cseresznye",
+        "tree_name": "Cseresznyefa",
+        "planting_cost": 250.00,
+        "first_yield_age_years": 5,
+        "last_yield_age_years": 50,
+        "ripening_week": 24,
+        "harvest_end_week": 28,
+        "annual_yield": 20,
+        "product_id": "cherry",
+        "canopy_color": (45, 105, 54),
+        "canopy_light_color": (65, 132, 66),
+        "fruit_color": (132, 31, 43),
+        "canopy_lobes": ((-4, 1, 11), (4, -2, 11), (2, 5, 10)),
+        "canopy_light_radius": 7,
+        "fruit_offsets": ((-6, 3), (5, -3), (4, 6), (-2, -5)),
+        # A specifikáció szerinti $250 a teljes telepítési levonás.
+        "delivery_cost_per_unit": 0,
     },
 }
 
@@ -105,7 +125,10 @@ def plant_tree(buildings, economy, row, col, tree_type):
     definition = TREE_TYPES.get(tree_type)
     slot = get_tree_slot_at(buildings, row, col)
     if definition is None or slot is None:
-        log("Almafa csak Gyümölcsös kijelölt fahelyére ültethető.", "Orchard")
+        log(
+            "Gyümölcsfa csak Gyümölcsös kijelölt fahelyére ültethető.",
+            "Orchard",
+        )
         return None
     orchard = slot["orchard"]
     if get_tree_in_slot(orchard, slot["slot"]) is not None:
@@ -114,6 +137,9 @@ def plant_tree(buildings, economy, row, col, tree_type):
     purchase = purchase_automatically(
         economy, definition["tree_name"], definition["planting_cost"], 1,
         EXPENSE_FRUIT_TREE, tree_type,
+        delivery_cost_per_unit=definition.get(
+            "delivery_cost_per_unit", AUTO_PURCHASE_DELIVERY_COST_PER_UNIT,
+        ),
     )
     if purchase is None:
         log("Nincs elegendő pénz a gyümölcsfa ültetéséhez.", "Economy")
@@ -249,8 +275,8 @@ def complete_tree_harvest(buildings, orchard, tree_slot):
 
 def run_weekly_orchard_cycle(buildings, elapsed_weeks):
     """Hetente öregíti a fákat; a termést a szüretelőgép gyűjti be."""
-    ripened = 0
-    lost = 0
+    ripened = {}
+    lost = {}
     year, week = get_year_and_week(elapsed_weeks)
     for orchard in get_orchards(buildings):
         for tree in orchard.get("trees", []):
@@ -261,15 +287,21 @@ def run_weekly_orchard_cycle(buildings, elapsed_weeks):
             previous_state = tree.get("annual_harvest_state")
             state = synchronize_tree_season(tree, year, week)
             if state == "ripe" and previous_state != "ripe":
-                ripened += 1
+                ripened[tree["type"]] = ripened.get(tree["type"], 0) + 1
             elif state == "lost" and previous_state != "lost":
-                lost += 1
-    if ripened:
-        log(f"Az Alma érési időszaka megkezdődött ({ripened} fa).", "Orchard")
-    if lost:
+                lost[tree["type"]] = lost.get(tree["type"], 0) + 1
+    for tree_type, count in ripened.items():
+        definition = TREE_TYPES[tree_type]
         log(
-            f"{lost} Almafa idei termése nem került leszüretelésre és elveszett.",
+            f"A(z) {definition['name']} érési időszaka megkezdődött "
+            f"({count} fa).",
             "Orchard",
+        )
+    for tree_type, count in lost.items():
+        definition = TREE_TYPES[tree_type]
+        log(
+            f"{count} {definition['tree_name']} idei termése nem került "
+            "leszüretelésre és elveszett.", "Orchard",
         )
     return {}
 
@@ -381,19 +413,23 @@ def draw_orchard_trees(screen, buildings):
                 (shadow_center[0] - 14, shadow_center[1] - 4, 28, 9),
             )
             pygame.draw.circle(screen, (105, 72, 40), center, 5)
-            pygame.draw.circle(
-                screen, definition["canopy_color"], center, 14,
-            )
+            for offset_x, offset_y, radius in definition.get(
+                    "canopy_lobes", ((0, 0, 14),)):
+                pygame.draw.circle(
+                    screen, definition["canopy_color"],
+                    (center[0] + offset_x, center[1] + offset_y), radius,
+                )
             pygame.draw.circle(
                 screen, definition["canopy_light_color"],
                 (
                     center[0] + TREE_CANOPY_LIGHT_OFFSET[0],
                     center[1] + TREE_CANOPY_LIGHT_OFFSET[1],
                 ),
-                8,
+                definition.get("canopy_light_radius", 8),
             )
             if is_tree_harvestable(tree):
-                for offset_x, offset_y in ((-6, 3), (5, -3), (4, 6)):
+                for offset_x, offset_y in definition.get(
+                        "fruit_offsets", ((-6, 3), (5, -3), (4, 6))):
                     pygame.draw.circle(
                         screen, definition["fruit_color"],
                         (center[0] + offset_x, center[1] + offset_y), 2,

@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Új gyümölcsfa készült: a $250-ért ültethető Cseresznyefa 5–50 éves kora között, a 24–28. héten évente 20 Cseresznyét terem; a Cseresznye piaci ára $20/db.
+
 - Átláthatóbb lett a Garázs popup: a parkoló eszközök közvetlenül a férőhelyadatok alatt, a darabszámok pedig külön Járműállomány blokkban jelennek meg.
 
 - A Majonéz bekerült az Étterem által felvásárolható feldolgozott termékek közé, a Sajt, a Paradicsomkonzerv és az Almalé közös értékesítési szabályai szerint.

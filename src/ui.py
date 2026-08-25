@@ -2820,12 +2820,20 @@ class CropSelectionPanel(SelectionPanel):
 class OrchardSelectionPanel(SelectionPanel):
     """Az adatvezérelt gyümölcsfajták közös kiválasztóablaka."""
 
+    CARD_HEIGHT = 166
+    CARD_GAP = 12
+
     def __init__(self):
-        super().__init__(520, 220)
+        super().__init__(
+            520,
+            68 + len(TREE_TYPES) * (self.CARD_HEIGHT + self.CARD_GAP),
+        )
 
     def _update_layout(self):
         self.rect.width = responsive_panel_width(520)
-        self.rect.height = 220
+        self.rect.height = 68 + len(TREE_TYPES) * (
+            self.CARD_HEIGHT + self.CARD_GAP
+        )
         self.rect.center = get_screen_center()
         self.card_rects = {}
         card_y = self.rect.y + 58
@@ -2834,9 +2842,9 @@ class OrchardSelectionPanel(SelectionPanel):
                 self.rect.x + INFO_PANEL_PADDING,
                 card_y,
                 self.rect.width - INFO_PANEL_PADDING * 2,
-                140,
+                self.CARD_HEIGHT,
             )
-            card_y += 152
+            card_y += self.CARD_HEIGHT + self.CARD_GAP
 
     def draw(self, screen, font):
         if not self.visible:
@@ -2869,6 +2877,8 @@ class OrchardSelectionPanel(SelectionPanel):
                 "Termő időszak: "
                 f"{definition['first_yield_age_years']}–"
                 f"{definition['last_yield_age_years']} éves kor",
+                f"Szüret: {definition['ripening_week']}–"
+                f"{definition['harvest_end_week']}. hét",
             )
             for index, line in enumerate(lines):
                 self.draw_text(

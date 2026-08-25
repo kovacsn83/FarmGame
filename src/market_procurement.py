@@ -18,12 +18,14 @@ class AutomaticPurchaseQuote:
     transaction_ids: tuple = ()
 
 
-def get_automatic_purchase_quote(unit_price, quantity):
+def get_automatic_purchase_quote(
+        unit_price, quantity,
+        delivery_cost_per_unit=AUTO_PURCHASE_DELIVERY_COST_PER_UNIT):
     """Áruértéket, szállítást és végösszeget számol egyetlen szabályból."""
     quantity = max(0, int(quantity))
     unit_price = float(unit_price)
     goods_cost = unit_price * quantity
-    delivery_cost = AUTO_PURCHASE_DELIVERY_COST_PER_UNIT * quantity
+    delivery_cost = max(0.0, float(delivery_cost_per_unit)) * quantity
     return AutomaticPurchaseQuote(
         quantity=quantity,
         unit_price=unit_price,
@@ -40,9 +42,12 @@ def get_automatic_purchase_unit_cost(unit_price):
 
 def purchase_automatically(
         economy, item_name, unit_price, quantity,
-        expense_category=None, subcategory=None):
+        expense_category=None, subcategory=None,
+        delivery_cost_per_unit=AUTO_PURCHASE_DELIVERY_COST_PER_UNIT):
     """Egységesen levonja és naplózza az automatikus piaci beszerzést."""
-    quote = get_automatic_purchase_quote(unit_price, quantity)
+    quote = get_automatic_purchase_quote(
+        unit_price, quantity, delivery_cost_per_unit,
+    )
     if quote.quantity <= 0 or not economy.spend(quote.total_cost):
         return None
     transaction_ids = []
@@ -51,16 +56,19 @@ def purchase_automatically(
             expense_category, quote.goods_cost, subcategory,
             f"{quote.quantity} db {item_name}",
         ))
-        transaction_ids.append(economy.record_expense(
-            EXPENSE_SHIPPING, quote.delivery_cost, subcategory,
-            f"{quote.quantity} db {item_name} szállítása",
-        ))
+        if quote.delivery_cost > 0:
+            transaction_ids.append(economy.record_expense(
+                EXPENSE_SHIPPING, quote.delivery_cost, subcategory,
+                f"{quote.quantity} db {item_name} szállítása",
+            ))
+    shipping_text = (
+        f" Szállítás: {format_money(quote.delivery_cost)}."
+        if quote.delivery_cost > 0 else ""
+    )
     log(
         f"{quote.quantity} db {item_name} vásárolva. "
-        f"Ár: {format_money(quote.goods_cost)}. "
-        f"Szállítás: {format_money(quote.delivery_cost)}. "
-        f"Összesen: {format_money(quote.total_cost)}.",
-        "Market",
+        f"Ár: {format_money(quote.goods_cost)}.{shipping_text} "
+        f"Összesen: {format_money(quote.total_cost)}.", "Market",
     )
     # A befoglalt, de később visszavont vetés ezeket a tételeket is
     # vissza tudja vonni anélkül, hogy fiktív költség maradna.

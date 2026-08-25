@@ -42,7 +42,7 @@ VEHICLE_TYPE_DEFINITIONS = {
         "purchase_price": FRUIT_HARVESTER_PURCHASE_PRICE,
         "accepts_field_tasks": False,
         "supported_tasks": ("orchard_harvest",),
-        "supported_tree_types": ("apple",),
+        "supported_tree_types": ("apple", "cherry"),
         "self_propelled": True,
         "towable": False,
         "category": "orchard_vehicle",

@@ -39,7 +39,7 @@ from crops import (
     can_plant_crop_in_week,
 )
 from economy import Economy
-from financial_history import EXPENSE_CONSTRUCTION
+from financial_history import EXPENSE_CONSTRUCTION, INCOME_ORCHARD_SALES
 from fields import (
     can_place_field, grow_crops, place_field, remove_field, remove_field_data,
 )
@@ -190,7 +190,10 @@ class SimulationBot:
     def _sale_income_category(item_id):
         if item_id in CROPS:
             return "crop_sales"
-        if item_id == "apple":
+        if (
+            PRODUCTS.get(item_id, {}).get("income_category")
+            == INCOME_ORCHARD_SALES
+        ):
             return "fruit_sales"
         if item_id == "milk":
             return "milk_sales"

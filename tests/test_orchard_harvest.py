@@ -96,6 +96,25 @@ class OrchardHarvestWorkflowTests(unittest.TestCase):
         self.assertFalse(is_tree_harvestable(self.tree))
         self.assertIs(self.harvester.assigned_parking_building, self.garage)
 
+    def test_cherry_is_harvested_by_the_same_fruit_harvester(self):
+        cherry = plant_tree(
+            self.buildings, self.economy, 12, 16, "cherry",
+        )
+        cherry["age_weeks"] = 5 * 52
+        synchronize_tree_season(cherry, 6, 24)
+        self.game_time.elapsed_weeks = 5 * 52 + 23
+
+        self.assertTrue(is_tree_harvestable(cherry))
+        self.assertTrue(self.manager.start_orchard_harvest(
+            self.world, self.buildings, self.economy,
+            self.inner_orchard, cherry, current_ticks=0,
+        ))
+        self._run_until_idle()
+
+        self.assertEqual(20, get_total_inventory(self.buildings)["cherry"])
+        self.assertFalse(is_tree_harvestable(cherry))
+        self.assertIs(self.harvester.assigned_parking_building, self.garage)
+
     def test_harvester_physically_enters_orchard_and_stops_next_to_tree(self):
         self.assertTrue(self.manager.start_orchard_harvest(
             self.world, self.buildings, self.economy,
