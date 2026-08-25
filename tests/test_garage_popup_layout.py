@@ -59,17 +59,22 @@ class GaragePopupLayoutTests(unittest.TestCase):
         self.panel.open_for_building(self.garage)
         self.state = type("State", (), {"vehicles": self.manager})()
 
-    def _drawn_texts(self):
-        texts = []
+    def _drawn_entries(self):
+        entries = []
         with patch.object(
             self.panel, "draw_text",
-            side_effect=lambda screen, font, text, x, y: texts.append(text),
+            side_effect=lambda screen, font, text, x, y: entries.append(
+                (text, x, y)
+            ),
         ):
             self.panel.draw(
                 pygame.display.get_surface(), pygame.font.Font(None, 20),
                 self.state,
             )
-        return texts
+        return entries
+
+    def _drawn_texts(self):
+        return [text for text, _x, _y in self._drawn_entries()]
 
     def test_parking_list_precedes_the_fleet_counts(self):
         texts = self._drawn_texts()
@@ -80,13 +85,23 @@ class GaragePopupLayoutTests(unittest.TestCase):
         self.assertLess(texts.index("Szabad hely: 0"), parking_index)
         self.assertLess(parking_index, texts.index("• Traktor #1"))
         self.assertLess(texts.index("• Kombájn #4"), fleet_index)
-        self.assertLess(fleet_index, texts.index("Traktorok: 2"))
+        self.assertLess(fleet_index, texts.index("• Traktorok: 2"))
         self.assertIn("• Locsolótartály #2 – Garázsban", texts)
         self.assertIn("• Pótkocsi #3 – Garázsban", texts)
-        self.assertIn("Kombájnok: 1", texts)
-        self.assertIn("Gyümölcs szüretelőgépek: 0", texts)
-        self.assertIn("Locsolótartályok: 1", texts)
-        self.assertIn("Pótkocsik: 1", texts)
+        self.assertIn("• Kombájnok: 1", texts)
+        self.assertIn("• Gyümölcs szüretelőgépek: 0", texts)
+        self.assertIn("• Locsolótartályok: 1", texts)
+        self.assertIn("• Pótkocsik: 1", texts)
+
+    def test_fleet_rows_use_the_same_indent_as_parked_assets(self):
+        entries = self._drawn_entries()
+        positions = {text: x for text, x, _y in entries}
+        self.assertEqual(
+            positions["• Traktor #1"], positions["• Traktorok: 2"],
+        )
+        self.assertGreater(
+            positions["• Traktorok: 2"], positions["Járműállomány:"],
+        )
 
     def test_redraw_uses_current_garage_assets_without_changing_panel_size(self):
         initial_texts = self._drawn_texts()
@@ -100,7 +115,7 @@ class GaragePopupLayoutTests(unittest.TestCase):
         self.assertNotIn("• Pótkocsi #3 – Garázsban", updated_texts)
         self.assertIn("Parkolóhelyek: 3 / 4", updated_texts)
         self.assertIn("Szabad hely: 1", updated_texts)
-        self.assertIn("Pótkocsik: 1", updated_texts)
+        self.assertIn("• Pótkocsik: 1", updated_texts)
         self.assertEqual(initial_height - 24, self.panel.rect.height)
         self.assertEqual(
             {

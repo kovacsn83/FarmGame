@@ -2344,29 +2344,33 @@ class InfoPanel(PopupWindow):
         y += 28
         self.draw_text(
             screen, font,
-            f"Traktorok: {manager.count_by_type(VehicleType.TRACTOR)}", x, y,
+            f"• Traktorok: {manager.count_by_type(VehicleType.TRACTOR)}",
+            x + 12, y,
         )
         y += 28
         self.draw_text(
             screen, font,
-            f"Kombájnok: {manager.count_by_type(VehicleType.COMBINE)}", x, y,
+            f"• Kombájnok: {manager.count_by_type(VehicleType.COMBINE)}",
+            x + 12, y,
         )
         y += 28
         self.draw_text(
             screen, font,
-            "Gyümölcs szüretelőgépek: "
-            f"{manager.count_by_type(VehicleType.FRUIT_HARVESTER)}", x, y,
+            "• Gyümölcs szüretelőgépek: "
+            f"{manager.count_by_type(VehicleType.FRUIT_HARVESTER)}",
+            x + 12, y,
         )
         y += 28
         self.draw_text(
             screen, font,
-            f"Locsolótartályok: "
-            f"{manager.count_by_type(VehicleType.WATER_TANK)}", x, y,
+            f"• Locsolótartályok: "
+            f"{manager.count_by_type(VehicleType.WATER_TANK)}", x + 12, y,
         )
         y += 28
         self.draw_text(
             screen, font,
-            f"Pótkocsik: {manager.count_by_type(VehicleType.TRAILER)}", x, y,
+            f"• Pótkocsik: {manager.count_by_type(VehicleType.TRAILER)}",
+            x + 12, y,
         )
         y += 28
         self.garage_purchase_rects = {}
