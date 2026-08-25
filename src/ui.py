@@ -2316,6 +2316,32 @@ class InfoPanel(PopupWindow):
             f"Parkolóhelyek: {status['occupied']} / {status['capacity']}", x, y,
         )
         y += 28
+        self.draw_text(screen, font, f"Szabad hely: {status['free']}", x, y)
+        y += 30
+        self.draw_text(screen, font, "Parkoló eszközök:", x, y)
+        y += 28
+        if garage_assets:
+            for asset in garage_assets:
+                definition = VEHICLE_TYPE_DEFINITIONS[asset.vehicle_type]
+                status_text = ""
+                if definition.get("towable"):
+                    status_text = (
+                        " – Felcsatolva"
+                        if asset.is_attached
+                        else " – Garázsban"
+                    )
+                self.draw_text(
+                    screen, font,
+                    f"• {definition['name']} #{asset.vehicle_id}{status_text}",
+                    x + 12, y,
+                )
+                y += 24
+        else:
+            self.draw_text(screen, font, "–", x + 12, y)
+            y += 24
+        y += 10
+        self.draw_text(screen, font, "Járműállomány:", x, y)
+        y += 28
         self.draw_text(
             screen, font,
             f"Traktorok: {manager.count_by_type(VehicleType.TRACTOR)}", x, y,
@@ -2343,30 +2369,6 @@ class InfoPanel(PopupWindow):
             f"Pótkocsik: {manager.count_by_type(VehicleType.TRAILER)}", x, y,
         )
         y += 28
-        self.draw_text(screen, font, f"Szabad hely: {status['free']}", x, y)
-        y += 30
-        self.draw_text(screen, font, "Parkoló eszközök:", x, y)
-        y += 28
-        if garage_assets:
-            for asset in garage_assets:
-                definition = VEHICLE_TYPE_DEFINITIONS[asset.vehicle_type]
-                status_text = ""
-                if definition.get("towable"):
-                    status_text = (
-                        " – Felcsatolva"
-                        if asset.is_attached
-                        else " – Garázsban"
-                    )
-                self.draw_text(
-                    screen, font,
-                    f"{definition['name']} #{asset.vehicle_id}{status_text}",
-                    x + 12, y,
-                )
-                y += 24
-        else:
-            self.draw_text(screen, font, "–", x + 12, y)
-            y += 24
-        y += 10
         self.garage_purchase_rects = {}
         for vehicle_type in (
                 VehicleType.TRACTOR, VehicleType.COMBINE,
