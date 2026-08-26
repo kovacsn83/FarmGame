@@ -1,7 +1,7 @@
 from buildings import (
     BUILDING_TYPES, get_building_maintenance_base, get_total_crop_amount,
-    get_marketable_item_amount, get_warehouses, remove_marketable_item,
-    store_crop,
+    get_marketable_item_amount, get_total_inventory, get_warehouses,
+    remove_marketable_item, store_crop,
 )
 from constants import (
     ROAD, ROAD_BUILD_COST, STARTING_MONEY, TRACTOR_PURCHASE_PRICE,
@@ -44,6 +44,127 @@ class Economy:
     def notify_storage_capacity_changed(self):
         if self._storage_capacity_changed_handler is not None:
             self._storage_capacity_changed_handler()
+
+    def get_farm_value_breakdown(self, game_state=None):
+        """Az aktuális farm állományértékét központi katalógusokból számolja.
+
+        A Farmház szintfejlesztéseit az aktuális szint értékalapja már
+        tartalmazza, ezért azok nem szerepelnek még egyszer a fejlesztések
+        között. Ismeretlen piaci árú készletelemhez nem talál ki értéket.
+        """
+        breakdown = {
+            "built_objects": 0.0,
+            "upgrades": 0.0,
+            "animals": 0.0,
+            "fruit_trees": 0.0,
+            "warehouse_inventory": 0.0,
+            "processing_inventory": 0.0,
+            "vehicles": 0.0,
+            "money": float(self.money),
+            "loan_balance": 0.0,
+        }
+        if game_state is None:
+            breakdown["total"] = breakdown["money"]
+            return breakdown
+
+        from animals import ANIMAL_TYPES
+        from orchards import TREE_TYPES
+        from vehicle_types import (
+            VEHICLE_TYPE_DEFINITIONS, normalize_vehicle_type,
+        )
+
+        road_count = sum(
+            tile == ROAD for row in game_state.world for tile in row
+        )
+        built_objects = road_count * ROAD_BUILD_COST
+        for building in game_state.buildings:
+            definition = BUILDING_TYPES.get(building.get("type"))
+            if definition is None:
+                continue
+            built_objects += get_building_maintenance_base(building)
+        for field in game_state.fields:
+            definition = FIELD_TYPES.get(
+                field.get("field_type", "field_4x4")
+            )
+            if definition is not None:
+                built_objects += definition["build_cost"]
+        breakdown["built_objects"] = built_objects
+
+        breakdown["upgrades"] = sum(
+            UPGRADES[upgrade_id]["price"]
+            for upgrade_id in game_state.purchased_upgrades
+            if (
+                upgrade_id in UPGRADES
+                and UPGRADES[upgrade_id].get("target_building_type")
+                != "farmhouse"
+            )
+        )
+        breakdown["animals"] = sum(
+            ANIMAL_TYPES.get(animal.get("type"), {}).get(
+                "purchase_price", 0.0,
+            )
+            for animal in game_state.animals
+        )
+        breakdown["fruit_trees"] = sum(
+            TREE_TYPES.get(tree.get("type"), {}).get("planting_cost", 0.0)
+            for building in game_state.buildings
+            if building.get("type") == "orchard"
+            for tree in building.get("trees", ())
+        )
+
+        def inventory_value(inventory):
+            value = 0.0
+            for item_id, amount in inventory.items():
+                definition = get_inventory_item_data(item_id)
+                if definition is None or "price" not in definition:
+                    continue
+                try:
+                    safe_amount = max(0, int(amount))
+                    price = max(0.0, float(definition["price"]))
+                except (TypeError, ValueError, OverflowError):
+                    continue
+                value += safe_amount * price
+            return value
+
+        breakdown["warehouse_inventory"] = inventory_value(
+            get_total_inventory(game_state.buildings)
+        )
+        breakdown["processing_inventory"] = sum(
+            inventory_value(building.get("processing_inventory", {}))
+            for building in game_state.buildings
+            if building.get("type") == "processing_plant"
+        )
+
+        vehicle_manager = game_state.vehicles or game_state.tractor
+        if vehicle_manager is not None:
+            assets = getattr(vehicle_manager, "managed_assets", ())
+            breakdown["vehicles"] = sum(
+                VEHICLE_TYPE_DEFINITIONS.get(
+                    normalize_vehicle_type(asset.vehicle_type), {}
+                ).get("purchase_price", 0.0)
+                for asset in assets
+            )
+
+        bank_system = game_state.bank_system
+        loan = getattr(bank_system, "loan", None)
+        breakdown["loan_balance"] = max(
+            0, int(getattr(loan, "remaining_balance_cents", 0))
+        ) / 100
+        breakdown["total"] = (
+            sum(
+                breakdown[key] for key in (
+                    "built_objects", "upgrades", "animals", "fruit_trees",
+                    "warehouse_inventory", "processing_inventory",
+                    "vehicles", "money",
+                )
+            )
+            - breakdown["loan_balance"]
+        )
+        return breakdown
+
+    def calculate_net_farm_value(self, game_state=None):
+        """Visszaadja a farm mindig újraszámolt aktuális nettó értékét."""
+        return self.get_farm_value_breakdown(game_state)["total"]
 
     def _current_week(self):
         return max(0, int(getattr(self._game_time, "elapsed_weeks", 0)))

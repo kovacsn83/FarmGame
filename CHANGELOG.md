@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Új „Gazdaság értéke” mutató jelent meg a Pénzügyi összesítőben: az aktuális épített objektumok, fejlesztések, állatok, gyümölcsfák, készletek, járművek és pénz értékéből számolódik, levonva a fennálló hiteltartozást.
+
 - Új gyümölcsfa készült: a $250-ért ültethető Cseresznyefa 5–50 éves kora között, a 24–28. héten évente 20 Cseresznyét terem; a Cseresznye piaci ára $20/db.
 
 - Átláthatóbb lett a Garázs popup: a parkoló eszközök közvetlenül a férőhelyadatok alatt, a darabszámok pedig külön Járműállomány blokkban jelennek meg.

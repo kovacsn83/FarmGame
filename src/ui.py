@@ -91,7 +91,7 @@ FINANCE_PANEL_PADDING = 24
 FINANCE_ROW_HEIGHT = 24
 FINANCE_SECTION_GAP = 10
 FINANCE_COLUMN_GAP = 28
-FINANCE_HEADER_HEIGHT = 72
+FINANCE_HEADER_HEIGHT = 112
 FINANCE_COLUMN_HEADER_HEIGHT = 24
 FINANCE_TOTALS_HEIGHT = 38
 FINANCE_NET_HEIGHT = 52
@@ -1306,6 +1306,8 @@ class FinancialSummaryPanel(PopupWindow):
         self.scroll_offset = 0
         self.max_scroll = 0
         self.bank_button_rect = pygame.Rect(0, 0, 0, 0)
+        self.farm_value_rect = pygame.Rect(0, 0, 0, 0)
+        self.last_farm_value = 0.0
         self._bank_requested = False
 
     def open(self):
@@ -1480,7 +1482,7 @@ class FinancialSummaryPanel(PopupWindow):
             right=rect.right, centery=rect.centery,
         ))
 
-    def draw(self, screen, font, economy):
+    def draw(self, screen, font, economy, game_state=None):
         if not self.visible:
             return
         self.rect.center = get_screen_center()
@@ -1502,6 +1504,16 @@ class FinancialSummaryPanel(PopupWindow):
         self.draw_text(screen, font, "Pénzügyi összesítő", title_x, title_y)
         self.draw_text(screen, font, "Utolsó 52 hét", title_x, title_y + 26)
         self._draw_bank_button(screen, font)
+        self.last_farm_value = economy.calculate_net_farm_value(game_state)
+        farm_value = font.render(
+            f"Gazdaság értéke: {format_money(self.last_farm_value)}",
+            True, COLOR_TEXT,
+        )
+        self.farm_value_rect = farm_value.get_rect(
+            centerx=self.rect.centerx,
+            top=title_y + 58,
+        )
+        screen.blit(farm_value, self.farm_value_rect)
 
         screen.blit(
             font.render("BEVÉTELEK", True, COLOR_TEXT),

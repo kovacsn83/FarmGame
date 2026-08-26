@@ -1030,7 +1030,7 @@ def main():
         restaurant_panel.draw(
             screen, font, buildings, game_time.elapsed_weeks,
         )
-        financial_summary_panel.draw(screen, font, economy)
+        financial_summary_panel.draw(screen, font, economy, game_state)
         game_menu.draw(screen, font)
         save_slots_menu.draw(screen, font)
         load_slots_menu.draw(screen, font)
