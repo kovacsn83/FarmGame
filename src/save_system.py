@@ -336,6 +336,7 @@ def _create_save_data(game_state):
         "save_version": SAVE_VERSION,
         "day": game_state.game_time.day,
         "time_speed": game_state.game_time.current_time_speed,
+        "week_progress": game_state.game_time.week_progress,
         "money": game_state.economy.money,
         "financial_history": game_state.economy.financial_history_save_record(),
         "world": game_state.world,
@@ -372,6 +373,13 @@ def _is_valid_save_data(data):
     if "time_speed" in data:
         time_speed = data["time_speed"]
         if isinstance(time_speed, bool) or time_speed not in TIME_WEEK_LENGTHS_MS:
+            return False
+    if "week_progress" in data:
+        progress = data["week_progress"]
+        if (not isinstance(progress, (int, float))
+                or isinstance(progress, bool)
+                or not math.isfinite(progress)
+                or not 0 <= progress < 1):
             return False
     if not isinstance(data["money"], (int, float)) or isinstance(data["money"], bool):
         return False
@@ -972,6 +980,9 @@ def _apply_game_data(game_state, data):
     if saved_time_speed == TIME_FAST:
         saved_time_speed = TIME_NORMAL
     game_state.game_time.set_time_speed(saved_time_speed)
+    # A mező opcionális: a korábbi mentések biztonságosan a hét elejéről
+    # folytatódnak, az új mentések pedig pontosan a mentett részprogresszről.
+    game_state.game_time.restore_week_progress(data.get("week_progress", 0.0))
     synchronize_orchard_seasons(
         game_state.buildings, game_state.game_time.elapsed_weeks, legacy=True,
     )

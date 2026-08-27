@@ -42,13 +42,17 @@ SEASON_PERIODS = (
     SeasonPeriod(Season.WINTER, 48, 52),
 )
 
-# Egy időlépés mostantól egy hetet jelent; a valós idejű hossz változatlan.
+# Az aktuális hét előrehaladása mindig 1×-es játékidőben mérődik.
+# A sebességfokozat csak azt szabja meg, hogy valós idő alatt mennyi ilyen
+# játékidő kerül az akkumulátorba.
+BASE_WEEK_DURATION_MS = 10000
+
 TIME_WEEK_LENGTHS_MS = {
     TIME_PAUSED: None,
-    TIME_SLOW: 12000,
-    TIME_NORMAL: 6000,
+    TIME_SLOW: BASE_WEEK_DURATION_MS,
+    TIME_NORMAL: BASE_WEEK_DURATION_MS // 2,
     # Mentési kompatibilitás: a 3× fokozat már nem kapcsolható be.
-    TIME_FAST: 6000,
+    TIME_FAST: BASE_WEEK_DURATION_MS // 2,
 }
 
 AVAILABLE_TIME_SPEEDS = (TIME_PAUSED, TIME_SLOW, TIME_NORMAL)
@@ -113,6 +117,7 @@ class GameTime:
 
     def __init__(self, current_time_speed=TIME_NORMAL, start_ticks=None):
         self.elapsed_weeks = 0
+        self.elapsed_time_in_week_ms = 0.0
         self.current_time_speed = TIME_NORMAL
         self.last_week_change = (
             pygame.time.get_ticks() if start_ticks is None else start_ticks
@@ -157,32 +162,55 @@ class GameTime:
     def time_speed_multiplier(self):
         return get_time_speed_multiplier(self.current_time_speed)
 
+    @property
+    def week_progress(self):
+        """Az aktuális hét 0 és 1 közötti, menthető előrehaladása."""
+        return self.elapsed_time_in_week_ms / BASE_WEEK_DURATION_MS
+
+    def restore_week_progress(self, progress):
+        """Ellenőrzött, normalizált heti progresszt állít vissza."""
+        if (isinstance(progress, bool)
+                or not isinstance(progress, (int, float))
+                or not 0 <= progress < 1):
+            progress = 0.0
+        self.elapsed_time_in_week_ms = float(progress) * BASE_WEEK_DURATION_MS
+
+    def _accumulate_until(self, current_ticks):
+        """Az utolsó mintavétel óta eltelt időt az aktuális skálával gyűjti."""
+        elapsed_time = max(0, current_ticks - self.last_week_change)
+        self.elapsed_time_in_week_ms += (
+            elapsed_time * self.time_speed_multiplier
+        )
+        self.last_week_change = current_ticks
+
     def set_time_speed(self, time_speed, current_ticks=None):
-        """Azonnal beállítja az időfokozatot, és új hétperiódust kezd."""
+        """Beállítja a sebességet a heti progressz megőrzése mellett."""
         if isinstance(time_speed, bool) or time_speed not in AVAILABLE_TIME_SPEEDS:
             return False
-        self.current_time_speed = time_speed
-        self.last_week_change = (
+        now = (
             pygame.time.get_ticks() if current_ticks is None else current_ticks
         )
+        # Előbb a régi szorzóval számoljuk el a sebességváltásig eltelt
+        # időt. Emiatt még minden frame-ben végrehajtott kapcsolgatással sem
+        # lehet megállítani vagy visszatekerni az aktuális hetet.
+        self._accumulate_until(now)
+        self.current_time_speed = time_speed
         return True
 
     def update(self, current_ticks=None):
         """Visszaadja az előző frissítés óta eltelt hetek 0-alapú indexeit."""
         now = pygame.time.get_ticks() if current_ticks is None else current_ticks
 
-        if self.current_time_speed == TIME_PAUSED:
-            self.last_week_change = now
-            return []
-
-        elapsed_time = now - self.last_week_change
-        passed_weeks = elapsed_time // self.week_length_ms
+        self._accumulate_until(now)
+        passed_weeks = int(
+            self.elapsed_time_in_week_ms // BASE_WEEK_DURATION_MS
+        )
         if passed_weeks <= 0:
             return []
 
         first_week_index = self.elapsed_weeks + 1
         self.elapsed_weeks += passed_weeks
-        self.last_week_change += passed_weeks * self.week_length_ms
+        self.elapsed_time_in_week_ms -= passed_weeks * BASE_WEEK_DURATION_MS
         return list(range(first_week_index, self.elapsed_weeks + 1))
 
     def synchronize(self, current_ticks=None):

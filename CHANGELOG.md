@@ -1327,3 +1327,6 @@ CHANGELOG – Első kamerarendszer
 - A Pótkocsi valódi `cargo_type` és `cargo_amount` rakományadatokat, valamint Lucerna- és Kukorica-megjelenítést kapott.
 - Egymást követő etetési feladatok között a felcsatolt szerelvény minden új rakományért visszatér a Raktárhoz, de csak a munkamenet végén megy vissza a Garázsba.
 - Megszűnt cél esetén a már felrakodott takarmány visszakerül a Raktárba; betöltéskor az esetleges árva rakomány ugyanezzel a biztonságos szabállyal rendeződik.
+# TimeSystem
+
+- Javítva az a hiba, amelynél a sebességváltás újraindíthatta az aktuális hét időzítését; a heti progressz most sebességváltások, szüneteltetés, mentés és betöltés között is megmarad.
