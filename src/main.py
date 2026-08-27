@@ -285,11 +285,9 @@ def main():
 
     def road_drag_tile_at(position):
         """Csak valódi, UI-val nem takart játéktéri csempét ad vissza."""
-        if (
-            developer_console.visible
-            and developer_console.rect.collidepoint(position)
-        ):
-            return None
+        # A Developer Console csak vizuális overlay. A teljes, képernyőszéles
+        # renderelési Rect-je nem interaktív hitbox, ezért nem zárhatja ki az
+        # alatta lévő játéktéri csempéket.
         row, col = screen_to_grid(*position, world)
         return (row, col) if row >= 0 else None
     
@@ -553,10 +551,6 @@ def main():
                 calendar_button = create_calendar_button(menu_button)
                 continue
 
-            if developer_console.handle_event(
-                    event, pygame.mouse.get_pos()):
-                continue
-
             if bank_panel.visible:
                 if bank_panel.market_active:
                     handle_info_panel_event(event)
@@ -770,6 +764,13 @@ def main():
                 continue
     
             if handle_info_panel_event(event):
+                continue
+
+            # A konzol nem modális overlay: csak a saját, ténylegesen kezelt
+            # egérgörgő-eseménye kap prioritást, a popupok és a normál UI
+            # után, de még a játékvilág eseménykezelése előtt.
+            if developer_console.handle_event(
+                    event, pygame.mouse.get_pos()):
                 continue
     
             if event.type == pygame.KEYDOWN:

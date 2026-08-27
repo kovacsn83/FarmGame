@@ -19,7 +19,7 @@ DEVELOPER_CONSOLE_FONT_SIZE = 16
 
 
 class DeveloperConsole:
-    """Görgethető, gyorsítótárazott fejlesztői naplópanel."""
+    """Click-through, görgethető fejlesztői napló-overlay."""
 
     def __init__(self, logger=None, visible=True):
         self.logger = logger or get_logger()
@@ -66,6 +66,7 @@ class DeveloperConsole:
         return True
 
     def handle_event(self, event, mouse_position=None):
+        """Csak a konzol feletti görgetést fogyasztja el; kattintást soha."""
         if not self.visible or event.type != pygame.MOUSEWHEEL:
             return False
         position = mouse_position or pygame.mouse.get_pos()

@@ -1332,4 +1332,7 @@ CHANGELOG – Első kamerarendszer
 - Javítva az a hiba, amelynél a sebességváltás újraindíthatta az aktuális hét időzítését; a heti progressz most sebességváltások, szüneteltetés, mentés és betöltés között is megmarad.
 # Egymásra rendezett értesítések
 
-- A Notification rendszer mostantól egyszerre legfeljebb 3 értesítést jelenít meg; az átfedésben érkező események nem várnak egymásra, és minden látható üzenet sajá időzítővel rendelkezik.
+- A Notification rendszer mostantól egyszerre legfeljebb 3 értesítést jelenít meg; az átfedésben érkező események nem várnak egymásra, és minden látható üzenet saját időzítővel rendelkezik.
+# Developer Console input
+
+- Javítva az F3 Developer Console teljes szélességű inputblokkolása; a konzol most click-through overlayként működik, és nem akadályozza az alatta lévő játékvilág kattintását.
