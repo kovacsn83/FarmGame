@@ -101,7 +101,7 @@ class PigLifecycleTests(unittest.TestCase):
         self.assertIn("15 sertés", slaughter_logs[0].message)
         self.assertIn("150 db sertéshús", slaughter_logs[0].message)
 
-    def test_slaughter_waits_in_public_notification_queue(self):
+    def test_slaughter_notification_appears_beside_existing_message(self):
         animals = [self.pig]
         notifications = NotificationManager(start_ticks=0)
         notifications.enqueue("Korábbi szezonális értesítés")
@@ -114,9 +114,8 @@ class PigLifecycleTests(unittest.TestCase):
             notifications.current_message, "Korábbi szezonális értesítés",
         )
         self.assertEqual(len(notifications.queue), 1)
+        self.assertIn("Egy sertés", notifications.active_messages[1])
         notifications.update(10_000, time_running=True)
-        self.assertIn("Egy sertés", notifications.current_message)
-        notifications.update(20_000, time_running=True)
         self.assertIsNone(notifications.current_message)
 
     def test_removal_releases_pen_capacity_for_a_new_pig(self):

@@ -1330,3 +1330,6 @@ CHANGELOG – Első kamerarendszer
 # TimeSystem
 
 - Javítva az a hiba, amelynél a sebességváltás újraindíthatta az aktuális hét időzítését; a heti progressz most sebességváltások, szüneteltetés, mentés és betöltés között is megmarad.
+# Egymásra rendezett értesítések
+
+- A Notification rendszer mostantól egyszerre legfeljebb 3 értesítést jelenít meg; az átfedésben érkező események nem várnak egymásra, és minden látható üzenet sajá időzítővel rendelkezik.

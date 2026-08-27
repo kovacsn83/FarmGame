@@ -614,49 +614,70 @@ def draw_tooltip(screen, font, text, button_rect):
 
 
 def draw_notification_bar(screen, font, notification_manager, bottom_y):
-    """A Developer Console fölött kirajzolja az aktuális nyilvános értesítést."""
-    message = notification_manager.current_message
-    if not message:
+    """A Developer Console fölött egymásra rendezi az aktív értesítéseket."""
+    messages = notification_manager.active_messages
+    if not messages:
         return None
-    screen_width, _ = get_screen_size()
+    screen_width, screen_height = get_screen_size()
     max_content_width = max(
         80,
         min(NEWS_BAR_MAX_WIDTH, screen_width - NEWS_BAR_LEFT_MARGIN * 2)
         - NEWS_BAR_PADDING_X * 2,
     )
-    text_lines = []
-    for paragraph in message.splitlines() or (message,):
-        current_line = ""
-        for word in paragraph.split():
-            candidate = word if not current_line else f"{current_line} {word}"
-            if font.size(candidate)[0] <= max_content_width or not current_line:
-                current_line = candidate
-            else:
+    panels = []
+    for message in messages:
+        text_lines = []
+        for paragraph in message.splitlines() or (message,):
+            current_line = ""
+            for word in paragraph.split():
+                candidate = word if not current_line else f"{current_line} {word}"
+                if font.size(candidate)[0] <= max_content_width or not current_line:
+                    current_line = candidate
+                else:
+                    text_lines.append(current_line)
+                    current_line = word
+            if current_line:
                 text_lines.append(current_line)
-                current_line = word
-        if current_line:
-            text_lines.append(current_line)
-    text_lines = text_lines[:4]
-    rendered = [font.render(line, True, NEWS_BAR_TEXT_COLOR) for line in text_lines]
-    width = max(line.get_width() for line in rendered) + NEWS_BAR_PADDING_X * 2
-    height = sum(line.get_height() for line in rendered) + NEWS_BAR_PADDING_Y * 2
-    panel = pygame.Surface((width, height), pygame.SRCALPHA)
-    pygame.draw.rect(
-        panel, NEWS_BAR_BACKGROUND, panel.get_rect(), border_radius=5,
+        text_lines = text_lines[:4]
+        rendered = [
+            font.render(line, True, NEWS_BAR_TEXT_COLOR)
+            for line in text_lines
+        ]
+        width = max(line.get_width() for line in rendered) + NEWS_BAR_PADDING_X * 2
+        height = sum(line.get_height() for line in rendered) + NEWS_BAR_PADDING_Y * 2
+        panel = pygame.Surface((width, height), pygame.SRCALPHA)
+        pygame.draw.rect(
+            panel, NEWS_BAR_BACKGROUND, panel.get_rect(), border_radius=5,
+        )
+        pygame.draw.rect(
+            panel, NEWS_BAR_BORDER, panel.get_rect(), width=1, border_radius=5,
+        )
+        line_y = NEWS_BAR_PADDING_Y
+        for line in rendered:
+            panel.blit(line, (NEWS_BAR_PADDING_X, line_y))
+            line_y += line.get_height()
+        panels.append(panel)
+
+    notification_gap = 6
+    total_height = (
+        sum(panel.get_height() for panel in panels)
+        + notification_gap * max(0, len(panels) - 1)
     )
-    pygame.draw.rect(
-        panel, NEWS_BAR_BORDER, panel.get_rect(), width=1, border_radius=5,
+    desired_bottom = int(bottom_y) - NEWS_BAR_BOTTOM_MARGIN
+    next_bottom = min(
+        screen_height,
+        max(total_height, desired_bottom),
     )
-    line_y = NEWS_BAR_PADDING_Y
-    for line in rendered:
-        panel.blit(line, (NEWS_BAR_PADDING_X, line_y))
-        line_y += line.get_height()
-    rect = panel.get_rect(
-        left=NEWS_BAR_LEFT_MARGIN,
-        bottom=max(height, int(bottom_y) - NEWS_BAR_BOTTOM_MARGIN),
-    )
-    screen.blit(panel, rect)
-    return rect
+    rects = []
+    for panel in panels:
+        rect = panel.get_rect(
+            left=NEWS_BAR_LEFT_MARGIN,
+            bottom=next_bottom,
+        )
+        screen.blit(panel, rect)
+        rects.append(rect)
+        next_bottom = rect.top - notification_gap
+    return rects
 
 
 def draw_time_hud(
