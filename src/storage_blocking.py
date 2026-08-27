@@ -2,6 +2,11 @@ from game_logger import log
 from time_system import TIME_PAUSED
 
 
+FIELD_HARVEST_STORAGE_MESSAGE = (
+    "Nincs elegendő hely a Raktárban a termés betárolásához."
+)
+
+
 class StorageBlockManager:
     """A konkrétan blokkolt automatikus raktári eseményeket kezeli.
 

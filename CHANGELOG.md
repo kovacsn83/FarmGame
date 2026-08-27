@@ -1336,3 +1336,6 @@ CHANGELOG – Első kamerarendszer
 # Developer Console input
 
 - Javítva az F3 Developer Console teljes szélességű inputblokkolása; a konzol most click-through overlayként működik, és nem akadályozza az alatta lévő játékvilág kattintását.
+# Veteményes raktárkapacitás-figyelmeztetés
+
+- A Raktár telítettségi figyelmeztetése mostantól a Veteményesek aratására is vonatkozik: elégtelen hely esetén fehér értesítés jelenik meg, a játék szünetel, a termés pedig aratható marad.

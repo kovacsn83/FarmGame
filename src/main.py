@@ -171,7 +171,7 @@ def main():
             )
         )
         bank_system = BankSystem(economy, notification_manager)
-        vehicles = VehicleManager()
+        vehicles = VehicleManager(storage_block_manager)
         quest_manager = QuestManager(economy)
         restaurant_system = RestaurantSystem()
         game_state = GameState(

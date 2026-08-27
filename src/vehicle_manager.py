@@ -58,6 +58,7 @@ from vehicle_types import (
 from financial_history import EXPENSE_PROCESSING_INPUT, EXPENSE_VEHICLE
 from inventory import get_inventory_item_data
 from market_procurement import purchase_automatically
+from storage_blocking import FIELD_HARVEST_STORAGE_MESSAGE
 
 
 DEBUG_TRACTOR_DISPATCH = False
@@ -111,7 +112,7 @@ TASK_LOG_CATEGORIES = {
 class VehicleManager:
     """Központilag kezeli a járműveket és a lefoglalt parkolóhelyeket."""
 
-    def __init__(self):
+    def __init__(self, storage_block_manager=None):
         self.vehicles = []
         self.implements = []
         self.next_vehicle_id = 1
@@ -119,6 +120,15 @@ class VehicleManager:
         self.next_task_order = 1
         self.quest_event_handler = None
         self.field_automation_handler = None
+        self.storage_block_manager = storage_block_manager
+
+    @staticmethod
+    def _field_harvest_storage_event_id(field):
+        """Egy Veteményes fennálló kapacitásblokkjának stabil kulcsa."""
+        return (
+            f"storage:field_harvest:{field.get('row')}:{field.get('col')}:"
+            f"{field.get('crop')}"
+        )
 
     @property
     def tractors(self):
@@ -697,7 +707,22 @@ class VehicleManager:
         )
         if block_reason is not None:
             log(self.get_harvest_block_message(block_reason), "Harvest")
+            if block_reason == "no_capacity" and self.storage_block_manager:
+                self.storage_block_manager.report(
+                    self._field_harvest_storage_event_id(field),
+                    FIELD_HARVEST_STORAGE_MESSAGE,
+                    (
+                        "Aratás blokkolva: nincs elegendő hely a teljes "
+                        f"terméshez ({field.get('row')}, {field.get('col')})."
+                    ),
+                )
             return False
+
+        if self.storage_block_manager is not None:
+            self.storage_block_manager.resolve(
+                self._field_harvest_storage_event_id(field),
+                "A Veteményes aratási kapacitásblokkja feloldva.",
+            )
 
         original_watered = field.get("watered", False)
         original_fertilized = field.get("fertilized", False)
