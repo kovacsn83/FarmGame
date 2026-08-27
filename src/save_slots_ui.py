@@ -19,6 +19,8 @@ EMPTY_SLOT_COLOR = (238, 238, 234)
 CORRUPT_SLOT_COLOR = (235, 205, 200)
 SELECTED_SLOT_COLOR = (210, 228, 205)
 TEXT_INPUT_BACKGROUND = (255, 255, 252)
+BACKSPACE_REPEAT_DELAY_MS = 425
+BACKSPACE_REPEAT_INTERVAL_MS = 60
 
 
 class TextInput:
@@ -29,19 +31,36 @@ class TextInput:
         self.max_length = max_length
         self.active = False
         self.rect = pygame.Rect(0, 0, 0, 0)
+        self._backspace_held = False
+        self._next_backspace_repeat_at = None
+
+    def _reset_backspace_repeat(self):
+        self._backspace_held = False
+        self._next_backspace_repeat_at = None
+
+    def _delete_character(self):
+        if self.text:
+            self.text = self.text[:-1]
+            return True
+        return False
 
     def activate(self, text=""):
         self.text = str(text)[:self.max_length]
         self.active = True
+        self._reset_backspace_repeat()
         pygame.key.start_text_input()
 
     def deactivate(self):
         self.active = False
+        self._reset_backspace_repeat()
         pygame.key.stop_text_input()
 
-    def handle_event(self, event):
+    def handle_event(self, event, current_ticks=None):
         if not self.active:
             return None
+        if event.type == pygame.WINDOWFOCUSLOST:
+            self._reset_backspace_repeat()
+            return "handled"
         if event.type == pygame.TEXTINPUT:
             available = self.max_length - len(self.text)
             if available > 0:
@@ -50,14 +69,48 @@ class TextInput:
                     if character.isprintable()
                 )
             return "changed"
+        if event.type == pygame.KEYUP and event.key == pygame.K_BACKSPACE:
+            self._reset_backspace_repeat()
+            return "handled"
         if event.type != pygame.KEYDOWN:
             return None
         if event.key == pygame.K_BACKSPACE:
-            self.text = self.text[:-1]
+            if self._backspace_held:
+                return "handled"
+            current_ticks = (
+                pygame.time.get_ticks()
+                if current_ticks is None else int(current_ticks)
+            )
+            self._backspace_held = True
+            self._next_backspace_repeat_at = (
+                current_ticks + BACKSPACE_REPEAT_DELAY_MS
+            )
+            self._delete_character()
             return "changed"
         if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
             return "submit"
         return None
+
+    def update(self, current_ticks=None):
+        """Lokálisan ismétli a Backspace-t, más billentyűk érintése nélkül."""
+        if not self.active or not self._backspace_held:
+            return False
+        current_ticks = (
+            pygame.time.get_ticks()
+            if current_ticks is None else int(current_ticks)
+        )
+        if current_ticks < self._next_backspace_repeat_at:
+            return False
+        repeat_count = 1 + (
+            current_ticks - self._next_backspace_repeat_at
+        ) // BACKSPACE_REPEAT_INTERVAL_MS
+        delete_count = min(len(self.text), repeat_count)
+        if delete_count:
+            self.text = self.text[:-delete_count]
+        self._next_backspace_repeat_at += (
+            repeat_count * BACKSPACE_REPEAT_INTERVAL_MS
+        )
+        return bool(delete_count)
 
     @property
     def normalized_text(self):
@@ -337,6 +390,13 @@ class SaveSlotsMenu(SaveSlotsBase):
             "Játék sikeresen elmentve."
             if success else "A játék mentése nem sikerült."
         )
+
+    def update(self, current_ticks=None):
+        """Csak az aktív mentésnév-szerkesztés időzítőjét frissíti."""
+        if self.visible and self.state == "name":
+            return self.text_input.update(current_ticks)
+        self.text_input._reset_backspace_repeat()
+        return False
 
     def handle_event(self, event, elapsed_weeks):
         if not self.visible:

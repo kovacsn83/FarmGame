@@ -874,6 +874,7 @@ def main():
                 if click_position is not None and not was_dragging:
                     handle_gameplay_click(click_position)
     
+        save_slots_menu.update()
         menu_system_active = (
             game_menu.visible
             or save_slots_menu.visible
