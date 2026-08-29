@@ -18,7 +18,8 @@ from crops import (
 from constants import TILE_SIZE
 from field_renderer import CROP_RENDERERS, _create_field_surface
 from fields import (
-    calculate_harvest_yield, complete_harvest, grow_crops, plant_crop,
+    calculate_harvest_yield, can_fertilize_field, can_water_field,
+    complete_harvest, grow_crops, plant_crop, water_crop,
 )
 from inventory import (
     get_inventory_item_data, get_inventory_item_ids, get_marketable_item_ids,
@@ -93,6 +94,28 @@ class HopsCropTests(unittest.TestCase):
         self.assertEqual("ripe", self.field["annual_harvest_state"])
         grow_crops([self.field], 20 * 52)  # 21. életév
         self.assertIsNone(self.field["crop"])
+
+    def test_first_year_care_is_allowed_and_preserved_for_first_harvest(self):
+        self.assertTrue(can_water_field(self.field))
+        self.assertTrue(water_crop(self.field))
+        self.assertTrue(can_fertilize_field(self.field))
+        self.field["fertilized"] = True
+
+        grow_crops([self.field], 52)  # 2. év, 1. hét
+        self.assertEqual("growing", self.field["annual_harvest_state"])
+        self.assertTrue(self.field["watered"])
+        self.assertTrue(self.field["fertilized"])
+
+        grow_crops([self.field], 52 + 33)
+        with patch("fields.random.uniform", return_value=1.0):
+            amount = calculate_harvest_yield(self.field)
+        self.assertEqual(13, amount)
+        self.assertTrue(complete_harvest(
+            self.field, [self.warehouse], "hops", amount, 52 + 33,
+        ))
+        self.assertFalse(self.field["watered"])
+        self.assertFalse(self.field["fertilized"])
+        self.assertFalse(can_water_field(self.field))
 
     def test_late_harvest_and_missed_year_preserve_the_perennial(self):
         grow_crops([self.field], 52 + 38)  # 2. év, 39. hét

@@ -323,13 +323,21 @@ def synchronize_annual_crop_cycle(field, current_elapsed_week):
         return
 
     if field.get("annual_cycle_year") != calendar_year:
+        previous_state = field.get("annual_harvest_state")
         field["annual_cycle_year"] = calendar_year
         field["annual_harvest_state"] = (
             "growing" if first_year <= age <= last_year else "ineligible"
         )
         field["harvestable"] = False
-        field["watered"] = False
-        field["fertilized"] = False
+        # A telepítés évében elvégzett gondozás az első, második évi
+        # termést készíti elő. A későbbi ciklusok aratáskor vagy elveszett
+        # terméskor már külön lenullázzák ezeket a bónuszokat.
+        entering_first_productive_year = (
+            previous_state == "ineligible" and age == first_year
+        )
+        if not entering_first_productive_year:
+            field["watered"] = False
+            field["fertilized"] = False
         _reset_late_harvest(field)
         if age >= first_year:
             field["growth"] = 100
@@ -391,9 +399,7 @@ def can_water_field(field, include_task_status=True):
         return False
     if (
         crop_has_annual_perennial_cycle(field.get("crop"))
-        and field.get("annual_harvest_state") in (
-            "ineligible", "harvested", "lost",
-        )
+        and field.get("annual_harvest_state") in ("harvested", "lost")
     ):
         return False
     return field.get("crop") in CROPS and not field.get("watered", False)
