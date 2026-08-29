@@ -9,6 +9,7 @@ from building_renderers import (
 from game_logger import log
 from market_procurement import purchase_automatically
 from financial_history import EXPENSE_FRUIT_TREE
+from field_renderer import draw_harvest_ready_border
 from inventory import get_inventory_item_name
 from screen_layout import world_to_screen
 from constants import AUTO_PURCHASE_DELIVERY_COST_PER_UNIT, TILE_SIZE
@@ -394,6 +395,21 @@ def is_valid_tree_record(tree, orchard):
 
 def draw_orchard_trees(screen, buildings):
     """Kis méretben is felismerhető, egyszerű felülnézetes fákat rajzol."""
+    # Minden keret a talaj fölé, de az összes fa grafikája alá kerül.
+    for orchard in get_orchards(buildings):
+        for tree in orchard.get("trees", []):
+            if not is_tree_harvestable(tree):
+                continue
+            left, top = world_to_screen(
+                tree["col"] * TILE_SIZE, tree["row"] * TILE_SIZE,
+            )
+            draw_harvest_ready_border(
+                screen,
+                pygame.Rect(
+                    round(left), round(top), 2 * TILE_SIZE, 2 * TILE_SIZE,
+                ),
+            )
+
     for orchard in get_orchards(buildings):
         for tree in orchard.get("trees", []):
             definition = TREE_TYPES.get(tree.get("type"))

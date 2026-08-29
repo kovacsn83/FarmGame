@@ -1343,3 +1343,7 @@ CHANGELOG – Első kamerarendszer
 # Játékidő balansz
 
 - Visszaállt a lassabb időmúlás: 1× sebességnél egy hét 12 másodperc, 2× sebességnél 6 másodperc.
+
+# Gyümölcsfa szüretelhetőségi jelzés
+
+- Az érett gyümölcsfák mostantól a saját 2×2-es fahelyük körül aranybarna kiemelő keretet kapnak, a Veteményesek érettségi jelzésével egységes stílusban.

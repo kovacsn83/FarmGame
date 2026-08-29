@@ -84,6 +84,14 @@ def get_field_border_color(harvest_ready=False, late_harvest=False):
     )
 
 
+def draw_harvest_ready_border(surface, rect=None, late_harvest=False):
+    """A közös arathatósági keretet rajzolja a megadott területre."""
+    pygame.draw.rect(
+        surface, get_field_border_color(True, late_harvest),
+        surface.get_rect() if rect is None else rect, FIELD_BORDER_WIDTH,
+    )
+
+
 def _draw_field_base(surface, field, harvest_ready=False):
     fertilized = field.get("fertilized", False)
     watered = field.get("watered", False)
@@ -106,12 +114,15 @@ def _draw_field_base(surface, field, harvest_ready=False):
             (center_x - FURROW_WIDTH // 2, 1, FURROW_WIDTH, height - 2),
         )
 
-    pygame.draw.rect(
-        surface, get_field_border_color(
-            harvest_ready, field.get("late_harvest_active", False),
-        ),
-        surface.get_rect(), FIELD_BORDER_WIDTH,
-    )
+    if harvest_ready:
+        draw_harvest_ready_border(
+            surface, late_harvest=field.get("late_harvest_active", False),
+        )
+    else:
+        pygame.draw.rect(
+            surface, get_field_border_color(), surface.get_rect(),
+            FIELD_BORDER_WIDTH,
+        )
     pygame.draw.line(surface, FIELD_SHADOW_COLOR, (1, 2), (width - 2, 2), 1)
     pygame.draw.line(surface, FIELD_SHADOW_COLOR, (width - 3, 1), (width - 3, height - 2), 1)
     pygame.draw.line(surface, FIELD_HIGHLIGHT_COLOR, (2, height - 3), (width - 3, height - 3), 1)
