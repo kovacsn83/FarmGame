@@ -1396,6 +1396,9 @@ class FinancialSummaryPanel(PopupWindow):
         ), None)
         if definition is not None:
             return definition["name"]
+        upgrade = UPGRADES.get(item_id)
+        if upgrade is not None:
+            return upgrade["name"]
         option = BUILD_OPTIONS.get(item_id)
         return option["name"] if option is not None else item_id.replace("_", " ").capitalize()
 
