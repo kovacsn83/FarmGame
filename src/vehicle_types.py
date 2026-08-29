@@ -23,7 +23,7 @@ VEHICLE_TYPE_DEFINITIONS = {
         "purchase_price": TRACTOR_PURCHASE_PRICE,
         "accepts_field_tasks": True,
         "supported_tasks": (
-            "plant", "fertilize", "watering",
+            "plant", "fertilize", "spraying", "watering",
             "supply_feed", "supply_water", "processing_supply",
         ),
         "self_propelled": True,

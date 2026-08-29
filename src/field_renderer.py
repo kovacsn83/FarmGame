@@ -27,6 +27,8 @@ FIELD_STATUS_MARKER_SPACING = 8
 FIELD_STATUS_MARKER_RADIUS = 3
 FERTILIZED_MARKER_COLOR = (101, 67, 38)
 FERTILIZED_MARKER_BORDER_COLOR = (66, 46, 29)
+SPRAYED_MARKER_COLOR = (224, 190, 48)
+SPRAYED_MARKER_BORDER_COLOR = (130, 101, 24)
 WATERED_MARKER_COLOR = (72, 116, 158)
 WATERED_MARKER_BORDER_COLOR = (48, 79, 108)
 
@@ -261,16 +263,18 @@ def _draw_field_status_markers(surface, field):
     """Az aktív mezőállapotokat azonos méretű, egymás mellé rendezett pontokkal jelzi."""
     markers = []
     if field.get("fertilized", False):
-        markers.append((
+        markers.append((0,
             FERTILIZED_MARKER_COLOR,
             FERTILIZED_MARKER_BORDER_COLOR,
         ))
     if field.get("watered", False):
-        markers.append((WATERED_MARKER_COLOR, WATERED_MARKER_BORDER_COLOR))
+        markers.append((1, WATERED_MARKER_COLOR, WATERED_MARKER_BORDER_COLOR))
+    if field.get("sprayed", False):
+        markers.append((2, SPRAYED_MARKER_COLOR, SPRAYED_MARKER_BORDER_COLOR))
 
     start_x, marker_y = FIELD_STATUS_MARKER_POSITION
-    for index, (color, border_color) in enumerate(markers):
-        center = (start_x + index * FIELD_STATUS_MARKER_SPACING, marker_y)
+    for slot, color, border_color in markers:
+        center = (start_x + slot * FIELD_STATUS_MARKER_SPACING, marker_y)
         pygame.draw.circle(
             surface, color, center, FIELD_STATUS_MARKER_RADIUS,
         )
@@ -288,6 +292,7 @@ def _cache_key(field, harvest_ready=False):
         crop_id, phase, bool(field.get("harvest_count", 0)),
         bool(field.get("fertilized", False)),
         bool(field.get("watered", False)),
+        bool(field.get("sprayed", False)),
         bool(field.get("late_harvest_active", False)),
         bool(harvest_ready),
     )

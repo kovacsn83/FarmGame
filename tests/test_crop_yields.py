@@ -20,6 +20,7 @@ def field_for(crop, harvest_count=0, **states):
         "harvest_count": harvest_count,
         "watered": False,
         "fertilized": False,
+        "sprayed": False,
         "pests": False,
         "weeds": False,
         "late_harvest_active": False,
@@ -76,6 +77,18 @@ class CropYieldTests(unittest.TestCase):
                     field_for("corn", watered=True, fertilized=True),
                     late_harvest=True,
                 ),
+            )
+
+    def test_spraying_bonus_combines_with_watering_and_fertilizing(self):
+        with patch("fields.random.uniform", return_value=1.0):
+            self.assertEqual(
+                13, calculate_harvest_yield(field_for("corn", sprayed=True)),
+            )
+            self.assertEqual(
+                16,
+                calculate_harvest_yield(field_for(
+                    "corn", watered=True, fertilized=True, sprayed=True,
+                )),
             )
 
 

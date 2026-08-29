@@ -7,7 +7,7 @@ from constants import (
     GRID_ROWS, ROAD, TILE_SIZE,
     TOOL_ANIMAL_HUSBANDRY, TOOL_BUILD, TOOL_BULLDOZER, TOOL_HARVEST,
     TOOL_FERTILIZE, TOOL_INSPECT, TOOL_ORCHARD, TOOL_PLANT, TOOL_ROAD,
-    TOOL_WATERING,
+    TOOL_SPRAYING, TOOL_WATERING,
 )
 from buildings import (
     BUILD_OPTIONS, BUILDING_TYPES, can_place_building, find_building_data,
@@ -185,7 +185,8 @@ def _draw_merged_area_fence(screen, area_tiles):
 
 def draw_grid(screen, world, selected_tool, selected_building, mouse_row, mouse_col):
     hidden_grid_tools = (
-        TOOL_INSPECT, TOOL_PLANT, TOOL_WATERING, TOOL_FERTILIZE, TOOL_HARVEST,
+        TOOL_INSPECT, TOOL_PLANT, TOOL_WATERING, TOOL_FERTILIZE,
+        TOOL_SPRAYING, TOOL_HARVEST,
     )
     if mouse_row >= 0 and selected_tool not in hidden_grid_tools:
         start_row, end_row = mouse_row - 2, mouse_row + 2

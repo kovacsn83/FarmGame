@@ -14,6 +14,8 @@ if str(SRC) not in sys.path:
 from field_renderer import (
     FIELD_BORDER_COLOR, FIELD_HARVEST_READY_BORDER_COLOR,
     FIELD_LATE_HARVEST_BORDER_COLOR,
+    FIELD_STATUS_MARKER_POSITION, FIELD_STATUS_MARKER_SPACING,
+    SPRAYED_MARKER_COLOR,
     GROWTH_DEVELOPED, _create_field_surface, _draw_corn,
     get_field_border_color,
 )
@@ -66,6 +68,16 @@ class FieldBorderRendererTests(unittest.TestCase):
         surface = _create_field_surface(self.field, harvest_ready=True)
         self.assertEqual(
             surface.get_at((0, 0))[:3], FIELD_LATE_HARVEST_BORDER_COLOR,
+        )
+
+    def test_spraying_marker_uses_the_fixed_third_position(self):
+        self.field.update({"growth": 20, "sprayed": True})
+        surface = _create_field_surface(self.field)
+        start_x, marker_y = FIELD_STATUS_MARKER_POSITION
+        marker_x = start_x + 2 * FIELD_STATUS_MARKER_SPACING
+        self.assertEqual(
+            SPRAYED_MARKER_COLOR,
+            surface.get_at((marker_x, marker_y))[:3],
         )
 
 

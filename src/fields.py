@@ -19,7 +19,7 @@ from crops import (
 )
 from game_logger import log
 from game_rules import (
-    FERTILIZER_BONUS, FIELD_TYPES, PEST_PENALTY, WATER_BONUS,
+    FERTILIZER_BONUS, FIELD_TYPES, PEST_PENALTY, SPRAYING_BONUS, WATER_BONUS,
     WEED_PENALTY, YIELD_RANDOM_VARIATION, get_field_fertilizer_cost,
 )
 
@@ -75,7 +75,7 @@ def place_field(world, fields, row, col, field_type="field_4x4"):
         "row": row, "col": col, "field_type": field_type,
         "width": width, "height": height, "crop": None, "growth": 0,
         "growth_weeks": 0, "harvestable": False, "fertilized": False,
-        "watered": False,
+        "watered": False, "sprayed": False,
         "harvest_count": 0, "planted_at_week": None,
         "last_harvest_at_week": None, "next_maturity_at_week": None,
         "expires_at_week": None,
@@ -132,6 +132,7 @@ def print_field_info(field):
         "fertilize": "Trágyázás",
         "harvest": "Aratás",
         "watering": "Locsolás",
+        "spraying": "Permetezés",
     }.get(task_type, "Ültetés")
     if vehicle_status == "active":
         print(f"Állapot: {task_name} folyamatban")
@@ -140,6 +141,8 @@ def print_field_info(field):
             "Ültetés": "Ültetésre",
             "Trágyázás": "Trágyázásra",
             "Aratás": "Aratásra",
+            "Locsolás": "Locsolásra",
+            "Permetezés": "Permetezésre",
         }[task_name]
         print(f"Állapot: {waiting_name} vár")
         queue_position = field.get("vehicle_queue_position")
@@ -158,6 +161,7 @@ def print_field_info(field):
         )
         print(f"Trágyázva: {'igen' if field.get('fertilized', False) else 'nem'}")
         print(f"Locsolva: {'igen' if field.get('watered', False) else 'nem'}")
+        print(f"Permetezve: {'igen' if field.get('sprayed', False) else 'nem'}")
     print()
 
 
@@ -173,6 +177,7 @@ def plant_crop(field, crop, current_elapsed_week=None):
     field["harvestable"] = False
     field["fertilized"] = False
     field["watered"] = False
+    field["sprayed"] = False
     field["harvest_count"] = 0
     field["planted_at_week"] = current_elapsed_week
     field["last_harvest_at_week"] = None
@@ -206,6 +211,7 @@ def clear_crop(field):
     field["harvestable"] = False
     field["fertilized"] = False
     field["watered"] = False
+    field["sprayed"] = False
     field["harvest_count"] = 0
     field["planted_at_week"] = None
     field["last_harvest_at_week"] = None
@@ -236,6 +242,7 @@ def _advance_crop_cycle(
         field["harvestable"] = False
         field["last_harvest_at_week"] = current_elapsed_week
         field["watered"] = False
+        field["sprayed"] = False
         if crop_resets_fertilizer_after_harvest(crop):
             field["fertilized"] = False
         _reset_late_harvest(field)
@@ -280,6 +287,7 @@ def _advance_crop_cycle(
     if crop_resets_fertilizer_after_harvest(crop):
         field["fertilized"] = False
     field["watered"] = False
+    field["sprayed"] = False
     _reset_late_harvest(field)
     return True
 
@@ -338,6 +346,7 @@ def synchronize_annual_crop_cycle(field, current_elapsed_week):
         if not entering_first_productive_year:
             field["watered"] = False
             field["fertilized"] = False
+            field["sprayed"] = False
         _reset_late_harvest(field)
         if age >= first_year:
             field["growth"] = 100
@@ -410,6 +419,40 @@ def water_crop(field):
     if not can_water_field(field, include_task_status=False):
         return False
     field["watered"] = True
+    return True
+
+
+def can_spray_field(field, include_task_status=True, allow_mature=False):
+    """Jelzi, hogy az aktuális termési ciklus még permetezhető-e."""
+    if field is None:
+        return False
+    if include_task_status and field.get("vehicle_task_status") is not None:
+        return False
+    if (
+        crop_has_annual_perennial_cycle(field.get("crop"))
+        and field.get("annual_harvest_state") in ("harvested", "lost")
+    ):
+        return False
+    return (
+        field.get("crop") in CROPS
+        and (
+            allow_mature
+            or crop_has_annual_perennial_cycle(field.get("crop"))
+            or (
+                field.get("growth", 0) < 100
+                and not field.get("harvestable", False)
+            )
+        )
+        and not field.get("sprayed", False)
+    )
+
+
+def spray_crop(field, allow_mature=False):
+    """A Traktor munkájának végén aktiválja a permetezési hozambónuszt."""
+    if not can_spray_field(
+            field, include_task_status=False, allow_mature=allow_mature):
+        return False
+    field["sprayed"] = True
     return True
 
 
@@ -542,6 +585,8 @@ def calculate_harvest_yield(field, late_harvest=None):
         modifier += WATER_BONUS
     if field.get("fertilized", False):
         modifier += FERTILIZER_BONUS
+    if field.get("sprayed", False):
+        modifier += SPRAYING_BONUS
     if field.get("pests", False):
         modifier -= PEST_PENALTY
     if field.get("weeds", False):

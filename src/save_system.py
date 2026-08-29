@@ -99,6 +99,7 @@ def _migrate_legacy_crop_data(data):
             crop = CROPS.get(field.get("crop"))
             field.setdefault("fertilized", False)
             field.setdefault("watered", False)
+            field.setdefault("sprayed", False)
             had_lifecycle_state = "harvest_count" in field
             field.setdefault("harvest_count", 0)
             field.setdefault("planted_at_week", None)
@@ -640,6 +641,7 @@ def _validate_fields(data):
                 or not isinstance(field.get("harvestable", False), bool)
                 or not isinstance(field.get("fertilized", False), bool)
                 or not isinstance(field.get("watered", False), bool)
+                or not isinstance(field.get("sprayed", False), bool)
                 or not isinstance(field.get("late_harvest_active", False), bool)
                 or field.get("annual_harvest_state") not in (
                     None, "ineligible", "growing", "ripe", "harvested", "lost",

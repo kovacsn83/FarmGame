@@ -17,11 +17,12 @@ from crops import (
     can_plant_crop_in_week,
 )
 from fields import (
-    can_fertilize_field, can_water_field, crop_lifecycle_is_active,
+    can_fertilize_field, can_spray_field, can_water_field,
+    crop_lifecycle_is_active,
     prepare_harvest, preview_harvest_yield,
     synchronize_annual_crop_cycle,
 )
-from game_rules import get_field_fertilizer_cost
+from game_rules import get_field_fertilizer_cost, get_field_spraying_cost
 from game_logger import log
 from maintenance import calculate_weekly_maintenance
 from orchards import (
@@ -44,7 +45,8 @@ from quest_system import (
 from tractor import (
     FEED_LOAD_DURATION_MS, FEED_UNLOAD_DURATION_MS,
     TASK_FERTILIZING, TASK_HARVESTING, TASK_PLANTING,
-    TASK_ORCHARD_HARVEST, TASK_SUPPLY_FEED, TASK_SUPPLY_WATER, TASK_WATERING,
+    TASK_ORCHARD_HARVEST, TASK_SPRAYING, TASK_SUPPLY_FEED,
+    TASK_SUPPLY_WATER, TASK_WATERING,
     TASK_PROCESSING_SUPPLY,
     TRACTOR_AWAITING_ASSIGNMENT, TRACTOR_SELECTING_NEXT_TASK,
     TRACTOR_RETURNING_HOME,
@@ -56,7 +58,9 @@ from tractor import (
 from vehicle_types import (
     VEHICLE_TYPE_DEFINITIONS, VehicleType, normalize_vehicle_type,
 )
-from financial_history import EXPENSE_PROCESSING_INPUT, EXPENSE_VEHICLE
+from financial_history import (
+    EXPENSE_PROCESSING_INPUT, EXPENSE_SPRAYING, EXPENSE_VEHICLE,
+)
 from inventory import get_inventory_item_data
 from market_procurement import purchase_automatically
 from storage_blocking import FIELD_HARVEST_STORAGE_MESSAGE
@@ -80,6 +84,7 @@ CROP_PLANT_EVENTS = {
 TASK_VEHICLE_TYPES = {
     TASK_PLANTING: VehicleType.TRACTOR,
     TASK_FERTILIZING: VehicleType.TRACTOR,
+    TASK_SPRAYING: VehicleType.TRACTOR,
     TASK_HARVESTING: VehicleType.COMBINE,
     TASK_ORCHARD_HARVEST: VehicleType.FRUIT_HARVESTER,
     TASK_WATERING: VehicleType.TRACTOR,
@@ -91,6 +96,7 @@ TASK_VEHICLE_TYPES = {
 TASK_NAMES = {
     TASK_PLANTING: "ültetési",
     TASK_FERTILIZING: "trágyázási",
+    TASK_SPRAYING: "permetezési",
     TASK_HARVESTING: "aratási",
     TASK_ORCHARD_HARVEST: "gyümölcsszüretelési",
     TASK_WATERING: "locsolási",
@@ -102,6 +108,7 @@ TASK_NAMES = {
 TASK_LOG_CATEGORIES = {
     TASK_PLANTING: "Planting",
     TASK_FERTILIZING: "Fertilizing",
+    TASK_SPRAYING: "Spraying",
     TASK_HARVESTING: "Harvest",
     TASK_ORCHARD_HARVEST: "Orchard",
     TASK_WATERING: "Watering",
@@ -627,6 +634,98 @@ class VehicleManager:
             log("Locsolási feladat létrehozva.", "Watering")
         elif report:
             log("Locsolási feladat várólistára helyezve.", "Dispatcher")
+        return True
+
+    def start_spraying(
+            self, world, buildings, economy, field, current_ticks=None,
+            source="manual"):
+        """Költséglevonás után a közös FIFO sorba teszi a permetezést."""
+        report = source == "manual"
+        if field is None:
+            if report:
+                log("A kijelölt helyen nincs Veteményes.", "Spraying")
+            return False
+        if field.get("crop") is None:
+            if report:
+                log("Az üres Veteményes nem permetezhető.", "Spraying")
+            return False
+        if field.get("sprayed", False):
+            if report:
+                log(
+                    "Ez a Veteményes ebben a termési ciklusban már "
+                    "permetezve lett.", "Spraying",
+                )
+            return False
+        if self.has_pending_field_task(field, TASK_SPRAYING):
+            if report:
+                log(
+                    "A permetezés már folyamatban van vagy várakozik.",
+                    "Spraying",
+                )
+            return False
+        if not can_spray_field(field, include_task_status=False):
+            if report:
+                log("Ez a Veteményes jelenleg nem permetezhető.", "Spraying")
+            return False
+        task_vehicles = self.vehicles_for_task(TASK_SPRAYING)
+        if not task_vehicles:
+            if report:
+                log("A permetezéshez Traktor szükséges.", "Spraying")
+            return False
+
+        has_road_connection = False
+        has_reachable_tractor = False
+        for tractor in task_vehicles:
+            _, parking_tile = tractor.get_parking(world, buildings)
+            if parking_tile is None:
+                continue
+            route, _, connected = find_field_route(world, parking_tile, field)
+            has_road_connection = has_road_connection or connected
+            if (route is not None
+                    and find_road_path(world, route[-1], parking_tile) is not None):
+                has_reachable_tractor = True
+                break
+        if not has_road_connection:
+            if report:
+                log("A veteményes nem érhető el útról.", "Spraying")
+            return False
+        if not has_reachable_tractor:
+            if report:
+                log(
+                    "Egyik traktor sem talál útvonalat a veteményeshez.",
+                    "Spraying",
+                )
+            return False
+
+        spraying_cost = get_field_spraying_cost(field)
+        if spraying_cost is None:
+            if report:
+                log("A Veteményes permetezési díja nincs beállítva.", "Spraying")
+            return False
+        if not economy.spend(spraying_cost):
+            if report:
+                log("Nincs elegendő pénz a permetezéshez.", "Spraying")
+            return False
+        economy.record_expense(
+            EXPENSE_SPRAYING, spraying_cost, field.get("crop"),
+            "Veteményes permetezése",
+        )
+        self.task_queue.append(FieldTask(
+            field=field,
+            task_type=TASK_SPRAYING,
+            buildings=buildings,
+            resource_amount=int(spraying_cost),
+            creation_order=self._take_task_order(),
+            manually_initiated=report,
+        ))
+        self._set_waiting_statuses()
+        self._dispatch_tasks(
+            world, buildings, economy, current_ticks=current_ticks,
+        )
+        if report and field.get("vehicle_task_status") == "active":
+            log("Permetezési feladat elindítva.", "Spraying")
+        elif report:
+            log("Permetezési feladat várólistára került.", "Spraying")
         return True
 
     @staticmethod
@@ -1383,6 +1482,13 @@ class VehicleManager:
                 and get_total_inventory(buildings).get("manure", 0)
                 >= task.resource_amount
             )
+        if task.task_type == TASK_SPRAYING:
+            return (
+                self._field_still_exists(world, task.field)
+                and can_spray_field(
+                    task.field, include_task_status=False, allow_mature=True,
+                )
+            )
         if task.task_type in (
                 TASK_SUPPLY_FEED, TASK_SUPPLY_WATER, TASK_PROCESSING_SUPPLY):
             if task.task_type == TASK_PROCESSING_SUPPLY:
@@ -1415,7 +1521,7 @@ class VehicleManager:
     def _discard_invalid_tasks(self, world, buildings):
         for task in tuple(self.task_queue):
             if task.task_type not in (
-                    TASK_WATERING, TASK_FERTILIZING,
+                    TASK_WATERING, TASK_FERTILIZING, TASK_SPRAYING,
                     TASK_SUPPLY_FEED, TASK_SUPPLY_WATER,
                     TASK_ORCHARD_HARVEST, TASK_PROCESSING_SUPPLY):
                 continue

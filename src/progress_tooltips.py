@@ -42,6 +42,11 @@ def get_field_progress_lines(
         return None
 
     lines = [crop["name"]]
+    lines.extend((
+        "Locsolás:", "Igen" if field.get("watered", False) else "Nem",
+        "Trágyázás:", "Igen" if field.get("fertilized", False) else "Nem",
+        "Permetezés:", "Igen" if field.get("sprayed", False) else "Nem",
+    ))
     if crop_has_annual_perennial_cycle(crop):
         age = get_crop_age_years(field, current_elapsed_week)
         first_year, last_year = get_crop_productive_year_range(crop)

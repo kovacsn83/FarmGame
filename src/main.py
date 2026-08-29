@@ -27,7 +27,7 @@ from constants import (
     COLOR_GRASS, GRASS, TILE_SIZE,
     TOOL_ANIMAL_HUSBANDRY, TOOL_BUILD, TOOL_BULLDOZER, TOOL_HARVEST,
     TOOL_CITY, TOOL_FERTILIZE, TOOL_INSPECT, TOOL_ORCHARD, TOOL_PLANT, TOOL_ROAD,
-    TOOL_WATERING,
+    TOOL_SPRAYING, TOOL_WATERING,
     WINDOW_HEIGHT, WINDOW_WIDTH,
 )
 from developer_console import DeveloperConsole
@@ -451,6 +451,11 @@ def main():
         elif selected_tool == TOOL_WATERING:
             field = find_field_data(fields, mouse_row, mouse_col)
             vehicles.start_watering(
+                world, buildings, economy, field,
+            )
+        elif selected_tool == TOOL_SPRAYING:
+            field = find_field_data(fields, mouse_row, mouse_col)
+            vehicles.start_spraying(
                 world, buildings, economy, field,
             )
         elif selected_tool == TOOL_ANIMAL_HUSBANDRY and selected_animal is not None:

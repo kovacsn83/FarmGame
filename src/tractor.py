@@ -9,7 +9,9 @@ from buildings import (
     BUILDING_TYPES, get_garage_parking_position, get_orchard_groups,
 )
 from crops import CROPS
-from fields import complete_harvest, fertilize_crop, plant_crop, water_crop
+from fields import (
+    complete_harvest, fertilize_crop, plant_crop, spray_crop, water_crop,
+)
 from feed_supply import (
     deliver_feed_cargo, prepare_feed_supply, return_feed_cargo,
 )
@@ -96,6 +98,7 @@ TASK_PLANTING = "plant"
 TASK_FERTILIZING = "fertilize"
 TASK_HARVESTING = "harvest"
 TASK_WATERING = "watering"
+TASK_SPRAYING = "spraying"
 TASK_SUPPLY_FEED = "supply_feed"
 TASK_SUPPLY_WATER = "supply_water"
 TASK_ORCHARD_HARVEST = "orchard_harvest"
@@ -1385,6 +1388,9 @@ class Vehicle:
         elif task.task_type == TASK_WATERING:
             completed = water_crop(task.field)
             completion_message = "A Veteményes sikeresen meglocsolva."
+        elif task.task_type == TASK_SPRAYING:
+            completed = spray_crop(task.field, allow_mature=True)
+            completion_message = "Veteményes permetezve. +10% hozambónusz."
         else:
             completed = plant_crop(
                 task.field, task.crop,
@@ -1409,6 +1415,7 @@ class Vehicle:
                     TASK_FERTILIZING: "Fertilizing",
                     TASK_HARVESTING: "Harvest",
                     TASK_WATERING: "Watering",
+                    TASK_SPRAYING: "Spraying",
                 }.get(task.task_type, "Vehicle"),
             )
         elif task.task_type == TASK_FERTILIZING:
@@ -1420,6 +1427,8 @@ class Vehicle:
             log("Az aratási feladat már nem hajtható végre.", "Harvest")
         elif task.task_type == TASK_WATERING:
             log("A locsolási feladat már nem hajtható végre.", "Watering")
+        elif task.task_type == TASK_SPRAYING:
+            log("A permetezési feladat már nem hajtható végre.", "Spraying")
         if completed and task.task_type == TASK_WATERING:
             log("+10% hozam aktiválva.", "Watering")
         return completed

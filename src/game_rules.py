@@ -8,6 +8,7 @@ YIELD_RANDOM_VARIATION = 0.10
 # Bónuszok
 WATER_BONUS = 0.10
 FERTILIZER_BONUS = 0.10
+SPRAYING_BONUS = 0.10
 
 # Büntetések
 PEST_PENALTY = 0.10
@@ -25,6 +26,7 @@ FIELD_TYPES = {
         "width": 4,
         "height": 4,
         "fertilizer_cost": 1,
+        "spraying_cost": 2.00,
         "build_cost": 50.00,
         "yield_multiplier": 1.0,
         "required_upgrade": None,
@@ -34,6 +36,7 @@ FIELD_TYPES = {
         "width": 6,
         "height": 6,
         "fertilizer_cost": 2,
+        "spraying_cost": 3.00,
         "build_cost": 250.00,
         "yield_multiplier": 2.5,
         "required_upgrade": "unlock_field_6x6",
@@ -43,6 +46,7 @@ FIELD_TYPES = {
         "width": 8,
         "height": 8,
         "fertilizer_cost": 3,
+        "spraying_cost": 4.00,
         "build_cost": 1000.00,
         "yield_multiplier": 5.0,
         "required_upgrade": "unlock_field_8x8",
@@ -57,6 +61,15 @@ def get_field_fertilizer_cost(field):
     if definition is None:
         return None
     return definition["fertilizer_cost"]
+
+
+def get_field_spraying_cost(field):
+    """A Veteményes méretéhez tartozó központi permetezési díjat adja."""
+    field_type = field.get("field_type", "field_4x4")
+    definition = FIELD_TYPES.get(field_type)
+    if definition is None:
+        return None
+    return definition["spraying_cost"]
 
 
 # A fejlesztések azonosítóalapú katalógusa későbbi előfeltételeket is támogat.
