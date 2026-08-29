@@ -24,10 +24,10 @@ from simulation import SimulationBot
 
 
 class SpeedTimingTests(unittest.TestCase):
-    def test_week_lengths_use_ten_and_five_seconds(self):
+    def test_week_lengths_use_twelve_and_six_seconds(self):
         self.assertIsNone(TIME_WEEK_LENGTHS_MS[TIME_PAUSED])
-        self.assertEqual(TIME_WEEK_LENGTHS_MS[TIME_SLOW], 10000)
-        self.assertEqual(TIME_WEEK_LENGTHS_MS[TIME_NORMAL], 5000)
+        self.assertEqual(TIME_WEEK_LENGTHS_MS[TIME_SLOW], 12000)
+        self.assertEqual(TIME_WEEK_LENGTHS_MS[TIME_NORMAL], 6000)
 
     def test_vehicle_step_times_use_eighty_and_forty_milliseconds(self):
         self.assertEqual(TRACTOR_STEP_INTERVAL_MS, 80)
@@ -45,23 +45,23 @@ class SpeedTimingTests(unittest.TestCase):
         self.assertEqual(WATER_UNLOAD_DURATION_MS, 800)
         self.assertEqual(FEED_LOAD_DURATION_MS, 1000)
 
-    def test_one_week_passes_after_ten_seconds_at_1x(self):
+    def test_one_week_passes_after_twelve_seconds_at_1x(self):
         game_time = GameTime(TIME_SLOW, start_ticks=0)
-        self.assertEqual(game_time.update(9999), [])
-        self.assertEqual(game_time.update(10000), [1])
+        self.assertEqual(game_time.update(11999), [])
+        self.assertEqual(game_time.update(12000), [1])
 
-    def test_one_week_passes_after_five_seconds_at_2x(self):
+    def test_one_week_passes_after_six_seconds_at_2x(self):
         game_time = GameTime(TIME_NORMAL, start_ticks=0)
-        self.assertEqual(game_time.update(5000), [1])
+        self.assertEqual(game_time.update(6000), [1])
 
     def test_switching_speed_preserves_partial_week(self):
         game_time = GameTime(TIME_SLOW, start_ticks=0)
         game_time.update(4000)
-        self.assertAlmostEqual(game_time.week_progress, 0.4)
+        self.assertAlmostEqual(game_time.week_progress, 1 / 3)
         game_time.set_time_speed(TIME_NORMAL, current_ticks=4000)
-        self.assertAlmostEqual(game_time.week_progress, 0.4)
-        self.assertEqual(game_time.update(6999), [])
-        self.assertEqual(game_time.update(7000), [1])
+        self.assertAlmostEqual(game_time.week_progress, 1 / 3)
+        self.assertEqual(game_time.update(7999), [])
+        self.assertEqual(game_time.update(8000), [1])
 
     def test_progress_is_monotonic_through_repeated_speed_switches(self):
         game_time = GameTime(TIME_SLOW, start_ticks=0)
@@ -82,7 +82,7 @@ class SpeedTimingTests(unittest.TestCase):
         for index in range(1, 101):
             speed = TIME_NORMAL if index % 2 else TIME_SLOW
             game_time.set_time_speed(speed, current_ticks=index * 100)
-        self.assertGreaterEqual(game_time.elapsed_time_in_week_ms, 10000)
+        self.assertGreaterEqual(game_time.elapsed_time_in_week_ms, 12000)
         self.assertEqual(game_time.update(10000), [1])
 
     def test_pause_preserves_progress_and_resume_continues_from_it(self):
@@ -90,14 +90,14 @@ class SpeedTimingTests(unittest.TestCase):
         game_time.update(6500)
         game_time.set_time_speed(TIME_PAUSED, current_ticks=6500)
         game_time.update(50000)
-        self.assertAlmostEqual(game_time.week_progress, 0.65)
+        self.assertAlmostEqual(game_time.week_progress, 6500 / 12000)
         game_time.set_time_speed(TIME_NORMAL, current_ticks=50000)
-        self.assertEqual(game_time.update(51749), [])
-        self.assertEqual(game_time.update(51750), [1])
+        self.assertEqual(game_time.update(52749), [])
+        self.assertEqual(game_time.update(52750), [1])
 
     def test_large_delta_advances_every_crossed_week_once(self):
         game_time = GameTime(TIME_NORMAL, start_ticks=0)
-        self.assertEqual(game_time.update(12500), [1, 2])
+        self.assertEqual(game_time.update(15000), [1, 2])
         self.assertEqual(game_time.elapsed_weeks, 2)
         self.assertAlmostEqual(game_time.week_progress, 0.5)
 

@@ -1339,3 +1339,7 @@ CHANGELOG – Első kamerarendszer
 # Veteményes raktárkapacitás-figyelmeztetés
 
 - A Raktár telítettségi figyelmeztetése mostantól a Veteményesek aratására is vonatkozik: elégtelen hely esetén fehér értesítés jelenik meg, a játék szünetel, a termés pedig aratható marad.
+
+# Játékidő balansz
+
+- Visszaállt a lassabb időmúlás: 1× sebességnél egy hét 12 másodperc, 2× sebességnél 6 másodperc.

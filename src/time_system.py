@@ -45,7 +45,7 @@ SEASON_PERIODS = (
 # Az aktuális hét előrehaladása mindig 1×-es játékidőben mérődik.
 # A sebességfokozat csak azt szabja meg, hogy valós idő alatt mennyi ilyen
 # játékidő kerül az akkumulátorba.
-BASE_WEEK_DURATION_MS = 10000
+BASE_WEEK_DURATION_MS = 12000
 
 TIME_WEEK_LENGTHS_MS = {
     TIME_PAUSED: None,
