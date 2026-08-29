@@ -64,7 +64,7 @@ class CherryTreeTests(unittest.TestCase):
 
         panel = OrchardSelectionPanel()
         panel.open()
-        self.assertEqual({"apple", "cherry"}, set(panel.card_rects))
+        self.assertEqual({"apple", "cherry", "plum"}, set(panel.card_rects))
         self.assertTrue(panel.handle_event(pygame.event.Event(
             pygame.MOUSEBUTTONDOWN,
             {"button": 1, "pos": panel.card_rects["cherry"].center},

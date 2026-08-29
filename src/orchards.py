@@ -54,6 +54,25 @@ TREE_TYPES = {
         # A specifikáció szerinti $250 a teljes telepítési levonás.
         "delivery_cost_per_unit": 0,
     },
+    "plum": {
+        "name": "Szilva",
+        "tree_name": "Szilvafa",
+        "planting_cost": 100.00,
+        "first_yield_age_years": 2,
+        "last_yield_age_years": 25,
+        "ripening_week": 34,
+        "harvest_end_week": 38,
+        "annual_yield": 20,
+        "product_id": "plum",
+        "canopy_color": (48, 106, 52),
+        "canopy_light_color": (68, 132, 62),
+        "fruit_color": (83, 55, 126),
+        "canopy_lobes": ((-3, 0, 12), (4, -1, 12), (1, 5, 11)),
+        "canopy_light_radius": 7,
+        "fruit_offsets": ((-6, 3), (5, -3), (4, 6), (-2, -5)),
+        # A specifikáció szerinti $100 a teljes telepítési levonás.
+        "delivery_cost_per_unit": 0,
+    },
 }
 
 # Egy 4×4-es Gyümölcsös négy rögzített, 2×2-es fahelyének bal felső eltolása.

@@ -30,7 +30,7 @@ from animals import (
 from buildings import (
     BUILDING_TYPES, can_place_building, get_animal_pen_groups,
     get_building_maintenance_base,
-    get_free_capacity, get_total_capacity, get_total_inventory,
+    get_free_capacity, get_orchards, get_total_capacity, get_total_inventory,
     place_building, remove_building,
 )
 from constants import BUILDING, FIELD, GRASS, ROAD, ROAD_BUILD_COST
@@ -49,6 +49,9 @@ from inventory import PRODUCTS, get_marketable_item_ids
 from market_procurement import get_automatic_purchase_unit_cost
 from maintenance import calculate_weekly_maintenance
 from money_format import format_money
+from orchards import (
+    is_tree_harvestable, plant_tree, run_weekly_orchard_cycle,
+)
 from simulation_report import write_simulation_reports
 from time_system import GameTime, TIME_SLOW, WEEKS_PER_YEAR
 from tractor import TRACTOR_IDLE
@@ -63,14 +66,15 @@ VIRTUAL_TICK_MS = 500
 MAX_TASK_TICKS = 20_000
 
 INCOME_CATEGORIES = (
-    "crop_sales", "milk_sales", "pork_sales",
+    "crop_sales", "fruit_sales", "milk_sales", "pork_sales",
     "other_animal_sales", "processed_product_sales", "other_income",
 )
 EXPENSE_CATEGORIES = (
     "building_maintenance", "field_maintenance", "road_maintenance",
     "vehicle_maintenance", "animal_purchase", "vehicle_purchase",
     "building_construction", "field_construction", "road_construction",
-    "feed_purchase", "seed_purchase", "bank_repayment", "other_expense",
+    "feed_purchase", "seed_purchase", "fruit_tree_purchase",
+    "bank_repayment", "other_expense",
 )
 
 
@@ -329,6 +333,19 @@ class SimulationBot:
         self.investments[self.year][f"upgrade:{upgrade_id}"] += 1
         return True
 
+    def plant_fruit_tree(self, row, col, tree_type):
+        """A bot a játék közös, adatvezérelt faültetési útvonalát használja."""
+        before = self.economy.money
+        tree = plant_tree(
+            self.buildings, self.economy, row, col, tree_type,
+        )
+        if tree is not None:
+            self._record_money_change(
+                self.year, before, "fruit_tree_purchase",
+            )
+            self.investments[self.year][f"fruit_tree:{tree_type}"] += 1
+        return tree
+
     def _purchase_animal_automation(self):
         """Megfelelő tartalék esetén fokozatosan automatizálja az ellátást."""
         reserve = 5000.00
@@ -504,6 +521,14 @@ class SimulationBot:
                         current_week=self.week,
                         current_elapsed_week=self.game_time.elapsed_weeks):
                     self.drain_vehicle_tasks()
+        for orchard in get_orchards(self.buildings):
+            for tree in orchard.get("trees", []):
+                if not is_tree_harvestable(tree):
+                    continue
+                if self.vehicles.start_orchard_harvest(
+                        self.world, self.buildings, self.economy,
+                        orchard, tree, current_ticks=self.virtual_ticks):
+                    self.drain_vehicle_tasks()
 
     def _sell_market_surplus(self):
         """A takarmányt megtartja; eladással előbb kapacitást, majd pénzt biztosít."""
@@ -586,6 +611,9 @@ class SimulationBot:
                 / (100 + LOAN_INTEREST_PERCENT)
             )
         grow_crops(self.fields, self.game_time.elapsed_weeks + 1)
+        run_weekly_orchard_cycle(
+            self.buildings, self.game_time.elapsed_weeks + 1,
+        )
         run_weekly_animal_cycle(self.animals, self.buildings, self.economy)
         if run_weekly_animal_supply_automation(
                 self.world, self.buildings, self.economy, self.animals,

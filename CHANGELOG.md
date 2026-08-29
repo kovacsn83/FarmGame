@@ -1347,3 +1347,8 @@ CHANGELOG – Első kamerarendszer
 # Gyümölcsfa szüretelhetőségi jelzés
 
 - Az érett gyümölcsfák mostantól a saját 2×2-es fahelyük körül aranybarna kiemelő keretet kapnak, a Veteményesek érettségi jelzésével egységes stílusban.
+
+# Új gyümölcsfa: Szilva
+
+- Bevezetésre került a $100 ültetési árú Szilvafa, amely 2–25 éves kora között, a 34–38. héten évente 20 db Szilvát terem.
+- A Szilva $10/db áron értékesíthető a Piacon, és a Gyümölcsértékesítés bevételi kategóriájába kerül.

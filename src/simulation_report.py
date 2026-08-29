@@ -13,6 +13,7 @@ from vehicle_types import VEHICLE_TYPE_DEFINITIONS
 
 INCOME_CATEGORY_NAMES = {
     "crop_sales": "Növényértékesítés",
+    "fruit_sales": "Gyümölcsértékesítés",
     "milk_sales": "Tejértékesítés",
     "pork_sales": "Sertéshús-értékesítés",
     "other_animal_sales": "Egyéb állati termék",
@@ -32,6 +33,7 @@ EXPENSE_CATEGORY_NAMES = {
     "road_construction": "Útépítés",
     "feed_purchase": "Takarmányvásárlás",
     "seed_purchase": "Vetőmagvásárlás",
+    "fruit_tree_purchase": "Gyümölcsfa-vásárlás",
     "bank_repayment": "Banki törlesztés",
     "other_expense": "Egyéb kiadás",
 }

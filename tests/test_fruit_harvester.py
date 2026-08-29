@@ -47,7 +47,8 @@ class FruitHarvesterTests(unittest.TestCase):
         self.assertFalse(definition["towable"])
         self.assertEqual(("orchard_harvest",), definition["supported_tasks"])
         self.assertEqual(
-            ("apple", "cherry"), definition["supported_tree_types"],
+            ("apple", "cherry", "plum"),
+            definition["supported_tree_types"],
         )
 
     def test_purchase_registers_and_parks_the_vehicle(self):

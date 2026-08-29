@@ -59,6 +59,12 @@ PRODUCTS = {
         "price": 20.00,
         "income_category": INCOME_ORCHARD_SALES,
     },
+    "plum": {
+        "name": "Szilva",
+        "marketable": True,
+        "price": 10.00,
+        "income_category": INCOME_ORCHARD_SALES,
+    },
     "milk": {
         "name": "Tej",
         "marketable": True,
