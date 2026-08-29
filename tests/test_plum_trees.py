@@ -157,6 +157,36 @@ class PlumTreeTests(unittest.TestCase):
         )
         self.assertIn(("detail", "  Szilva", 200), summary_rows)
 
+    def test_plum_canopy_has_a_distinct_silhouette_from_cherry(self):
+        tree = self._plant_plum()
+        surface = pygame.Surface((1000, 800))
+
+        def canopy_mask(tree_type):
+            tree["type"] = tree_type
+            surface.fill((0, 0, 0))
+            draw_orchard_trees(surface, self.buildings)
+            definition = TREE_TYPES[tree_type]
+            canopy_colors = {
+                definition["canopy_color"],
+                definition["canopy_light_color"],
+            }
+            return {
+                (x - 220, y - 270)
+                for x in range(200, 241)
+                for y in range(250, 291)
+                if surface.get_at((x, y))[:3] in canopy_colors
+            }
+
+        cherry_mask = canopy_mask("cherry")
+        plum_mask = canopy_mask("plum")
+
+        self.assertNotEqual(
+            TREE_TYPES["cherry"]["canopy_lobes"],
+            TREE_TYPES["plum"]["canopy_lobes"],
+        )
+        self.assertNotEqual(cherry_mask, plum_mask)
+        self.assertGreater(len(cherry_mask ^ plum_mask), 40)
+
     def test_mixed_orchard_and_save_load_round_trip(self):
         plant_tree(self.buildings, self.economy, 10, 10, "apple")
         plant_tree(self.buildings, self.economy, 10, 12, "cherry")

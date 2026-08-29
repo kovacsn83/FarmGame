@@ -64,11 +64,15 @@ TREE_TYPES = {
         "harvest_end_week": 38,
         "annual_yield": 20,
         "product_id": "plum",
-        "canopy_color": (48, 106, 52),
-        "canopy_light_color": (68, 132, 62),
+        "canopy_color": (48, 101, 68),
+        "canopy_light_color": (72, 132, 82),
         "fruit_color": (83, 55, 126),
-        "canopy_lobes": ((-3, 0, 12), (4, -1, 12), (1, 5, 11)),
-        "canopy_light_radius": 7,
+        # Szélesebb, szimmetrikus négykaréjos korona különíti el a
+        # Cseresznyefa szabálytalan, háromkaréjos sziluettjétől.
+        "canopy_lobes": (
+            (-7, 2, 9), (0, -5, 11), (7, 2, 9), (0, 7, 10),
+        ),
+        "canopy_light_radius": 6,
         "fruit_offsets": ((-6, 3), (5, -3), (4, 6), (-2, -5)),
         # A specifikáció szerinti $100 a teljes telepítési levonás.
         "delivery_cost_per_unit": 0,
