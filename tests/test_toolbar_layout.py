@@ -13,11 +13,14 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from constants import (
-    TOOL_ANIMAL_HUSBANDRY, TOOL_BULLDOZER, TOOL_CITY, TOOL_ORCHARD,
+    TOOL_ANIMAL_HUSBANDRY, TOOL_BULLDOZER, TOOL_CITY, TOOL_FERTILIZE,
+    TOOL_HARVEST, TOOL_ORCHARD, TOOL_SPRAYING,
 )
+from asset_loader import load_toolbar_icons
 from screen_layout import set_screen_size
 from ui import (
-    BUTTON_SIZE, CITY_TOOL_GROUPS, PRIMARY_TOOL_GROUPS, TOOLBAR_CITY_LEFT_MARGIN,
+    BUTTON_GAP, BUTTON_SIZE, CITY_TOOL_GROUPS, PRIMARY_TOOL_GROUPS,
+    TOOLBAR_CITY_LEFT_MARGIN,
     TOOLBAR_CITY_MIN_GAP, TOOLBAR_GROUP_SPACING,
     TOOLBAR_UTILITY_MIN_GAP, TOOLBAR_UTILITY_RIGHT_MARGIN, TOOLS,
     clicked_tool, create_buttons, create_toolbar_icons,
@@ -141,6 +144,47 @@ class ToolbarLayoutTests(unittest.TestCase):
         city_icon = create_toolbar_icons()[TOOL_CITY]
         self.assertIsNotNone(city_icon)
         self.assertEqual((24, 24), city_icon.get_size())
+
+    def test_spraying_is_between_fertilizing_and_harvest_without_group_gap(self):
+        crop_care_group = next(
+            group for group in PRIMARY_TOOL_GROUPS
+            if any(tool["tool"] == TOOL_SPRAYING for tool in group)
+        )
+        order = [tool["tool"] for tool in crop_care_group]
+        spray_index = order.index(TOOL_SPRAYING)
+        self.assertEqual(TOOL_FERTILIZE, order[spray_index - 1])
+        self.assertEqual(TOOL_HARVEST, order[spray_index + 1])
+
+        definition = next(
+            tool for tool in TOOLS if tool["tool"] == TOOL_SPRAYING
+        )
+        self.assertEqual("Permetezés", definition["name"])
+        self.assertEqual("spraying_24.png", definition["icon_path"].name)
+
+        set_screen_size(1500, 1000)
+        buttons = create_buttons()
+        self.assertEqual(
+            buttons[TOOL_FERTILIZE].right + BUTTON_GAP,
+            buttons[TOOL_SPRAYING].left,
+        )
+        self.assertEqual(
+            buttons[TOOL_SPRAYING].right + BUTTON_GAP,
+            buttons[TOOL_HARVEST].left,
+        )
+        self.assertEqual(
+            TOOL_SPRAYING,
+            clicked_tool(buttons, buttons[TOOL_SPRAYING].center),
+        )
+
+    def test_spraying_uses_available_exact_icon_sizes(self):
+        pygame.display.init()
+        if pygame.display.get_surface() is None:
+            pygame.display.set_mode((1, 1))
+        for size in (20, 24, 64):
+            with self.subTest(size=size):
+                icon = load_toolbar_icons(TOOLS, size)[TOOL_SPRAYING]
+                self.assertIsNotNone(icon)
+                self.assertEqual((size, size), icon.get_size())
 
 
 if __name__ == "__main__":

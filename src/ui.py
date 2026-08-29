@@ -16,7 +16,7 @@ from constants import (
     COLOR_FIELD, COLOR_ROAD, COLOR_TEXT, COLOR_TOOLBAR, COLOR_TOOLBAR_LINE,
     TOOL_ANIMAL_HUSBANDRY, TOOL_BUILD, TOOL_BULLDOZER, TOOL_HARVEST,
     TOOL_CITY, TOOL_FERTILIZE, TOOL_INSPECT, TOOL_ORCHARD, TOOL_PLANT, TOOL_ROAD,
-    TOOL_WATERING,
+    TOOL_SPRAYING, TOOL_WATERING,
     TOP_BAR_HEIGHT,
 )
 from crops import CROPS, get_crop_growth_weeks, get_crop_week_intervals
@@ -247,6 +247,14 @@ PRIMARY_TOOL_GROUPS = [
         {"name": "Trágyázás", "icon_color": (116, 83, 52),
          "icon_path": toolbar_icon_path("toolbar-fertilizer-24.png"),
          "tool": TOOL_FERTILIZE},
+        {"name": "Permetezés", "icon_color": (91, 142, 83),
+         "icon_path": toolbar_icon_path("spraying_24.png"),
+         "icon_paths": {
+             20: toolbar_icon_path("spraying_20.png", 20),
+             24: toolbar_icon_path("spraying_24.png", 24),
+             64: toolbar_icon_path("spraying_64.png", 64),
+         },
+         "tool": TOOL_SPRAYING},
         {"name": "Aratás", "icon_color": (220, 50, 50),
          "icon_path": toolbar_icon_path("tractor_24.png"),
          "tool": TOOL_HARVEST},

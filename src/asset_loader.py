@@ -28,9 +28,9 @@ def get_asset_root():
     return Path(__file__).resolve().parent.parent / "assets"
 
 
-def toolbar_icon_path(filename):
-    """A 24 pixeles toolbar-ikon projektfüggetlen relatív útvonalát adja vissza."""
-    return TOOLBAR_ICON_DIRECTORY / filename
+def toolbar_icon_path(filename, size=24):
+    """Egy megadott méretű toolbar-ikon projektfüggetlen útvonalát adja."""
+    return Path("images") / "icons" / str(size) / filename
 
 
 @lru_cache(maxsize=None)
@@ -61,7 +61,10 @@ def load_icon(icon_path, size):
 def load_toolbar_icons(tool_definitions, size):
     """Eszközazonosító szerint előkészíti a toolbar opcionális ikonjait."""
     return {
-        tool["tool"]: load_icon(tool.get("icon_path"), size)
+        tool["tool"]: load_icon(
+            tool.get("icon_paths", {}).get(size, tool.get("icon_path")),
+            size,
+        )
         for tool in tool_definitions
     }
 
