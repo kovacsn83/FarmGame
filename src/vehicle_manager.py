@@ -19,6 +19,7 @@ from crops import (
 from fields import (
     can_fertilize_field, can_water_field, crop_lifecycle_is_active,
     prepare_harvest, preview_harvest_yield,
+    synchronize_annual_crop_cycle,
 )
 from game_rules import get_field_fertilizer_cost
 from game_logger import log
@@ -911,8 +912,16 @@ class VehicleManager:
         if field is None or field.get("crop") is None:
             return "empty"
         crop = field.get("crop")
+        synchronize_annual_crop_cycle(field, current_elapsed_week)
         if not crop_lifecycle_is_active(field, current_elapsed_week):
             return "lifecycle_ended"
+        annual_state = field.get("annual_harvest_state")
+        if annual_state == "ineligible":
+            return "not_productive_yet"
+        if annual_state == "harvested":
+            return "already_harvested"
+        if annual_state == "lost":
+            return "annual_yield_lost"
         if field.get("growth", 0) < 100:
             return "immature"
         if (
@@ -970,6 +979,9 @@ class VehicleManager:
         return {
             "empty": "Ezen a veteményesen nincs elültetett növény.",
             "lifecycle_ended": "A növény életciklusa lejárt.",
+            "not_productive_yet": "Az évelő növény még nem termőkorú.",
+            "already_harvested": "Ez az évelő növény idén már le lett aratva.",
+            "annual_yield_lost": "Az idei termés elveszett.",
             "immature": "A növény még nem érett.",
             "outside_harvest_window": "Most nincs aratási időszaka.",
             "harvest_active": "Aratás folyamatban.",

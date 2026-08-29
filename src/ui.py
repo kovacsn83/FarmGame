@@ -112,7 +112,7 @@ NEWS_BAR_BORDER = (105, 105, 95)
 NEWS_BAR_TEXT_COLOR = (35, 35, 32)
 
 CALENDAR_PANEL_WIDTH = 720
-CALENDAR_PANEL_HEIGHT = 390
+CALENDAR_PANEL_HEIGHT = 432
 CALENDAR_PANEL_PADDING = 24
 CALENDAR_TITLE_GAP = 12
 CALENDAR_TIMELINE_TOP_GAP = 32
@@ -160,7 +160,7 @@ INFO_PANEL_BORDER = (60, 60, 60)
 INFO_PANEL_SEPARATOR = (140, 140, 140)
 
 CROP_PANEL_WIDTH = 440
-CROP_CARD_HEIGHT = 114
+CROP_CARD_HEIGHT = 140
 CROP_CARD_GAP = 12
 CROP_CARD_BACKGROUND = (232, 232, 225)
 CROP_CARD_HOVER = (220, 230, 210)
@@ -1752,7 +1752,10 @@ class CalendarPanel(PopupWindow):
         row_top = annual_rect.bottom + 28
         for row_index, crop_data in enumerate(CROPS.values()):
             row_y = row_top + row_index * CALENDAR_ROW_HEIGHT
-            self.draw_text(screen, font, crop_data["name"], left, row_y - 3)
+            crop_label = crop_data["name"]
+            if crop_data.get("annual_perennial") is not None:
+                crop_label += " (évelő)"
+            self.draw_text(screen, font, crop_label, left, row_y - 3)
             crop_timeline = pygame.Rect(
                 timeline_left, row_y,
                 timeline_width, CALENDAR_TIMELINE_HEIGHT,
@@ -2847,6 +2850,15 @@ class CropSelectionPanel(SelectionPanel):
                 text_x,
                 text_y + 78,
             )
+            annual = crop_data.get("annual_perennial")
+            if annual is not None:
+                self.draw_text(
+                    screen, font,
+                    "Évelő: "
+                    f"{annual['first_productive_year']}–"
+                    f"{annual['last_productive_year']}. évben terem",
+                    text_x, text_y + 104,
+                )
         screen.set_clip(previous_clip)
 
 

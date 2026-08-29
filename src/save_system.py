@@ -110,6 +110,8 @@ def _migrate_legacy_crop_data(data):
             field.setdefault("late_harvest_started_at_week", None)
             field.setdefault("late_harvest_expires_at_week", None)
             field.setdefault("missed_harvest_count", 0)
+            field.setdefault("annual_cycle_year", None)
+            field.setdefault("annual_harvest_state", None)
             legacy_growth = field.pop("growth_days", None)
             field.pop("tractor_task_status", None)
             field.pop("tractor_queue_position", None)
@@ -627,6 +629,7 @@ def _validate_fields(data):
             field.get("expires_at_week"),
             field.get("late_harvest_started_at_week"),
             field.get("late_harvest_expires_at_week"),
+            field.get("annual_cycle_year"),
         )
         if (field["crop"] not in (None, *CROPS)
                 or not isinstance(growth, (int, float))
@@ -638,6 +641,9 @@ def _validate_fields(data):
                 or not isinstance(field.get("fertilized", False), bool)
                 or not isinstance(field.get("watered", False), bool)
                 or not isinstance(field.get("late_harvest_active", False), bool)
+                or field.get("annual_harvest_state") not in (
+                    None, "ineligible", "growing", "ripe", "harvested", "lost",
+                )
                 or not _is_plain_int(harvest_count) or harvest_count < 0
                 or not _is_plain_int(field.get("missed_harvest_count", 0))
                 or not 0 <= field.get("missed_harvest_count", 0) <= harvest_count

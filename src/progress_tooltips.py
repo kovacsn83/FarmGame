@@ -4,10 +4,12 @@ from animal_troughs import get_group_animals, get_group_supply
 from buildings import get_animal_pen_groups
 from calendar_utils import get_year_and_week
 from crops import (
-    CROPS, can_harvest_crop_in_week, format_crop_week_intervals,
+    CROPS, can_harvest_crop_in_week, crop_has_annual_perennial_cycle,
+    format_crop_week_intervals, get_crop_productive_year_range,
     get_crop_lifespan_weeks, get_current_growth_weeks,
     LATE_HARVEST_DURATION_WEEKS, LATE_HARVEST_YIELD_MULTIPLIER,
 )
+from fields import get_crop_age_years
 from orchards import (
     find_tree_at, get_tree_tooltip_lines, synchronize_tree_season,
 )
@@ -40,6 +42,22 @@ def get_field_progress_lines(
         return None
 
     lines = [crop["name"]]
+    if crop_has_annual_perennial_cycle(crop):
+        age = get_crop_age_years(field, current_elapsed_week)
+        first_year, last_year = get_crop_productive_year_range(crop)
+        lines.extend((
+            f"Életkor: {age} / {last_year} év",
+            f"Termőkor: {first_year}–{last_year}. év",
+        ))
+        annual_status = field.get("annual_harvest_state")
+        if age < first_year:
+            lines.append("Állapot: fejlődik – az első évben nem aratható")
+        elif annual_status == "harvested":
+            lines.append("Állapot: az idei termés learatva")
+        elif annual_status == "lost":
+            lines.append("Állapot: az idei termés elveszett")
+        elif annual_status == "ripe":
+            lines.append("Állapot: aratható")
     lifespan = get_crop_lifespan_weeks(crop)
     expires_at = field.get("expires_at_week")
     if (
@@ -101,6 +119,9 @@ def get_field_progress_lines(
 
     status_text = {
         "lifecycle_ended": "Élettartama véget ért",
+        "not_productive_yet": "Még nem termőkorú",
+        "already_harvested": "Az idei termés már learatva",
+        "annual_yield_lost": "Az idei termés elveszett",
         "harvest_active": "Aratás folyamatban",
         "harvest_waiting": "Aratás várakozik",
         "field_busy": "Érett – más járműfeladat van folyamatban",

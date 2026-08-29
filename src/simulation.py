@@ -36,6 +36,7 @@ from buildings import (
 from constants import BUILDING, FIELD, GRASS, ROAD, ROAD_BUILD_COST
 from crops import (
     CROPS, can_harvest_crop_in_week, can_late_harvest_crop_in_week,
+    crop_has_annual_perennial_cycle,
     can_plant_crop_in_week,
 )
 from economy import Economy
@@ -127,7 +128,7 @@ class SimulationBot:
 
     CROP_PLAN = (
         "alfalfa", "alfalfa", "alfalfa", "corn",
-        "corn", "tomato", "tomato", "wheat",
+        "corn", "tomato", "wheat", "hops",
     )
 
     def __init__(self, seed=DEFAULT_SIMULATION_SEED, accept_first_bank_offer=True):
@@ -486,7 +487,13 @@ class SimulationBot:
                         current_ticks=self.virtual_ticks, current_week=self.week):
                     self._record_money_change(self.year, before, "seed_purchase")
                     self.drain_vehicle_tasks()
-            if field.get("crop") is not None and field.get("growth", 0) < 100:
+            if (
+                field.get("crop") is not None
+                and (
+                    field.get("growth", 0) < 100
+                    or crop_has_annual_perennial_cycle(field.get("crop"))
+                )
+            ):
                 if (
                     AUTOMATED_FIELD_WATERING_UPGRADE
                     not in self.state.purchased_upgrades

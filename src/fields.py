@@ -8,10 +8,13 @@ from buildings import (
 )
 from constants import FIELD, FIELD_SIZE, GRASS, ROAD
 from crops import (
-    CROPS, crop_has_more_harvests, crop_has_recurring_harvest,
+    CROPS, can_harvest_crop_in_week, crop_has_annual_perennial_cycle,
+    crop_has_more_harvests,
+    crop_has_recurring_harvest,
     crop_resets_fertilizer_after_harvest,
     get_late_harvest_weeks_remaining, LATE_HARVEST_YIELD_MULTIPLIER,
-    get_crop_lifespan_weeks, get_current_base_yield,
+    get_crop_lifespan_weeks, get_crop_productive_year_range,
+    get_current_base_yield,
     get_current_growth_weeks, next_harvest_stage_fits_current_season,
 )
 from game_logger import log
@@ -80,6 +83,7 @@ def place_field(world, fields, row, col, field_type="field_4x4"):
         "late_harvest_started_at_week": None,
         "late_harvest_expires_at_week": None,
         "missed_harvest_count": 0,
+        "annual_cycle_year": None, "annual_harvest_state": None,
     })
 
 
@@ -185,6 +189,12 @@ def plant_crop(field, crop, current_elapsed_week=None):
     )
     _reset_late_harvest(field)
     field["missed_harvest_count"] = 0
+    field["annual_cycle_year"] = None
+    field["annual_harvest_state"] = None
+    if crop_has_annual_perennial_cycle(crop) and current_elapsed_week is not None:
+        calendar_year, _week = get_year_and_week(current_elapsed_week)
+        field["annual_cycle_year"] = calendar_year
+        field["annual_harvest_state"] = "ineligible"
     return True
 
 
@@ -203,6 +213,8 @@ def clear_crop(field):
     field["expires_at_week"] = None
     _reset_late_harvest(field)
     field["missed_harvest_count"] = 0
+    field["annual_cycle_year"] = None
+    field["annual_harvest_state"] = None
 
 
 def _reset_late_harvest(field):
@@ -214,6 +226,21 @@ def _reset_late_harvest(field):
 def _advance_crop_cycle(
         field, crop, current_elapsed_week=None, missed=False):
     """Aratás vagy elveszett termés után ugyanazzal a szabállyal továbblép."""
+    if crop_has_annual_perennial_cycle(crop):
+        field["harvest_count"] = field.get("harvest_count", 0) + 1
+        if missed:
+            field["missed_harvest_count"] = (
+                field.get("missed_harvest_count", 0) + 1
+            )
+        field["annual_harvest_state"] = "lost" if missed else "harvested"
+        field["harvestable"] = False
+        field["last_harvest_at_week"] = current_elapsed_week
+        field["watered"] = False
+        if crop_resets_fertilizer_after_harvest(crop):
+            field["fertilized"] = False
+        _reset_late_harvest(field)
+        return True
+
     # Véges, többszedéses növénynél az elveszett termés nem számít
     # sikeres aratásnak, ezért nem oldhatja fel a következő szakaszt.
     if missed and not crop_has_recurring_harvest(crop):
@@ -259,12 +286,63 @@ def _advance_crop_cycle(
 
 def crop_lifecycle_is_active(field, current_elapsed_week):
     """Az ismeretlen régi lejáratot aktívnak, a pontos újat abszolútnak kezeli."""
+    if crop_has_annual_perennial_cycle(field.get("crop")):
+        if current_elapsed_week is None:
+            return True
+        return get_crop_age_years(field, current_elapsed_week) <= (
+            get_crop_productive_year_range(field["crop"])[1]
+        )
     expires_at = field.get("expires_at_week")
     return (
         expires_at is None
         or current_elapsed_week is None
         or current_elapsed_week < expires_at
     )
+
+
+def get_crop_age_years(field, current_elapsed_week):
+    """Az ültetés naptári évét 1. életévként kezeli."""
+    planted_at = field.get("planted_at_week")
+    if planted_at is None or current_elapsed_week is None:
+        return 1
+    planted_year, _ = get_year_and_week(planted_at)
+    current_year, _ = get_year_and_week(current_elapsed_week)
+    return max(1, current_year - planted_year + 1)
+
+
+def synchronize_annual_crop_cycle(field, current_elapsed_week):
+    """Az éves évelő állapotát menthető, adatvezérelt naptári ciklushoz igazítja."""
+    crop_id = field.get("crop")
+    productive_range = get_crop_productive_year_range(crop_id)
+    if productive_range is None or current_elapsed_week is None:
+        return
+    calendar_year, current_week = get_year_and_week(current_elapsed_week)
+    age = get_crop_age_years(field, current_elapsed_week)
+    first_year, last_year = productive_range
+    if age > last_year:
+        return
+
+    if field.get("annual_cycle_year") != calendar_year:
+        field["annual_cycle_year"] = calendar_year
+        field["annual_harvest_state"] = (
+            "growing" if first_year <= age <= last_year else "ineligible"
+        )
+        field["harvestable"] = False
+        field["watered"] = False
+        field["fertilized"] = False
+        _reset_late_harvest(field)
+        if age >= first_year:
+            field["growth"] = 100
+            field["growth_weeks"] = get_current_growth_weeks(crop_id, 0)
+
+    state = field.get("annual_harvest_state")
+    if not first_year <= age <= last_year or state in ("harvested", "lost"):
+        field["harvestable"] = False
+        return
+    normal_window = can_harvest_crop_in_week(crop_id, current_week)
+    if normal_window and field.get("growth", 0) >= 100:
+        field["annual_harvest_state"] = "ripe"
+        field["harvestable"] = True
 
 
 def can_fertilize_field(
@@ -278,6 +356,10 @@ def can_fertilize_field(
         field.get("crop") in CROPS
         and (
             allow_mature
+            or (
+                crop_has_annual_perennial_cycle(field.get("crop"))
+                and field.get("annual_harvest_state") in ("growing", "ripe")
+            )
             or (
                 field.get("growth", 0) < 100
                 and not field.get("harvestable", False)
@@ -307,6 +389,13 @@ def can_water_field(field, include_task_status=True):
         return False
     if include_task_status and field.get("vehicle_task_status") is not None:
         return False
+    if (
+        crop_has_annual_perennial_cycle(field.get("crop"))
+        and field.get("annual_harvest_state") in (
+            "ineligible", "harvested", "lost",
+        )
+    ):
+        return False
     return field.get("crop") in CROPS and not field.get("watered", False)
 
 
@@ -325,6 +414,8 @@ def grow_crops(fields, current_elapsed_week=None, notification_manager=None):
         if field.get("crop") is not None and crop is None:
             print(f"Ismeretlen növényazonosító: {field['crop']}")
             continue
+        if crop_has_annual_perennial_cycle(field.get("crop")):
+            synchronize_annual_crop_cycle(field, current_elapsed_week)
         if (
             crop is not None
             and not crop_lifecycle_is_active(field, current_elapsed_week)
@@ -350,6 +441,15 @@ def grow_crops(fields, current_elapsed_week=None, notification_manager=None):
                 100, round(field["growth_weeks"] * 100 / growth_time)
             )
             field["harvestable"] = field["growth_weeks"] >= growth_time
+
+        if (
+            crop is not None
+            and crop_has_annual_perennial_cycle(field.get("crop"))
+            and field.get("annual_harvest_state") in (
+                "ineligible", "harvested", "lost",
+            )
+        ):
+            continue
 
         if (
             crop is None
@@ -472,6 +572,10 @@ def prepare_harvest(
     if field["crop"] is None:
         print("Ezen a veteményesen nincs elültetett növény.")
         return None
+    if field.get("annual_harvest_state") in (
+        "ineligible", "harvested", "lost",
+    ):
+        return None
     if field["growth"] < 100:
         print("A növény még nem érett.")
         return None
@@ -495,6 +599,10 @@ def complete_harvest(
     """A kombájn munkájának végén betárolja és továbblépteti a ciklust."""
     if (field.get("crop") != crop or field.get("growth", 0) < 100
             or harvested_amount is None):
+        return False
+    if field.get("annual_harvest_state") in (
+        "ineligible", "harvested", "lost",
+    ):
         return False
     if not get_warehouses(buildings):
         return False

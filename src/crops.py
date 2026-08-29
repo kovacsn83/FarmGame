@@ -63,6 +63,25 @@ CROPS = {
         "colors": ((150, 225, 135), (95, 195, 90), (55, 165, 70),
                    (35, 135, 55), (25, 105, 45)),
     },
+    "hops": {
+        "name": "Komló",
+        # Az első év a telepítésé és a támrendszer befutásáé; az éves
+        # termőciklus ettől függetlenül, naptári ablakok alapján működik.
+        "growth_weeks": 20,
+        "growth_time": 20,
+        "planting_weeks": ((14, 18),),
+        "harvest_weeks": ((34, 38),),
+        "yield": 10,
+        "price": 11.00,
+        "seed_cost": 11.00,
+        "annual_perennial": {
+            "first_productive_year": 2,
+            "last_productive_year": 20,
+            "reset_fertilized_after_harvest": True,
+        },
+        "colors": ((112, 159, 72), (71, 146, 60), (49, 126, 48),
+                   (38, 108, 43), (31, 91, 38)),
+    },
 }
 
 # A rendes aratási időszakot követő, minden növényre egységes pótidő.
@@ -115,6 +134,9 @@ def get_current_harvest_stage(crop, harvest_count=0):
         harvest_count = 0
     definition = get_crop_definition(crop)
     recurring = definition.get("recurring_harvest") if definition else None
+    annual = definition.get("annual_perennial") if definition else None
+    if annual is not None:
+        return stages[0]
     if recurring is not None and harvest_count >= 1:
         return stages[1]
     if not 0 <= harvest_count < len(stages):
@@ -141,6 +163,27 @@ def get_crop_lifespan_weeks(crop):
     return recurring.get("lifespan_weeks") if recurring is not None else None
 
 
+def get_annual_perennial_definition(crop):
+    """Az éves ciklusú évelő konfigurációját adja vissza, ha van ilyen."""
+    definition = get_crop_definition(crop)
+    return definition.get("annual_perennial") if definition else None
+
+
+def crop_has_annual_perennial_cycle(crop):
+    return get_annual_perennial_definition(crop) is not None
+
+
+def get_crop_productive_year_range(crop):
+    """Az évelő első és utolsó termő életévét központilag adja vissza."""
+    annual = get_annual_perennial_definition(crop)
+    if annual is None:
+        return None
+    return (
+        annual["first_productive_year"],
+        annual["last_productive_year"],
+    )
+
+
 def crop_has_recurring_harvest(crop):
     definition = get_crop_definition(crop)
     return bool(definition and definition.get("recurring_harvest"))
@@ -149,14 +192,16 @@ def crop_has_recurring_harvest(crop):
 def crop_resets_fertilizer_after_harvest(crop):
     definition = get_crop_definition(crop)
     recurring = definition.get("recurring_harvest") if definition else None
+    annual = definition.get("annual_perennial") if definition else None
     return bool(
-        recurring and recurring.get("reset_fertilized_after_harvest", False)
+        (recurring and recurring.get("reset_fertilized_after_harvest", False))
+        or (annual and annual.get("reset_fertilized_after_harvest", False))
     )
 
 
 def crop_has_more_harvests(crop, completed_harvests):
     """Véges és ismétlődő ciklusnál is jelzi a következő aratást."""
-    if crop_has_recurring_harvest(crop):
+    if crop_has_recurring_harvest(crop) or crop_has_annual_perennial_cycle(crop):
         return True
     return completed_harvests < len(get_crop_harvest_stages(crop))
 

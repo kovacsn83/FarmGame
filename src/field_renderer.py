@@ -209,11 +209,40 @@ def _draw_alfalfa(surface, field, phase):
                 pygame.draw.circle(surface, color, (x + offset_x, y - offset_y), radius)
 
 
+def _draw_hops(surface, field, phase):
+    """Keskeny támrendszeren felfutó, tobozos Komló-sorokat rajzol."""
+    vine_colors = ((78, 111, 52), (61, 137, 54), (43, 119, 45), (34, 101, 39))
+    heights = (2, 7, 12, 15)
+    for row in range(field["height"]):
+        for col in range(field["width"]):
+            variation = _stable_value(field, "hops", row, col)
+            x, y = _plant_anchor(row, col, variation)
+            if phase == GROWTH_SEEDED:
+                pygame.draw.circle(surface, (65, 78, 40), (x, y), 1)
+                continue
+            height = heights[phase] + variation % 3 - 1
+            top = y - height
+            # A világos támhuzal és a rátekeredő zöld inda a többi
+            # szántóföldi növénytől kis méretben is jól elkülöníti.
+            pygame.draw.line(surface, (116, 103, 73), (x, y), (x, top), 1)
+            vine = _shift_color(vine_colors[phase], variation % 7 - 3)
+            for offset in range(2, height, 3):
+                side = -1 if (offset // 3 + variation) % 2 else 1
+                pygame.draw.circle(surface, vine, (x + side * 2, y - offset), 2)
+            if phase == GROWTH_MATURE:
+                cone = (176, 183, 72)
+                pygame.draw.polygon(
+                    surface, cone,
+                    ((x - 2, top + 3), (x + 2, top + 3), (x, top + 7)),
+                )
+
+
 CROP_RENDERERS = {
     "wheat": _draw_wheat,
     "corn": _draw_corn,
     "tomato": _draw_tomato,
     "alfalfa": _draw_alfalfa,
+    "hops": _draw_hops,
 }
 
 

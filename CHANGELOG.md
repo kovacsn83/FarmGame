@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Új évelő Veteményes-növény készült: a Komló a 14–18. héten telepíthető, a 2–20. életévében évente egyszer, a 34–38. héten aratható; alaphozama 10 db, piaci ára $11/db. A növény a Kombájn, a locsolás, a trágyázás, a pótaratás, a Raktár és a Piac meglévő rendszereit használja.
+
 - Új „Gazdaság értéke” mutató jelent meg a Pénzügyi összesítőben: az aktuális épített objektumok, fejlesztések, állatok, gyümölcsfák, készletek, járművek és pénz értékéből számolódik, levonva a fennálló hiteltartozást.
 
 - Új gyümölcsfa készült: a $250-ért ültethető Cseresznyefa 5–50 éves kora között, a 24–28. héten évente 20 Cseresznyét terem; a Cseresznye piaci ára $20/db.
