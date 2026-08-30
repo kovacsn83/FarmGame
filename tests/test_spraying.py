@@ -77,9 +77,9 @@ class SprayingTests(unittest.TestCase):
         self.fail("A permetezési feladat nem fejeződött be.")
 
     def test_central_costs_are_size_dependent(self):
-        self.assertEqual(2, get_field_spraying_cost({"field_type": "field_4x4"}))
-        self.assertEqual(3, get_field_spraying_cost({"field_type": "field_6x6"}))
-        self.assertEqual(4, get_field_spraying_cost({"field_type": "field_8x8"}))
+        self.assertEqual(4, get_field_spraying_cost({"field_type": "field_4x4"}))
+        self.assertEqual(6, get_field_spraying_cost({"field_type": "field_6x6"}))
+        self.assertEqual(8, get_field_spraying_cost({"field_type": "field_8x8"}))
 
     def test_task_uses_only_tractor_and_records_cost(self):
         starting_money = self.economy.money
@@ -89,9 +89,9 @@ class SprayingTests(unittest.TestCase):
         ))
         self.assertEqual(TASK_SPRAYING, self.tractor.current_task.task_type)
         self.assertIsNone(self.tractor.attached_implement)
-        self.assertEqual(starting_money - 2, self.economy.money)
+        self.assertEqual(starting_money - 4, self.economy.money)
         summary = self.economy.get_financial_summary()
-        self.assertEqual(2, summary["expense"][EXPENSE_SPRAYING]["total"])
+        self.assertEqual(4, summary["expense"][EXPENSE_SPRAYING]["total"])
 
         self._run_to_idle()
         self.assertTrue(self.field["sprayed"])
