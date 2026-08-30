@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- A Quest-sor új „Permetezz be 3 veteményest” feladattal bővült a trágyázási küldetés és a Kombájn megvásárlása között; csak a sikeresen befejezett, különböző Veteményeseken végzett kézi permetezések számítanak.
+
 - A Permetezés balansza módosult: a 4×4/6×6/8×8-as Veteményesek permetezési költsége mostantól rendre $4/$6/$8.
 
 - Elkészült a Permetezés mezőmunka: termési ciklusonként egyszer +10% hozambónuszt ad, költsége a 4×4/6×6/8×8-as Veteményeseken rendre $2/$3/$4; a munkát vontatmány nélküli Traktor végzi, a permetezett állapotot sárga pont jelzi.

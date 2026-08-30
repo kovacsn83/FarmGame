@@ -41,6 +41,7 @@ QUEST_EVENT_WATER_TROUGH_FILLED = "water_trough_filled"
 QUEST_EVENT_FIELD_DEMOLISHED = "field_demolished"
 QUEST_EVENT_FIELD_WATERED = "field_watered"
 QUEST_EVENT_FIELD_FERTILIZED = "field_fertilized"
+QUEST_EVENT_FIELD_SPRAYED = "field_sprayed"
 
 
 class QuestState(Enum):
@@ -201,6 +202,13 @@ class QuestManager:
                 "fertilize_3_fields",
                 "Trágyázz be 3 veteményest",
                 QUEST_EVENT_FIELD_FERTILIZED,
+                3,
+                unique_progress=True,
+            ),
+            Quest(
+                "spray_3_fields",
+                "Permetezz be 3 veteményest",
+                QUEST_EVENT_FIELD_SPRAYED,
                 3,
                 unique_progress=True,
             ),

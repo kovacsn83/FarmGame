@@ -17,6 +17,7 @@ from fields import (
 from financial_history import EXPENSE_SPRAYING
 from game_rules import get_field_spraying_cost
 from progress_tooltips import get_field_progress_lines
+from quest_system import QUEST_EVENT_FIELD_SPRAYED
 from save_system import _migrate_legacy_crop_data
 from time_system import GameTime, TIME_SLOW
 from tractor import TASK_FERTILIZING, TASK_SPRAYING, TASK_WATERING, TRACTOR_IDLE
@@ -82,6 +83,10 @@ class SprayingTests(unittest.TestCase):
         self.assertEqual(8, get_field_spraying_cost({"field_type": "field_8x8"}))
 
     def test_task_uses_only_tractor_and_records_cost(self):
+        quest_events = []
+        self.manager.quest_event_handler = lambda event_id, **data: (
+            quest_events.append((event_id, data))
+        )
         starting_money = self.economy.money
         self.assertTrue(self.manager.start_spraying(
             self.world, self.buildings, self.economy, self.field,
@@ -96,6 +101,8 @@ class SprayingTests(unittest.TestCase):
         self._run_to_idle()
         self.assertTrue(self.field["sprayed"])
         self.assertIsNone(self.tractor.attached_implement)
+        self.assertEqual(QUEST_EVENT_FIELD_SPRAYED, quest_events[0][0])
+        self.assertEqual((20, 12), quest_events[0][1]["unique_key"])
 
     def test_busy_tractor_queues_spraying_and_rejects_duplicate(self):
         self.assertTrue(self.manager.start_fertilizing(

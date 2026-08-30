@@ -15,7 +15,8 @@ from quest_system import (
     QUEST_EVENT_ANIMAL_PEN_BUILT, QUEST_EVENT_CALENDAR_OPENED,
     QUEST_EVENT_CATTLE_COUNT_CHANGED, QUEST_EVENT_COMBINE_PURCHASED,
     QUEST_EVENT_FARMHOUSE_BUILT, QUEST_EVENT_FIELD_COUNT_CHANGED,
-    QUEST_EVENT_FIELD_FERTILIZED, QUEST_EVENT_FIELD_WATERED,
+    QUEST_EVENT_FIELD_FERTILIZED, QUEST_EVENT_FIELD_SPRAYED,
+    QUEST_EVENT_FIELD_WATERED,
     QUEST_EVENT_FOOD_TROUGH_FILLED, QUEST_EVENT_GARAGE_BUILT,
     QUEST_EVENT_MARKET_BUILT, QUEST_EVENT_MILK_SOLD,
     QUEST_EVENT_POND_BUILT, QUEST_EVENT_ROAD_BUILT,
@@ -52,6 +53,7 @@ EXPECTED_TITLES = [
     "Ültess 3 lucernát",
     "Locsolj meg 3 veteményest",
     "Trágyázz be 3 veteményest",
+    "Permetezz be 3 veteményest",
     "Vegyél 1 kombájnt",
     "Arass 3 lucernát",
 ]
@@ -125,7 +127,7 @@ class QuestSystemTests(unittest.TestCase):
         self.assertEqual(economy.get_financial_summary()["income_total"], 0)
         self.assertFalse(restored.current_quest.reward_granted)
 
-    def test_all_twenty_one_conditions_advance_in_order(self):
+    def test_all_twenty_two_conditions_advance_in_order(self):
         manager = QuestManager(appear_delay_ms=0)
         tick = 0
         manager.start_new_game(current_ticks=tick)
@@ -150,6 +152,7 @@ class QuestSystemTests(unittest.TestCase):
             (QUEST_EVENT_ALFALFA_PLANTED, 3, None),
             (QUEST_EVENT_FIELD_WATERED, 3, None),
             (QUEST_EVENT_FIELD_FERTILIZED, 3, None),
+            (QUEST_EVENT_FIELD_SPRAYED, 3, None),
             (QUEST_EVENT_COMBINE_PURCHASED, 1, None),
             (QUEST_EVENT_ALFALFA_HARVESTED, 3, None),
         ]
@@ -203,7 +206,8 @@ class QuestSystemTests(unittest.TestCase):
         manager.start_new_game(current_ticks=0)
         for event_id, quest_id in (
                 (QUEST_EVENT_FIELD_WATERED, "water_3_fields"),
-                (QUEST_EVENT_FIELD_FERTILIZED, "fertilize_3_fields")):
+                (QUEST_EVENT_FIELD_FERTILIZED, "fertilize_3_fields"),
+                (QUEST_EVENT_FIELD_SPRAYED, "spray_3_fields")):
             manager.record_event(event_id, unique_key=(2, 3))
             manager.record_event(event_id, unique_key=(2, 3))
             manager.record_event(event_id, unique_key=(4, 5))

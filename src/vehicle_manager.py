@@ -37,7 +37,8 @@ from quest_system import (
     QUEST_EVENT_ALFALFA_HARVESTED, QUEST_EVENT_ALFALFA_PLANTED,
     QUEST_EVENT_COMBINE_PURCHASED,
     QUEST_EVENT_CROP_HARVESTED, QUEST_EVENT_TOMATO_HARVESTED,
-    QUEST_EVENT_FIELD_FERTILIZED, QUEST_EVENT_FIELD_WATERED,
+    QUEST_EVENT_FIELD_FERTILIZED, QUEST_EVENT_FIELD_SPRAYED,
+    QUEST_EVENT_FIELD_WATERED,
     QUEST_EVENT_FOOD_TROUGH_FILLED, QUEST_EVENT_TRAILER_PURCHASED,
     QUEST_EVENT_WATER_TANK_PURCHASED, QUEST_EVENT_WATER_TROUGH_FILLED,
     QUEST_EVENT_WHEAT_HARVESTED, QUEST_EVENT_WHEAT_PLANTED,
@@ -1695,15 +1696,17 @@ class VehicleManager:
                 completed
                 and active_task is not None
                 and active_task.status == "completed"
-                and active_task.task_type in (TASK_WATERING, TASK_FERTILIZING)
+                and active_task.task_type in (
+                    TASK_WATERING, TASK_FERTILIZING, TASK_SPRAYING,
+                )
                 and active_task.manually_initiated
                 and self.quest_event_handler is not None
             ):
-                field_event = (
-                    QUEST_EVENT_FIELD_WATERED
-                    if active_task.task_type == TASK_WATERING
-                    else QUEST_EVENT_FIELD_FERTILIZED
-                )
+                field_event = {
+                    TASK_WATERING: QUEST_EVENT_FIELD_WATERED,
+                    TASK_FERTILIZING: QUEST_EVENT_FIELD_FERTILIZED,
+                    TASK_SPRAYING: QUEST_EVENT_FIELD_SPRAYED,
+                }[active_task.task_type]
                 self.quest_event_handler(
                     field_event,
                     unique_key=(active_task.field["row"], active_task.field["col"]),
