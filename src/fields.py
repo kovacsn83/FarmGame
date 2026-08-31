@@ -287,7 +287,11 @@ def _advance_crop_cycle(
     if crop_resets_fertilizer_after_harvest(crop):
         field["fertilized"] = False
     field["watered"] = False
-    field["sprayed"] = False
+    # A Paradicsom két aratása egyetlen termesztési ciklus: az egyszer
+    # megszerzett permetezési bónusz és jelölés a második aratásig megmarad.
+    # A második aratás után a clear_crop() törli az állapotot.
+    if crop != "tomato":
+        field["sprayed"] = False
     _reset_late_harvest(field)
     return True
 

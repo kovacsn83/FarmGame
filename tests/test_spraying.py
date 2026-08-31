@@ -1,6 +1,7 @@
 from pathlib import Path
 import sys
 import unittest
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -11,7 +12,7 @@ if str(SRC) not in sys.path:
 from constants import FIELD, ROAD
 from economy import Economy
 from fields import (
-    _advance_crop_cycle, can_spray_field, plant_crop,
+    _advance_crop_cycle, calculate_harvest_yield, can_spray_field, plant_crop,
     synchronize_annual_crop_cycle,
 )
 from financial_history import EXPENSE_SPRAYING
@@ -148,14 +149,31 @@ class SprayingTests(unittest.TestCase):
         self.assertTrue(self.field["fertilized"])
         self.assertTrue(self.field["sprayed"])
 
-    def test_new_crop_cycle_resets_spraying(self):
+    def test_tomato_keeps_spraying_for_both_harvests_then_resets(self):
         empty_field = {"crop": None, "sprayed": True}
         self.assertTrue(plant_crop(empty_field, "tomato", 0))
         self.assertFalse(empty_field["sprayed"])
 
-        recurring = dict(self.field, crop="tomato", sprayed=True)
-        self.assertTrue(_advance_crop_cycle(recurring, "tomato", 30))
-        self.assertFalse(recurring["sprayed"])
+        tomato = dict(
+            self.field, crop="tomato", field_type="field_8x8",
+            sprayed=True, harvest_count=0,
+        )
+        self.assertTrue(_advance_crop_cycle(tomato, "tomato", 30))
+        self.assertTrue(tomato["sprayed"])
+        self.assertFalse(can_spray_field(tomato))
+        with patch("fields.random.uniform", return_value=1.0):
+            self.assertEqual(17, calculate_harvest_yield(tomato))
+
+        self.assertFalse(_advance_crop_cycle(tomato, "tomato", 40))
+        self.assertIsNone(tomato["crop"])
+        self.assertFalse(tomato["sprayed"])
+        self.assertTrue(plant_crop(tomato, "tomato", 50))
+        self.assertTrue(can_spray_field(tomato))
+
+    def test_other_crop_cycles_still_reset_spraying(self):
+        wheat = dict(self.field, crop="wheat", sprayed=True)
+        self.assertFalse(_advance_crop_cycle(wheat, "wheat", 30))
+        self.assertFalse(wheat["sprayed"])
 
         perennial = dict(
             self.field, crop="hops", sprayed=True, planted_at_week=0,
