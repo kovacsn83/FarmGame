@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Új Farmház-fejlesztés készült: az „Automatizált veteményes permetezés” a permetezhető Veteményesekhez automatikusan, a meglévő Dispatcher-rendszeren keresztül hoz létre Permetezési feladatot.
+
 - A Quest-sor új „Permetezz be 3 veteményest” feladattal bővült a trágyázási küldetés és a Kombájn megvásárlása között; csak a sikeresen befejezett, különböző Veteményeseken végzett kézi permetezések számítanak.
 
 - A Permetezés balansza módosult: a 4×4/6×6/8×8-as Veteményesek permetezési költsége mostantól rendre $4/$6/$8.

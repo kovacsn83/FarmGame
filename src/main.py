@@ -13,6 +13,7 @@ from animal_troughs import (
 from animal_automation import run_weekly_animal_supply_automation
 from field_automation import (
     AUTOMATED_FIELD_FERTILIZING_UPGRADE,
+    AUTOMATED_FIELD_SPRAYING_UPGRADE,
     AUTOMATED_FIELD_WATERING_UPGRADE,
     run_field_automation,
 )
@@ -269,7 +270,8 @@ def main():
             purchased = economy.purchase_upgrade(game_state, upgrade_to_purchase)
             if purchased and upgrade_to_purchase in (
                     AUTOMATED_FIELD_WATERING_UPGRADE,
-                    AUTOMATED_FIELD_FERTILIZING_UPGRADE):
+                    AUTOMATED_FIELD_FERTILIZING_UPGRADE,
+                    AUTOMATED_FIELD_SPRAYING_UPGRADE):
                 run_field_automation(
                     world, buildings, economy, fields, vehicles,
                     game_state.purchased_upgrades,

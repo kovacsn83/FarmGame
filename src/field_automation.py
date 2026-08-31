@@ -5,6 +5,7 @@ from game_logger import log
 
 AUTOMATED_FIELD_WATERING_UPGRADE = "automated_field_watering"
 AUTOMATED_FIELD_FERTILIZING_UPGRADE = "automated_field_fertilizing"
+AUTOMATED_FIELD_SPRAYING_UPGRADE = "automated_field_spraying"
 
 
 def run_field_automation(
@@ -21,7 +22,10 @@ def run_field_automation(
     fertilizing_enabled = (
         AUTOMATED_FIELD_FERTILIZING_UPGRADE in purchased_upgrades
     )
-    if not watering_enabled and not fertilizing_enabled:
+    spraying_enabled = (
+        AUTOMATED_FIELD_SPRAYING_UPGRADE in purchased_upgrades
+    )
+    if not watering_enabled and not fertilizing_enabled and not spraying_enabled:
         return 0
 
     created = 0
@@ -40,6 +44,15 @@ def run_field_automation(
             created += 1
             log(
                 f"Automatikus Trágyázás indítva: Veteményes #{field_number}.",
+                "Automation",
+            )
+        if spraying_enabled and vehicles.start_spraying(
+                world, buildings, economy, field,
+                current_ticks=current_ticks, source="automatic"):
+            created += 1
+            log(
+                "Automatikus permetezési feladat létrehozva: "
+                f"Veteményes #{field_number}.",
                 "Automation",
             )
     return created

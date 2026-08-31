@@ -152,6 +152,17 @@ UPGRADES = {
         "state_key": "automated_field_fertilizing",
         "requires": None,
     },
+    "automated_field_spraying": {
+        "name": "Automatizált veteményes permetezés",
+        "description": (
+            "Amikor egy Veteményes permetezhetővé válik, automatikusan "
+            "Permetezési feladat indul."
+        ),
+        "price": 20000.00,
+        "unlocks": "automated_field_spraying",
+        "state_key": "automated_field_spraying",
+        "requires": None,
+    },
 }
 
 
