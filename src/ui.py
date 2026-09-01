@@ -21,7 +21,8 @@ from constants import (
 )
 from crops import CROPS, get_crop_growth_weeks, get_crop_week_intervals
 from game_rules import (
-    UPGRADES, get_upgrade_status, is_build_option_unlocked,
+    UPGRADES, get_upgrade_status, get_upgrade_tree_columns,
+    is_build_option_unlocked,
 )
 from inventory import (
     get_inventory_item_data, get_inventory_item_ids, get_inventory_item_name,
@@ -193,13 +194,21 @@ BUILDING_PANEL_WIDTH = 760
 BUILDING_CARD_HEIGHT = 112
 BUILDING_CARD_GAP = 12
 
-UPGRADE_PANEL_WIDTH = 480
-UPGRADE_CARD_HEIGHT = 92
-UPGRADE_CARD_GAP = 10
+UPGRADE_PANEL_WIDTH = 1120
+UPGRADE_PANEL_MAX_HEIGHT = 720
+UPGRADE_CARD_HEIGHT = 94
+UPGRADE_CARD_GAP = 32
+UPGRADE_COLUMN_GAP = 22
+UPGRADE_TREE_TOP = 58
+UPGRADE_TREE_BOTTOM_PADDING = 22
+UPGRADE_SCROLL_STEP = 72
 UPGRADE_INFO_HITBOX_SIZE = 20
 UPGRADE_INFO_MARGIN = 9
 UPGRADE_INFO_FILL = (218, 220, 213)
 UPGRADE_INFO_BORDER = (95, 95, 88)
+UPGRADE_LOCKED_FILL = (213, 213, 208)
+UPGRADE_COMPLETED_FILL = (211, 229, 208)
+UPGRADE_ARROW_COLOR = (75, 100, 75)
 
 POPUP_TITLES = {
     "city": "Város",
@@ -2002,6 +2011,10 @@ class InfoPanel(PopupWindow):
         self.sale_dialog = MarketSaleDialog()
         self.upgrade_card_rects = {}
         self.upgrade_info_rects = {}
+        self.upgrade_clickable_ids = set()
+        self.upgrade_tree_view_rect = pygame.Rect(0, 0, 0, 0)
+        self.upgrade_tree_scroll = 0
+        self.upgrade_tree_max_scroll = 0
         self.pending_upgrade_selection = None
         self.building = None
         self.garage_purchase_rects = {}
@@ -2029,6 +2042,7 @@ class InfoPanel(PopupWindow):
         self.market_scroll_offset = 0
         self.market_quotes = {}
         self.sale_dialog.close()
+        self.upgrade_tree_scroll = 0
         self.open()
         return True
 
@@ -2054,6 +2068,21 @@ class InfoPanel(PopupWindow):
                     self.close()
                     return True
                 return self._handle_content_click(event.pos)
+        if (
+            self.visible
+            and self.building_type == "farmhouse"
+            and event.type == pygame.MOUSEWHEEL
+            and self.rect.collidepoint(pygame.mouse.get_pos())
+        ):
+            self.upgrade_tree_scroll = max(
+                0,
+                min(
+                    self.upgrade_tree_max_scroll,
+                    self.upgrade_tree_scroll
+                    - event.y * UPGRADE_SCROLL_STEP,
+                ),
+            )
+            return True
         if (
             self.visible
             and self.building_type == "processing_plant"
@@ -2121,7 +2150,10 @@ class InfoPanel(PopupWindow):
                 info_rect = self.upgrade_info_rects.get(upgrade_id)
                 if info_rect is not None and info_rect.collidepoint(position):
                     return True
-                if card_rect.collidepoint(position):
+                if (
+                    upgrade_id in self.upgrade_clickable_ids
+                    and card_rect.collidepoint(position)
+                ):
                     self.pending_upgrade_selection = upgrade_id
                     return True
         elif self.building_type == "garage":
@@ -2149,6 +2181,10 @@ class InfoPanel(PopupWindow):
         self.sale_dialog.close()
         self.upgrade_card_rects = {}
         self.upgrade_info_rects = {}
+        self.upgrade_clickable_ids = set()
+        self.upgrade_tree_view_rect = pygame.Rect(0, 0, 0, 0)
+        self.upgrade_tree_scroll = 0
+        self.upgrade_tree_max_scroll = 0
         self.pending_upgrade_selection = None
         self.building = None
         self.garage_purchase_rects = {}
@@ -2636,43 +2672,122 @@ class InfoPanel(PopupWindow):
         farmhouse_level = (
             farmhouse.get("farmhouse_level", 2) if farmhouse is not None else None
         )
-        upgrade_count = len(UPGRADES)
-        panel_height = 104 + upgrade_count * UPGRADE_CARD_HEIGHT
-        panel_height += max(0, upgrade_count - 1) * UPGRADE_CARD_GAP + 20
-        self.rect.size = (responsive_panel_width(UPGRADE_PANEL_WIDTH), panel_height)
+        columns = get_upgrade_tree_columns()
+        column_count = max(1, len(columns))
+        longest_branch = max((len(column) for column in columns), default=0)
+        tree_height = UPGRADE_CARD_HEIGHT
+        if longest_branch:
+            tree_height += (
+                UPGRADE_CARD_GAP
+                + longest_branch * UPGRADE_CARD_HEIGHT
+                + max(0, longest_branch - 1) * UPGRADE_CARD_GAP
+            )
+        _screen_width, screen_height = get_screen_size()
+        desired_height = (
+            UPGRADE_TREE_TOP + tree_height + UPGRADE_TREE_BOTTOM_PADDING
+        )
+        panel_height = min(
+            UPGRADE_PANEL_MAX_HEIGHT,
+            max(320, screen_height - 20),
+            desired_height,
+        )
+        self.rect.size = (
+            responsive_panel_width(
+                UPGRADE_PANEL_WIDTH,
+                min(620, max(280, _screen_width - 20)),
+            ),
+            panel_height,
+        )
         self.rect.center = get_screen_center()
 
         self.upgrade_card_rects = {}
         self.upgrade_info_rects = {}
-        card_y = self.rect.y + 58
-        for upgrade_id in UPGRADES:
-            card_rect = pygame.Rect(
-                self.rect.x + INFO_PANEL_PADDING,
-                card_y,
-                self.rect.width - INFO_PANEL_PADDING * 2,
-                UPGRADE_CARD_HEIGHT,
+        self.upgrade_clickable_ids = set()
+        self.upgrade_tree_view_rect = pygame.Rect(
+            self.rect.x + 2,
+            self.rect.y + UPGRADE_TREE_TOP,
+            self.rect.width - 4,
+            self.rect.height - UPGRADE_TREE_TOP - 4,
+        )
+        self.upgrade_tree_max_scroll = max(
+            0, tree_height - self.upgrade_tree_view_rect.height
+            + UPGRADE_TREE_BOTTOM_PADDING,
+        )
+        self.upgrade_tree_scroll = min(
+            self.upgrade_tree_scroll, self.upgrade_tree_max_scroll,
+        )
+
+        content_left = self.rect.x + INFO_PANEL_PADDING
+        content_width = self.rect.width - INFO_PANEL_PADDING * 2
+        column_width = max(
+            150,
+            (content_width - UPGRADE_COLUMN_GAP * (column_count - 1))
+            // column_count,
+        )
+        content_top = self.upgrade_tree_view_rect.top - self.upgrade_tree_scroll
+        level_upgrade_ids = {
+            upgrade.get("target_level"): upgrade_id
+            for upgrade_id, upgrade in UPGRADES.items()
+            if upgrade.get("target_level") is not None
+        }
+        header_rects = []
+        branch_rects = []
+        for column_index, branch in enumerate(columns, start=1):
+            column_x = (
+                content_left
+                + (column_index - 1) * (column_width + UPGRADE_COLUMN_GAP)
             )
-            self.upgrade_card_rects[upgrade_id] = card_rect
-            self.upgrade_info_rects[upgrade_id] = pygame.Rect(
-                card_rect.right - UPGRADE_INFO_MARGIN - UPGRADE_INFO_HITBOX_SIZE,
-                card_rect.top + UPGRADE_INFO_MARGIN,
-                UPGRADE_INFO_HITBOX_SIZE,
-                UPGRADE_INFO_HITBOX_SIZE,
-            )
-            card_y += UPGRADE_CARD_HEIGHT + UPGRADE_CARD_GAP
+            header_rects.append(pygame.Rect(
+                column_x, content_top, column_width, UPGRADE_CARD_HEIGHT,
+            ))
+            branch_y = content_top + UPGRADE_CARD_HEIGHT + UPGRADE_CARD_GAP
+            current_branch = []
+            for upgrade_id in branch:
+                current_branch.append(pygame.Rect(
+                    column_x, branch_y, column_width, UPGRADE_CARD_HEIGHT,
+                ))
+                branch_y += UPGRADE_CARD_HEIGHT + UPGRADE_CARD_GAP
+            branch_rects.append(current_branch)
 
         self.draw_frame(screen)
         x = self.rect.x + INFO_PANEL_PADDING
         self.draw_text(
             screen, font,
-            f"Farmház {self._roman_level(farmhouse_level)}. - Fejlesztések",
+            f"Farmház {self._roman_level(farmhouse_level)}. – Fejlesztési fa",
             x, self.rect.y + INFO_PANEL_PADDING,
         )
         mouse_position = pygame.mouse.get_pos()
         hovered_info = None
-        for upgrade_id, upgrade in UPGRADES.items():
-            card_rect = self.upgrade_card_rects[upgrade_id]
-            info_rect = self.upgrade_info_rects[upgrade_id]
+
+        previous_clip = screen.get_clip()
+        screen.set_clip(self.upgrade_tree_view_rect)
+
+        # Először a kapcsolatokat rajzoljuk, így a node-ok tisztán föléjük kerülnek.
+        for left_header, right_header in zip(header_rects, header_rects[1:]):
+            start = (left_header.right + 3, left_header.centery)
+            end = (right_header.left - 3, right_header.centery)
+            pygame.draw.line(screen, UPGRADE_ARROW_COLOR, start, end, 3)
+            pygame.draw.polygon(screen, UPGRADE_ARROW_COLOR, (
+                end,
+                (end[0] - 8, end[1] - 6),
+                (end[0] - 8, end[1] + 6),
+            ))
+        for header_rect, nodes in zip(header_rects, branch_rects):
+            previous_rect = header_rect
+            for node_rect in nodes:
+                start = (previous_rect.centerx, previous_rect.bottom + 3)
+                end = (node_rect.centerx, node_rect.top - 3)
+                pygame.draw.line(screen, UPGRADE_ARROW_COLOR, start, end, 3)
+                pygame.draw.polygon(screen, UPGRADE_ARROW_COLOR, (
+                    end,
+                    (end[0] - 6, end[1] - 8),
+                    (end[0] + 6, end[1] - 8),
+                ))
+                previous_rect = node_rect
+
+        def draw_node(upgrade_id, card_rect):
+            nonlocal hovered_info
+            upgrade = UPGRADES[upgrade_id]
             target_level = upgrade.get("target_level")
             purchased = (
                 farmhouse_level is not None
@@ -2682,28 +2797,43 @@ class InfoPanel(PopupWindow):
                 target_level is None
                 and upgrade_id in game_state.purchased_upgrades
             )
-            card_color = CROP_CARD_BACKGROUND
+            status = get_upgrade_status(
+                upgrade_id, game_state.purchased_upgrades, farmhouse_level,
+            )
+            locked = status.startswith("Zárolt")
+            if purchased:
+                card_color = UPGRADE_COMPLETED_FILL
+            elif locked:
+                card_color = UPGRADE_LOCKED_FILL
+            else:
+                card_color = CROP_CARD_BACKGROUND
+                self.upgrade_clickable_ids.add(upgrade_id)
             if (
-                not purchased
+                not purchased and not locked
                 and card_rect.collidepoint(mouse_position)
-                and not info_rect.collidepoint(mouse_position)
             ):
                 card_color = CROP_CARD_HOVER
             pygame.draw.rect(screen, card_color, card_rect)
             pygame.draw.rect(screen, INFO_PANEL_BORDER, card_rect, 1)
 
+            self.upgrade_card_rects[upgrade_id] = card_rect
+            info_rect = pygame.Rect(
+                card_rect.right - UPGRADE_INFO_MARGIN - UPGRADE_INFO_HITBOX_SIZE,
+                card_rect.top + UPGRADE_INFO_MARGIN,
+                UPGRADE_INFO_HITBOX_SIZE,
+                UPGRADE_INFO_HITBOX_SIZE,
+            )
+            self.upgrade_info_rects[upgrade_id] = info_rect
             text_x = card_rect.x + 14
             text_y = card_rect.y + 8
             self.draw_text(screen, font, upgrade["name"], text_x, text_y)
             self.draw_text(
-                screen, font, f"Fejlesztés ára: {format_money(upgrade['price'])}",
+                screen, font, f"Ár: {format_money(upgrade['price'])}",
                 text_x, text_y + 26,
             )
-            status = get_upgrade_status(
-                upgrade_id, game_state.purchased_upgrades, farmhouse_level,
-            )
+            display_status = "Zárolt" if locked else status
             self.draw_text(
-                screen, font, f"Fejlesztés: {status}", text_x, text_y + 52
+                screen, font, display_status, text_x, text_y + 52,
             )
 
             pygame.draw.ellipse(screen, UPGRADE_INFO_FILL, info_rect)
@@ -2711,7 +2841,31 @@ class InfoPanel(PopupWindow):
             info_text = font.render("i", True, COLOR_TEXT)
             screen.blit(info_text, info_text.get_rect(center=info_rect.center))
             if info_rect.collidepoint(mouse_position):
-                hovered_info = (upgrade["description"], info_rect)
+                description = upgrade["description"]
+                if locked:
+                    description = f"{description}\n{status}."
+                hovered_info = (description, info_rect)
+
+        # A Farmház I. az alap, nem megvásárolható aktív gyökérnode.
+        base_rect = header_rects[0]
+        pygame.draw.rect(screen, UPGRADE_COMPLETED_FILL, base_rect)
+        pygame.draw.rect(screen, INFO_PANEL_BORDER, base_rect, 1)
+        self.draw_text(
+            screen, font, "Farmház I.", base_rect.x + 14, base_rect.y + 16,
+        )
+        self.draw_text(
+            screen, font, "Aktív", base_rect.x + 14, base_rect.y + 50,
+        )
+
+        for column_index in range(2, column_count + 1):
+            level_upgrade_id = level_upgrade_ids.get(column_index)
+            if level_upgrade_id is not None:
+                draw_node(level_upgrade_id, header_rects[column_index - 1])
+        for branch, rects in zip(columns, branch_rects):
+            for upgrade_id, card_rect in zip(branch, rects):
+                draw_node(upgrade_id, card_rect)
+
+        screen.set_clip(previous_clip)
 
         if hovered_info is not None:
             description, info_rect = hovered_info
@@ -2720,7 +2874,20 @@ class InfoPanel(PopupWindow):
     @staticmethod
     def _roman_level(level):
         """A felhasználói felületen használt Farmház-szintjelölés."""
-        return {1: "I", 2: "II", 3: "III"}.get(level, str(level or 1))
+        if not isinstance(level, int) or level < 1:
+            return "I"
+        values = (
+            (1000, "M"), (900, "CM"), (500, "D"), (400, "CD"),
+            (100, "C"), (90, "XC"), (50, "L"), (40, "XL"),
+            (10, "X"), (9, "IX"), (5, "V"), (4, "IV"), (1, "I"),
+        )
+        result = []
+        remaining = level
+        for value, symbol in values:
+            while remaining >= value:
+                result.append(symbol)
+                remaining -= value
+        return "".join(result)
 
 
 class AnimalHusbandryPanel(SelectionPanel):

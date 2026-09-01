@@ -83,6 +83,8 @@ UPGRADES = {
         "requires": None,
         "target_building_type": "farmhouse",
         "target_level": 2,
+        "tree_column": 2,
+        "tree_order": 0,
     },
     "farmhouse_level_3": {
         "name": "Farmház III.",
@@ -97,6 +99,8 @@ UPGRADES = {
         "required_level": 2,
         "target_building_type": "farmhouse",
         "target_level": 3,
+        "tree_column": 3,
+        "tree_order": 0,
     },
     "unlock_field_6x6": {
         "name": "6x6-os veteményes",
@@ -105,6 +109,9 @@ UPGRADES = {
         "unlocks": "field_6x6",
         "state_key": "unlock_field_6x6",
         "requires": None,
+        "required_farmhouse_level": 1,
+        "tree_column": 1,
+        "tree_order": 1,
     },
     "unlock_field_8x8": {
         "name": "8x8-as veteményes",
@@ -113,6 +120,9 @@ UPGRADES = {
         "unlocks": "field_8x8",
         "state_key": "unlock_field_8x8",
         "requires": None,
+        "required_farmhouse_level": 2,
+        "tree_column": 2,
+        "tree_order": 1,
     },
     "automated_animal_feeding": {
         "name": "Automatizált állat etetés",
@@ -120,7 +130,10 @@ UPGRADES = {
         "price": 20000.00,
         "unlocks": "automated_animal_feeding",
         "state_key": "automated_animal_feeding",
-        "requires": None,
+        "requires": "automated_animal_watering",
+        "required_farmhouse_level": 1,
+        "tree_column": 1,
+        "tree_order": 3,
     },
     "automated_animal_watering": {
         "name": "Automatizált állat itatás",
@@ -128,7 +141,10 @@ UPGRADES = {
         "price": 20000.00,
         "unlocks": "automated_animal_watering",
         "state_key": "automated_animal_watering",
-        "requires": None,
+        "requires": "unlock_field_6x6",
+        "required_farmhouse_level": 1,
+        "tree_column": 1,
+        "tree_order": 2,
     },
     "automated_field_watering": {
         "name": "Automatizált veteményes locsolás",
@@ -139,7 +155,10 @@ UPGRADES = {
         "price": 20000.00,
         "unlocks": "automated_field_watering",
         "state_key": "automated_field_watering",
-        "requires": None,
+        "requires": "unlock_field_8x8",
+        "required_farmhouse_level": 2,
+        "tree_column": 2,
+        "tree_order": 2,
     },
     "automated_field_fertilizing": {
         "name": "Automatizált veteményes trágyázás",
@@ -150,7 +169,10 @@ UPGRADES = {
         "price": 20000.00,
         "unlocks": "automated_field_fertilizing",
         "state_key": "automated_field_fertilizing",
-        "requires": None,
+        "requires": "automated_field_watering",
+        "required_farmhouse_level": 2,
+        "tree_column": 2,
+        "tree_order": 3,
     },
     "automated_field_spraying": {
         "name": "Automatizált veteményes permetezés",
@@ -161,7 +183,10 @@ UPGRADES = {
         "price": 20000.00,
         "unlocks": "automated_field_spraying",
         "state_key": "automated_field_spraying",
-        "requires": None,
+        "requires": "automated_field_fertilizing",
+        "required_farmhouse_level": 2,
+        "tree_column": 2,
+        "tree_order": 4,
     },
 }
 
@@ -182,14 +207,37 @@ def get_upgrade_status(upgrade_id, purchased_upgrades, farmhouse_level=None):
         required_level = upgrade.get("required_level")
         if required_level is not None and (
                 farmhouse_level is None or farmhouse_level < required_level):
-            return "Előfeltétel szükséges"
-        return "Nincs kifejlesztve"
+            return f"Zárolt: Farmház {required_level}. szükséges"
+        return "Fejleszthető"
     if upgrade_id in purchased_upgrades:
         return "Kifejlesztve"
+    required_level = upgrade.get("required_farmhouse_level")
+    if required_level is not None and (
+            farmhouse_level is None or farmhouse_level < required_level):
+        return f"Zárolt: Farmház {required_level}. szükséges"
     required = upgrade.get("requires")
     if required and required not in purchased_upgrades:
-        return "Előfeltétel szükséges"
+        return f"Zárolt: előbb {UPGRADES[required]['name']}"
     return "Fejleszthető"
+
+
+def get_upgrade_tree_columns():
+    """A konfigurált fejlesztéseket oszlop és sorrend szerint csoportosítja."""
+    column_count = max(
+        (upgrade.get("tree_column", 1) for upgrade in UPGRADES.values()),
+        default=1,
+    )
+    columns = []
+    for column in range(1, column_count + 1):
+        columns.append(tuple(sorted(
+            (
+                upgrade_id for upgrade_id, upgrade in UPGRADES.items()
+                if upgrade.get("tree_column", 1) == column
+                and upgrade.get("tree_order", 0) > 0
+            ),
+            key=lambda upgrade_id: UPGRADES[upgrade_id].get("tree_order", 0),
+        )))
+    return tuple(columns)
 
 
 # Az itt nem szereplő épülettípusok korlátlan számban építhetők.

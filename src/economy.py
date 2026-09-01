@@ -439,6 +439,15 @@ class Economy:
             log(f"Fejlesztés megvásárolva: {upgrade['name']}", "Economy")
             return True
         required = upgrade.get("requires")
+        required_level = upgrade.get("required_farmhouse_level")
+        if required_level is not None:
+            farmhouse = next(
+                building for building in game_state.buildings
+                if building["type"] == "farmhouse"
+            )
+            if farmhouse.get("farmhouse_level", 1) < required_level:
+                log("A szükséges Farmház-szint még nincs kifejlesztve.", "Economy")
+                return False
         if required and required not in game_state.purchased_upgrades:
             log("A fejlesztés előfeltétele még nem teljesült.", "Economy")
             return False

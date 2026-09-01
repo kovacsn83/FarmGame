@@ -145,8 +145,13 @@ class FieldAutomationTests(unittest.TestCase):
     def test_spraying_upgrade_can_be_purchased_once_and_saved(self):
         economy = Economy(25000)
         state = GameState(
-            [[0]], [], [{"type": "farmhouse"}], economy,
+            [[0]], [], [{"type": "farmhouse", "farmhouse_level": 2}], economy,
             GameTime(start_ticks=0),
+            purchased_upgrades={
+                "unlock_field_8x8",
+                AUTOMATED_FIELD_WATERING_UPGRADE,
+                AUTOMATED_FIELD_FERTILIZING_UPGRADE,
+            },
         )
         self.assertTrue(economy.purchase_upgrade(
             state, AUTOMATED_FIELD_SPRAYING_UPGRADE,
@@ -169,9 +174,7 @@ class FieldAutomationTests(unittest.TestCase):
             )
             state.purchased_upgrades.clear()
             self.assertTrue(load_game(state, path))
-        self.assertIn(
-            AUTOMATED_FIELD_SPRAYING_UPGRADE, state.purchased_upgrades,
-        )
+        self.assertIn(AUTOMATED_FIELD_SPRAYING_UPGRADE, state.purchased_upgrades)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- A Farmház fejlesztési rendszere háromoszlopos, vizuális fejlesztési fává alakult; a fejlesztések Farmház-szintekhez és egymásra épülő előfeltételekhez kötődnek, miközben a régi mentések korábban megszerzett elemei megmaradnak. Az adatvezérelt felépítés előkészíti a további Farmház-szinteket és fejlesztési ágakat.
+
 - Javítva a Questek betöltése: a már teljesített feladatok nem jelennek meg újra minden betöltéskor, és az újonnan beszúrt Quest után a rendszer csendben átugorja a korábban teljesített feladatokat.
 
 - A Paradicsom permetezési állapota és +10%-os hozambónusza mostantól a teljes, kétaratásos termesztési ciklus végéig megmarad.
