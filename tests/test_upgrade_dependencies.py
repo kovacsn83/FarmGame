@@ -34,10 +34,16 @@ class UpgradeDependencyTests(unittest.TestCase):
 
     def test_farmhouse_one_branch_must_be_bought_in_order(self):
         state, economy = self.make_state()
+        starting_money = economy.money
         self.assertFalse(economy.purchase_upgrade(
             state, "automated_animal_watering",
         ))
+        self.assertEqual(starting_money, economy.money)
         self.assertTrue(economy.purchase_upgrade(state, "unlock_field_6x6"))
+        self.assertEqual(
+            starting_money - UPGRADES["unlock_field_6x6"]["price"],
+            economy.money,
+        )
         self.assertTrue(economy.purchase_upgrade(
             state, "automated_animal_watering",
         ))

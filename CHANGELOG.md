@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Javítva a Farmház fejlesztési popup inputkezelése: fejlesztésvásárlás mostantól kizárólag bal egérgombbal indítható, az egérgörgő és a többi egérgomb nem aktivál node-ot.
+
 - A Farmház fejlesztési rendszere háromoszlopos, vizuális fejlesztési fává alakult; a fejlesztések Farmház-szintekhez és egymásra épülő előfeltételekhez kötődnek, miközben a régi mentések korábban megszerzett elemei megmaradnak. Az adatvezérelt felépítés előkészíti a további Farmház-szinteket és fejlesztési ágakat.
 
 - Javítva a Questek betöltése: a már teljesített feladatok nem jelennek meg újra minden betöltéskor, és az újonnan beszúrt Quest után a rendszer csendben átugorja a korábban teljesített feladatokat.

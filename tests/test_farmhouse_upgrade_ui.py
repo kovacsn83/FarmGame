@@ -107,6 +107,58 @@ class FarmhouseUpgradeUiTests(unittest.TestCase):
         self.assertTrue(self.panel._handle_content_click(click_position))
         self.assertEqual(self.panel.take_upgrade_selection(), upgrade_id)
 
+    def test_only_left_mouse_button_can_select_available_upgrade(self):
+        self._draw_at((-1, -1))
+        upgrade_id = "farmhouse_level_2"
+        card = self.panel.upgrade_card_rects[upgrade_id]
+        position = (card.left + 10, card.bottom - 10)
+
+        for button in (2, 3, 4, 5):
+            with self.subTest(button=button):
+                event = pygame.event.Event(
+                    pygame.MOUSEBUTTONDOWN,
+                    {"button": button, "pos": position},
+                )
+                self.assertTrue(self.panel.handle_event(event))
+                self.assertIsNone(self.panel.take_upgrade_selection())
+
+        left_click = pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN,
+            {"button": 1, "pos": position},
+        )
+        self.assertTrue(self.panel.handle_event(left_click))
+        self.assertEqual(upgrade_id, self.panel.take_upgrade_selection())
+
+    def test_mousewheel_scrolls_without_selecting_upgrade(self):
+        set_screen_size(640, 480)
+        self._draw_at((-1, -1))
+        initial_scroll = self.panel.upgrade_tree_scroll
+        event = pygame.event.Event(pygame.MOUSEWHEEL, {"y": -1})
+        with patch("pygame.mouse.get_pos", return_value=self.panel.rect.center):
+            self.assertTrue(self.panel.handle_event(event))
+        self.assertGreater(self.panel.upgrade_tree_scroll, initial_scroll)
+        self.assertIsNone(self.panel.take_upgrade_selection())
+
+    def test_locked_and_completed_nodes_ignore_left_click(self):
+        self._draw_at((-1, -1))
+        locked = self.panel.upgrade_card_rects["automated_animal_watering"]
+        locked_click = pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN,
+            {"button": 1, "pos": (locked.left + 8, locked.bottom - 8)},
+        )
+        self.assertTrue(self.panel.handle_event(locked_click))
+        self.assertIsNone(self.panel.take_upgrade_selection())
+
+        self.state.purchased_upgrades.add("unlock_field_6x6")
+        self._draw_at((-1, -1))
+        completed = self.panel.upgrade_card_rects["unlock_field_6x6"]
+        completed_click = pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN,
+            {"button": 1, "pos": (completed.left + 8, completed.bottom - 8)},
+        )
+        self.assertTrue(self.panel.handle_event(completed_click))
+        self.assertIsNone(self.panel.take_upgrade_selection())
+
     def test_tooltip_also_works_for_purchased_upgrade(self):
         upgrade_id = "unlock_field_6x6"
         self.state.purchased_upgrades.add(upgrade_id)

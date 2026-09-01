@@ -2068,21 +2068,26 @@ class InfoPanel(PopupWindow):
                     self.close()
                     return True
                 return self._handle_content_click(event.pos)
-        if (
-            self.visible
-            and self.building_type == "farmhouse"
-            and event.type == pygame.MOUSEWHEEL
-            and self.rect.collidepoint(pygame.mouse.get_pos())
-        ):
-            self.upgrade_tree_scroll = max(
-                0,
-                min(
-                    self.upgrade_tree_max_scroll,
-                    self.upgrade_tree_scroll
-                    - event.y * UPGRADE_SCROLL_STEP,
-                ),
-            )
-            return True
+        if self.visible and self.building_type == "farmhouse":
+            if event.type == pygame.MOUSEWHEEL:
+                if self.rect.collidepoint(pygame.mouse.get_pos()):
+                    self._scroll_upgrade_tree(-event.y * UPGRADE_SCROLL_STEP)
+                # A görgő a popup nyitott állapotában sosem juthat át a világra.
+                return True
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button in (4, 5):
+                    if self.rect.collidepoint(event.pos):
+                        direction = -1 if event.button == 4 else 1
+                        self._scroll_upgrade_tree(
+                            direction * UPGRADE_SCROLL_STEP,
+                        )
+                    return True
+                if is_outside_popup_click(event, self.rect):
+                    self.close()
+                    return True
+                if event.button != 1:
+                    return True
+                return self._handle_content_click(event.pos)
         if (
             self.visible
             and self.building_type == "processing_plant"
@@ -2108,6 +2113,15 @@ class InfoPanel(PopupWindow):
             min(
                 self.market_max_scroll,
                 self.market_scroll_offset + amount,
+            ),
+        )
+
+    def _scroll_upgrade_tree(self, amount):
+        self.upgrade_tree_scroll = max(
+            0,
+            min(
+                self.upgrade_tree_max_scroll,
+                self.upgrade_tree_scroll + amount,
             ),
         )
 
