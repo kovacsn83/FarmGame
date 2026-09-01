@@ -68,6 +68,21 @@ class UpgradeDependencyTests(unittest.TestCase):
         self.assertTrue(economy.purchase_upgrade(state, "farmhouse_level_2"))
         self.assertTrue(economy.purchase_upgrade(state, "farmhouse_level_3"))
 
+    def test_automatic_harvesting_requires_farmhouse_three(self):
+        state, economy = self.make_state(level=2)
+        self.assertFalse(economy.purchase_upgrade(
+            state, "automated_field_harvesting",
+        ))
+        state.buildings[0]["farmhouse_level"] = 3
+        before = economy.money
+        self.assertTrue(economy.purchase_upgrade(
+            state, "automated_field_harvesting",
+        ))
+        self.assertEqual(economy.money, before - 30000)
+        self.assertFalse(economy.purchase_upgrade(
+            state, "automated_field_harvesting",
+        ))
+
     def test_legacy_purchased_child_remains_completed_without_parent(self):
         purchased = {"automated_field_spraying"}
         self.assertEqual(

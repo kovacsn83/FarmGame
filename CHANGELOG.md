@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Új Farmház III. fejlesztés készült: a $30 000 értékű „Automatizált veteményes aratás” az aratható Veteményesekhez automatikusan, a meglévő Kombájn- és Dispatcher-rendszeren keresztül hoz létre Aratási feladatot.
+
 - Javítva a Farmház fejlesztési popup inputkezelése: fejlesztésvásárlás mostantól kizárólag bal egérgombbal indítható, az egérgörgő és a többi egérgomb nem aktivál node-ot.
 
 - A Farmház fejlesztési rendszere háromoszlopos, vizuális fejlesztési fává alakult; a fejlesztések Farmház-szintekhez és egymásra épülő előfeltételekhez kötődnek, miközben a régi mentések korábban megszerzett elemei megmaradnak. Az adatvezérelt felépítés előkészíti a további Farmház-szinteket és fejlesztési ágakat.

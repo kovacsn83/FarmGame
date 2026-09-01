@@ -799,15 +799,17 @@ class VehicleManager:
 
     def start_harvesting(
             self, world, buildings, economy, field, current_ticks=None,
-            current_week=None, current_elapsed_week=None):
+            current_week=None, current_elapsed_week=None, source="manual"):
         """A teljes aratást a Kombájn számára a közös FIFO sorba teszi."""
+        report = source == "manual"
         block_reason = self.get_harvest_block_reason(
             world, buildings, field,
             current_week=current_week,
             current_elapsed_week=current_elapsed_week,
         )
         if block_reason is not None:
-            log(self.get_harvest_block_message(block_reason), "Harvest")
+            if report:
+                log(self.get_harvest_block_message(block_reason), "Harvest")
             if block_reason == "no_capacity" and self.storage_block_manager:
                 self.storage_block_manager.report(
                     self._field_harvest_storage_event_id(field),
@@ -858,14 +860,15 @@ class VehicleManager:
             resource_reserved=True,
             resource_amount=harvest["amount"],
             creation_order=self._take_task_order(),
+            manually_initiated=report,
         ))
         self._set_waiting_statuses()
         self._dispatch_tasks(
             world, buildings, economy, current_ticks=current_ticks,
         )
-        if field.get("vehicle_task_status") == "active":
+        if report and field.get("vehicle_task_status") == "active":
             log("Aratási feladat elindítva.", "Harvest")
-        else:
+        elif report:
             log(
                 "Aratási feladat hozzáadva a közös várólistához.",
                 "Harvest",
@@ -1729,6 +1732,7 @@ class VehicleManager:
                 completed
                 and active_task is not None
                 and active_task.task_type == TASK_HARVESTING
+                and active_task.manually_initiated
                 and self.quest_event_handler is not None
             ):
                 self.quest_event_handler(QUEST_EVENT_CROP_HARVESTED)

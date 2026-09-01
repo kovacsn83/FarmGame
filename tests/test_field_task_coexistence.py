@@ -220,6 +220,45 @@ class FieldTaskCoexistenceTests(unittest.TestCase):
         self.assertLess(watering_index, fertilizing_index)
         self.assertLess(fertilizing_index, harvest_index)
 
+    def test_automatic_harvest_keeps_fifo_order_and_skips_quest(self):
+        self.manager._create_managed_asset(
+            VehicleType.COMBINE, self.garage, 2,
+        ).ensure_idle_position(self.world, self.buildings)
+        quest_events = []
+        self.manager.quest_event_handler = (
+            lambda event, **kwargs: quest_events.append(event)
+        )
+        self.assertTrue(self.manager.start_watering(
+            self.world, self.buildings, self.economy, self.field,
+            current_ticks=0, source="automatic",
+        ))
+        self.field["growth"] = 100
+        self.field["growth_weeks"] = 38
+        self.field["harvestable"] = True
+        self.assertTrue(self.manager.start_harvesting(
+            self.world, self.buildings, self.economy, self.field,
+            current_ticks=0, current_week=30, current_elapsed_week=29,
+            source="automatic",
+        ))
+        self.assertFalse(self.manager.start_harvesting(
+            self.world, self.buildings, self.economy, self.field,
+            current_ticks=0, current_week=30, current_elapsed_week=29,
+        ))
+
+        self._run_to_idle()
+
+        messages = [entry.message for entry in get_logger().entries]
+        watering_index = next(
+            index for index, message in enumerate(messages)
+            if "sikeresen meglocsolva" in message
+        )
+        harvest_index = next(
+            index for index, message in enumerate(messages)
+            if "aratás befejeződött" in message
+        )
+        self.assertLess(watering_index, harvest_index)
+        self.assertEqual(quest_events, [])
+
     def test_moving_combine_continues_harvest_after_save_and_load(self):
         combine = self.manager._create_managed_asset(
             VehicleType.COMBINE, self.garage, 2,
@@ -235,6 +274,7 @@ class FieldTaskCoexistenceTests(unittest.TestCase):
         self.assertTrue(self.manager.start_harvesting(
             self.world, self.buildings, self.economy, self.field,
             current_ticks=0, current_week=30, current_elapsed_week=29,
+            source="automatic",
         ))
         last_tick = None
         for tick in range(100, 10000, 100):
@@ -269,6 +309,7 @@ class FieldTaskCoexistenceTests(unittest.TestCase):
             loaded_combine.world_x, loaded_combine.world_y,
             loaded_combine.next_path_index,
         ), saved_runtime)
+        self.assertFalse(loaded_combine.current_task.manually_initiated)
         for tick in range(last_tick + 100, last_tick + 30000, 100):
             self.manager.update(
                 self.world, self.buildings, self.economy, self.game_time,

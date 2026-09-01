@@ -13,6 +13,7 @@ from animal_troughs import (
 from animal_automation import run_weekly_animal_supply_automation
 from field_automation import (
     AUTOMATED_FIELD_FERTILIZING_UPGRADE,
+    AUTOMATED_FIELD_HARVESTING_UPGRADE,
     AUTOMATED_FIELD_SPRAYING_UPGRADE,
     AUTOMATED_FIELD_WATERING_UPGRADE,
     run_field_automation,
@@ -204,6 +205,8 @@ def main():
                 world, buildings, economy, fields, vehicles,
                 game_state.purchased_upgrades,
                 current_ticks=current_ticks,
+                current_week=game_time.week,
+                current_elapsed_week=game_time.elapsed_weeks,
             )
         )
         quest_panel = QuestPanel(create_quest_icon())
@@ -232,6 +235,8 @@ def main():
             world, buildings, economy, fields, vehicles,
             game_state.purchased_upgrades,
             current_ticks=pygame.time.get_ticks(),
+            current_week=game_time.week,
+            current_elapsed_week=game_time.elapsed_weeks,
         )
         app_state.start_playing()
 
@@ -265,17 +270,27 @@ def main():
             if economy.sell_item(buildings, item_to_sell, sale_amount):
                 if item_to_sell == "milk":
                     quest_manager.record_event(QUEST_EVENT_MILK_SOLD)
+                run_field_automation(
+                    world, buildings, economy, fields, vehicles,
+                    game_state.purchased_upgrades,
+                    current_ticks=pygame.time.get_ticks(),
+                    current_week=game_time.week,
+                    current_elapsed_week=game_time.elapsed_weeks,
+                )
         upgrade_to_purchase = info_panel.take_upgrade_selection()
         if upgrade_to_purchase is not None:
             purchased = economy.purchase_upgrade(game_state, upgrade_to_purchase)
             if purchased and upgrade_to_purchase in (
                     AUTOMATED_FIELD_WATERING_UPGRADE,
                     AUTOMATED_FIELD_FERTILIZING_UPGRADE,
-                    AUTOMATED_FIELD_SPRAYING_UPGRADE):
+                    AUTOMATED_FIELD_SPRAYING_UPGRADE,
+                    AUTOMATED_FIELD_HARVESTING_UPGRADE):
                 run_field_automation(
                     world, buildings, economy, fields, vehicles,
                     game_state.purchased_upgrades,
                     current_ticks=pygame.time.get_ticks(),
+                    current_week=game_time.week,
+                    current_elapsed_week=game_time.elapsed_weeks,
                 )
         vehicle_purchase = info_panel.take_vehicle_purchase()
         if vehicle_purchase is not None:
@@ -931,6 +946,8 @@ def main():
                     world, buildings, economy, fields, vehicles,
                     game_state.purchased_upgrades,
                     current_ticks=pygame.time.get_ticks(),
+                    current_week=((elapsed_week - 1) % 52) + 1,
+                    current_elapsed_week=elapsed_week,
                 )
                 notification_manager.process_week(elapsed_week)
 

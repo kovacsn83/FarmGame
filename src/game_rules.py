@@ -188,6 +188,20 @@ UPGRADES = {
         "tree_column": 2,
         "tree_order": 4,
     },
+    "automated_field_harvesting": {
+        "name": "Automatizált veteményes aratás",
+        "description": (
+            "Amikor egy Veteményes arathatóvá válik, automatikusan "
+            "Aratási feladat indul."
+        ),
+        "price": 30000.00,
+        "unlocks": "automated_field_harvesting",
+        "state_key": "automated_field_harvesting",
+        "requires": None,
+        "required_farmhouse_level": 3,
+        "tree_column": 3,
+        "tree_order": 1,
+    },
 }
 
 

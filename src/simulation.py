@@ -19,6 +19,7 @@ from animal_automation import (
 )
 from field_automation import (
     AUTOMATED_FIELD_FERTILIZING_UPGRADE,
+    AUTOMATED_FIELD_HARVESTING_UPGRADE,
     AUTOMATED_FIELD_WATERING_UPGRADE,
     run_field_automation,
 )
@@ -362,7 +363,8 @@ class SimulationBot:
         reserve = 5000.00
         for upgrade_id in (
                 AUTOMATED_FIELD_WATERING_UPGRADE,
-                AUTOMATED_FIELD_FERTILIZING_UPGRADE):
+                AUTOMATED_FIELD_FERTILIZING_UPGRADE,
+                AUTOMATED_FIELD_HARVESTING_UPGRADE):
             if upgrade_id in self.state.purchased_upgrades:
                 continue
             if self.economy.money >= UPGRADES[upgrade_id]["price"] + reserve:
@@ -569,7 +571,9 @@ class SimulationBot:
         if run_field_automation(
                 self.world, self.buildings, self.economy, self.fields,
                 self.vehicles, self.state.purchased_upgrades,
-                current_ticks=self.virtual_ticks):
+                current_ticks=self.virtual_ticks,
+                current_week=self.week,
+                current_elapsed_week=self.game_time.elapsed_weeks):
             self.drain_vehicle_tasks()
         self._sell_market_surplus()
 
@@ -627,10 +631,13 @@ class SimulationBot:
                 self.vehicles, self.state.purchased_upgrades,
                 current_ticks=self.virtual_ticks):
             self.drain_vehicle_tasks()
+        next_elapsed_week = self.game_time.elapsed_weeks + 1
         if run_field_automation(
                 self.world, self.buildings, self.economy, self.fields,
                 self.vehicles, self.state.purchased_upgrades,
-                current_ticks=self.virtual_ticks):
+                current_ticks=self.virtual_ticks,
+                current_week=((next_elapsed_week - 1) % 52) + 1,
+                current_elapsed_week=next_elapsed_week):
             self.drain_vehicle_tasks()
         self.game_time.elapsed_weeks += 1
         if self.bank_system.observe_balance():

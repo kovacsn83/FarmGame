@@ -12,6 +12,7 @@ if str(SRC) not in sys.path:
 
 from field_automation import (
     AUTOMATED_FIELD_FERTILIZING_UPGRADE,
+    AUTOMATED_FIELD_HARVESTING_UPGRADE,
     AUTOMATED_FIELD_SPRAYING_UPGRADE,
     AUTOMATED_FIELD_WATERING_UPGRADE,
     run_field_automation,
@@ -22,7 +23,9 @@ from game_rules import UPGRADES
 from game_state import GameState
 from save_system import load_game, save_game
 from time_system import GameTime
-from tractor import TASK_FERTILIZING, TASK_SPRAYING, TASK_WATERING
+from tractor import (
+    TASK_FERTILIZING, TASK_HARVESTING, TASK_SPRAYING, TASK_WATERING,
+)
 
 
 class RecordingVehicleManager:
@@ -51,6 +54,11 @@ class RecordingVehicleManager:
     def start_spraying(self, world, buildings, economy, field,
                        current_ticks=None, source="manual"):
         return self._start(field, TASK_SPRAYING, source)
+
+    def start_harvesting(
+            self, world, buildings, economy, field, current_ticks=None,
+            current_week=None, current_elapsed_week=None, source="manual"):
+        return self._start(field, TASK_HARVESTING, source)
 
 
 class FieldAutomationTests(unittest.TestCase):
@@ -82,6 +90,12 @@ class FieldAutomationTests(unittest.TestCase):
                 AUTOMATED_FIELD_SPRAYING_UPGRADE):
             self.assertEqual(UPGRADES[upgrade_id]["price"], 20000)
             self.assertTrue(UPGRADES[upgrade_id]["description"])
+        self.assertEqual(
+            UPGRADES[AUTOMATED_FIELD_HARVESTING_UPGRADE]["price"], 30000,
+        )
+        self.assertEqual(
+            UPGRADES[AUTOMATED_FIELD_HARVESTING_UPGRADE]["tree_column"], 3,
+        )
 
     def test_disabled_automation_creates_nothing(self):
         self.assertEqual(self.run_automation([]), 0)
@@ -112,15 +126,24 @@ class FieldAutomationTests(unittest.TestCase):
             TASK_SPRAYING, "automatic",
         ))
 
+    def test_harvesting_upgrade_uses_public_automatic_request(self):
+        self.assertEqual(
+            self.run_automation([AUTOMATED_FIELD_HARVESTING_UPGRADE]), 1,
+        )
+        self.assertEqual(self.vehicles.created[0][1:], (
+            TASK_HARVESTING, "automatic",
+        ))
+
     def test_repeated_check_does_not_duplicate_either_task_type(self):
         upgrades = {
             AUTOMATED_FIELD_WATERING_UPGRADE,
             AUTOMATED_FIELD_FERTILIZING_UPGRADE,
             AUTOMATED_FIELD_SPRAYING_UPGRADE,
+            AUTOMATED_FIELD_HARVESTING_UPGRADE,
         }
-        self.assertEqual(self.run_automation(upgrades), 3)
+        self.assertEqual(self.run_automation(upgrades), 4)
         self.assertEqual(self.run_automation(upgrades), 0)
-        self.assertEqual(len(self.vehicles.created), 3)
+        self.assertEqual(len(self.vehicles.created), 4)
 
     def test_watering_and_fertilizing_can_coexist_on_same_field(self):
         self.assertEqual(self.run_automation({
