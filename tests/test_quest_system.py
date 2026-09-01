@@ -127,6 +127,56 @@ class QuestSystemTests(unittest.TestCase):
         self.assertEqual(economy.get_financial_summary()["income_total"], 0)
         self.assertFalse(restored.current_quest.reward_granted)
 
+    def test_load_skips_saved_completed_current_quest_without_replaying_it(self):
+        source = QuestManager(appear_delay_ms=0)
+        source.start_new_game(current_ticks=0)
+        source.update(current_ticks=0)
+        source.record_event(QUEST_EVENT_ROAD_BUILT, amount=5, current_ticks=0)
+
+        restored = QuestManager(appear_delay_ms=0)
+        self.assertTrue(restored.load_save_record(
+            source.to_save_record(), current_ticks=100,
+        ))
+        self.assertEqual("build_farmhouse", restored.current_quest.quest_id)
+        self.assertEqual(QuestState.ACTIVE, restored.current_quest.state)
+        self.assertIsNone(restored.current_quest.completed_at)
+
+    def test_inserted_quest_skips_later_previously_completed_quests(self):
+        source = QuestManager(appear_delay_ms=0)
+        source.start_new_game(current_ticks=0)
+        record = source.to_save_record()
+        spray_index = next(
+            index for index, quest in enumerate(source.quests)
+            if quest.quest_id == "spray_3_fields"
+        )
+        for quest in source.quests[:spray_index]:
+            record["quests"][quest.quest_id] = {
+                "progress": quest.target or 0, "completed": True,
+            }
+        record["quests"]["buy_combine"] = {
+            "progress": 1, "completed": True,
+        }
+        record["current_quest_id"] = "buy_combine"
+
+        restored = QuestManager(appear_delay_ms=0)
+        self.assertTrue(restored.load_save_record(record, current_ticks=0))
+        self.assertEqual("spray_3_fields", restored.current_quest.quest_id)
+
+        for field_number in range(3):
+            restored.record_event(
+                QUEST_EVENT_FIELD_SPRAYED,
+                current_ticks=0,
+                unique_key=(field_number, 0),
+            )
+        self.assertEqual(QuestState.COMPLETED, restored.current_quest.state)
+        restored.update(current_ticks=QUEST_COMPLETED_DISPLAY_MS)
+        self.assertEqual("harvest_3_alfalfa", restored.current_quest.quest_id)
+        self.assertEqual(QuestState.HIDDEN, restored.current_quest.state)
+        restored.update(current_ticks=(
+            QUEST_COMPLETED_DISPLAY_MS + QUEST_NEXT_APPEAR_DELAY_MS
+        ))
+        self.assertEqual(QuestState.ACTIVE, restored.current_quest.state)
+
     def test_all_twenty_two_conditions_advance_in_order(self):
         manager = QuestManager(appear_delay_ms=0)
         tick = 0

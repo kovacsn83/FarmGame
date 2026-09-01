@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Javítva a Questek betöltése: a már teljesített feladatok nem jelennek meg újra minden betöltéskor, és az újonnan beszúrt Quest után a rendszer csendben átugorja a korábban teljesített feladatokat.
+
 - A Paradicsom permetezési állapota és +10%-os hozambónusza mostantól a teljes, kétaratásos termesztési ciklus végéig megmarad.
 
 - Új Farmház-fejlesztés készült: az „Automatizált veteményes permetezés” a permetezhető Veteményesekhez automatikusan, a meglévő Dispatcher-rendszeren keresztül hoz létre Permetezési feladatot.

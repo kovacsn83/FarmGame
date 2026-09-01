@@ -284,7 +284,7 @@ class QuestManager:
         }
 
     def load_save_record(self, record, current_ticks=None):
-        """Quest ID alapján tölt; régi, Quest-adat nélküli mentésnél rejtve marad."""
+        """ID alapján tölt, a korábban teljesített Questeket nem játssza vissza."""
         if not isinstance(record, dict) or not record.get("enabled", False):
             self.hide()
             return False
@@ -302,14 +302,10 @@ class QuestManager:
                 quest.progress = min(max(0, progress), quest.target or 0)
             quest.completed = saved.get("completed") is True
 
-        current_id = record.get("current_quest_id")
-        current_index = next(
-            (index for index, quest in enumerate(self.quests)
-             if quest.quest_id == current_id),
-            next((index for index, quest in enumerate(self.quests)
-                  if not quest.completed), len(self.quests)),
-        )
-        self.current_quest_index = current_index
+        # A sorrend változhat két verzió között (például új Quest kerülhet egy
+        # régi aktuális feladat elé). Ezért nem a mentett aktuális azonosítót
+        # jelenítjük meg újra, hanem mindig az első befejezetlen Questet.
+        self.current_quest_index = self._first_incomplete_index()
         self.statistics = {
             key: value for key, value in record.get("statistics", {}).items()
             if isinstance(key, str) and isinstance(value, int)
@@ -329,9 +325,6 @@ class QuestManager:
         quest = self.current_quest
         if quest is not None:
             quest.state = QuestState.ACTIVE
-            if quest.completed:
-                quest.state = QuestState.COMPLETED
-                quest.completed_at = self._get_ticks(current_ticks)
         return True
 
     def record_event(
@@ -430,10 +423,20 @@ class QuestManager:
             and now - quest.completed_at >= QUEST_COMPLETED_DISPLAY_MS
         ):
             quest.state = QuestState.HIDDEN
-            self.current_quest_index += 1
+            self.current_quest_index = self._first_incomplete_index(
+                self.current_quest_index + 1,
+            )
             self.next_appearance_at = now + QUEST_NEXT_APPEAR_DELAY_MS
 
         return self.visible
+
+    def _first_incomplete_index(self, start=0):
+        """Visszaadja a sorrend következő, még nem teljesített Questjét."""
+        return next(
+            (index for index in range(start, len(self.quests))
+             if not self.quests[index].completed),
+            len(self.quests),
+        )
 
     def _complete_current_quest(self, current_ticks):
         quest = self.current_quest
