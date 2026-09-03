@@ -94,6 +94,7 @@ def apply_processing_upgrades(buildings, purchased_upgrades):
     level = 2 if PROCESSING_UPGRADE_ID in purchased_upgrades else 1
     definition = PROCESSING_LEVELS[level]
     for plant in get_processing_plants(buildings):
+        plant["_processing_plant_level"] = level
         plant["processing_capacity"] = definition["storage"]
         while len(get_processing_lines(plant)) < definition["lines"]:
             plant["additional_processing_lines"].append({

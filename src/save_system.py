@@ -350,7 +350,8 @@ def _create_save_data(game_state):
         "world_width_tiles": len(game_state.world[0]) if game_state.world else 0,
         "world_height_tiles": len(game_state.world),
         "fields": game_state.fields,
-        "buildings": [{k: v for k, v in b.items() if k != "_garage_level"}
+        "buildings": [{k: v for k, v in b.items()
+                       if k not in ("_garage_level", "_warehouse_level", "_processing_plant_level")}
                       for b in game_state.buildings],
         "purchased_upgrades": sorted(game_state.purchased_upgrades),
         "tractors": vehicles.save_records() if vehicles is not None else [],

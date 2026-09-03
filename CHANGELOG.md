@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- A Garázs, Raktár és Feldolgozó üzem fenntartási alapja mostantól szintfüggő: Garázs I–III. $500 / $3 000 / $6 000, Raktár I–II. $500 / $2 000, Feldolgozó üzem I–II. $3 000 / $6 000. Az éves 10%-os, hetente levont fenntartás épületenként érvényes; a Gazdaság értékének számítása nem változott.
+
 - Egyszerre maximum 2 Raktár építhető. Az Épületek menü kijelzi az aktuális darabszámot és a limitet; a korlát a Raktár II. fejlesztéssel és a meglévő bontási kapacitásvédelemmel együtt működik.
 
 - Új Farmház II. fejlesztés: Raktár II. ($2 000). Minden meglévő és később épített normál Raktár kapacitása 500-ról 1000-re nő, a teljes kapacitás automatikusan követi ezt. Bontás csak elegendő megmaradó hely esetén történhet, a készlet megőrzésével.

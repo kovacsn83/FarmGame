@@ -1,5 +1,5 @@
 from buildings import (
-    BUILDING_TYPES, get_building_maintenance_base, get_total_crop_amount,
+    BUILDING_TYPES, get_building_maintenance_base, get_building_asset_value, get_total_crop_amount,
     get_marketable_item_amount, get_total_inventory, get_warehouses,
     remove_marketable_item, store_crop,
     GARAGE_UPGRADE_LEVELS,
@@ -82,7 +82,7 @@ class Economy:
             definition = BUILDING_TYPES.get(building.get("type"))
             if definition is None:
                 continue
-            built_objects += get_building_maintenance_base(building)
+            built_objects += get_building_asset_value(building)
         for field in game_state.fields:
             definition = FIELD_TYPES.get(
                 field.get("field_type", "field_4x4")

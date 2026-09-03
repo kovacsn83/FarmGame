@@ -20,6 +20,13 @@ WAREHOUSE_CAPACITY = 500
 WAREHOUSE_LEVEL_CAPACITIES = {1: WAREHOUSE_CAPACITY, 2: 1000}
 WAREHOUSE_UPGRADE_LEVELS = {"warehouse_level_2": 2}
 
+# Épületenkénti fenntartási alapok, nem összeadódó fejlesztési árak.
+BUILDING_LEVEL_MAINTENANCE_BASES = {
+    "garage": {1: GARAGE_BUILD_COST, 2: 3000.00, 3: 6000.00},
+    "warehouse": {1: WAREHOUSE_BUILD_COST, 2: 2000.00},
+    "processing_plant": {1: PROCESSING_PLANT_BUILD_COST, 2: 6000.00},
+}
+
 
 def get_warehouse_capacity(purchased_upgrades=()):
     level = max((level for upgrade, level in WAREHOUSE_UPGRADE_LEVELS.items()
@@ -29,9 +36,12 @@ def get_warehouse_capacity(purchased_upgrades=()):
 
 def apply_warehouse_upgrades(buildings, purchased_upgrades):
     capacity = get_warehouse_capacity(purchased_upgrades)
+    level = max((level for upgrade, level in WAREHOUSE_UPGRADE_LEVELS.items()
+                 if upgrade in purchased_upgrades), default=1)
     for building in buildings:
         if building["type"] == "warehouse":
             building["capacity"] = capacity
+            building["_warehouse_level"] = level
 GARAGE_PARKING_SLOT_SIZE = 2
 
 # A Farmház teljes telke és a telken belüli házgrafika helye külön
@@ -318,6 +328,15 @@ def get_farmhouse_level_definition(building):
 
 def get_building_maintenance_base(building):
     """Az épület aktuális állapotához tartozó fenntartási alapérték."""
+    building_type = building.get("type")
+    if building_type in BUILDING_LEVEL_MAINTENANCE_BASES:
+        levels = BUILDING_LEVEL_MAINTENANCE_BASES[building_type]
+        return levels.get(building.get(f"_{building_type}_level", 1), levels[1])
+    return get_building_asset_value(building)
+
+
+def get_building_asset_value(building):
+    """Állományérték: a globális fejlesztéseket a gazdaság külön számolja."""
     if building.get("type") == "farmhouse":
         return get_farmhouse_level_definition(building)["maintenance_base_value"]
     return BUILDING_TYPES[building["type"]]["build_cost"]
