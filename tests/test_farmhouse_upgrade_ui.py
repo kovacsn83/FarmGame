@@ -185,6 +185,7 @@ class FarmhouseUpgradeUiTests(unittest.TestCase):
             "automated_field_watering",
             "automated_field_fertilizing",
             "automated_field_spraying",
+            "garage_level_2",
         ))
         self.assertEqual(columns[2], (
             "automated_field_harvesting",

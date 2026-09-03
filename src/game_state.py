@@ -29,5 +29,10 @@ class GameState:
         return self.game_time.current_time_speed
 
     def synchronize_processing_upgrades(self):
+        self.synchronize_garage_upgrades()
         from processing import apply_processing_upgrades
         apply_processing_upgrades(self.buildings, self.purchased_upgrades)
+
+    def synchronize_garage_upgrades(self):
+        from buildings import apply_garage_upgrades
+        apply_garage_upgrades(self.buildings, self.purchased_upgrades)

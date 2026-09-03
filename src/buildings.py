@@ -53,6 +53,19 @@ FARMHOUSE_BUILDING_OFFSET = tuple(
 
 # A helyek sorrendje: bal felső, jobb felső, bal alsó, jobb alsó.
 GARAGE_PARKING_SLOTS = ((0, 0), (0, 2), (2, 0), (2, 2))
+GARAGE_UPGRADE_ID = "garage_level_2"
+GARAGE_LEVEL_SLOTS = {
+    1: GARAGE_PARKING_SLOTS,
+    2: GARAGE_PARKING_SLOTS + ((0, 1), (1, 0), (1, 2), (2, 1)),
+}
+
+
+def apply_garage_upgrades(buildings, purchased_upgrades):
+    """Derived runtime level; existing home/slot and task records stay untouched."""
+    level = 2 if GARAGE_UPGRADE_ID in purchased_upgrades else 1
+    for building in buildings:
+        if building["type"] == "garage":
+            building["_garage_level"] = level
 
 # Az épülettípusok központi leírása. Új épület hozzáadásához ezt kell bővíteni.
 BUILDING_TYPES = {
@@ -153,9 +166,9 @@ def get_garage_parking_position(building, slot_index=0):
     if building["type"] != "garage":
         raise ValueError("Belső parkolópozíció csak Garázshoz kérhető.")
     if (not isinstance(slot_index, int) or isinstance(slot_index, bool)
-            or not 0 <= slot_index < len(GARAGE_PARKING_SLOTS)):
+            or not 0 <= slot_index < get_garage_capacity(building)):
         raise ValueError("A kért garázshely még nem létezik.")
-    row_offset, col_offset = GARAGE_PARKING_SLOTS[slot_index]
+    row_offset, col_offset = GARAGE_LEVEL_SLOTS[building.get("_garage_level", 1)][slot_index]
 
     parking_col = building["col"] + col_offset
     parking_row = building["row"] + row_offset
@@ -168,7 +181,7 @@ def get_garage_parking_position(building, slot_index=0):
 
 def get_garage_capacity(building):
     """Single capacity entry point for current and future garage levels."""
-    return len(GARAGE_PARKING_SLOTS) if building.get("type") == "garage" else 0
+    return len(GARAGE_LEVEL_SLOTS[building.get("_garage_level", 1)]) if building.get("type") == "garage" else 0
 
 
 def has_adjacent_road(world, row, col, width, height):

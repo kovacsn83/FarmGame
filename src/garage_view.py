@@ -1,5 +1,5 @@
 """Read-only presentation helpers for real garage parking slots."""
-from math import ceil, sqrt
+from math import ceil
 
 import pygame
 from buildings import get_garage_parking_position
@@ -10,7 +10,7 @@ PARKING_SLOT_GAP = 4
 
 
 def parking_view_height(capacity):
-    columns = max(1, ceil(sqrt(capacity)))
+    columns = 2 if capacity <= 4 else 4
     rows = max(1, ceil(capacity / columns))
     return rows * (PARKING_SLOT_SIZE + PARKING_SLOT_GAP) + PARKING_SLOT_GAP
 
@@ -32,7 +32,7 @@ def is_parked_in_garage(asset, garage=None):
 
 def parking_slot_rects(rect, capacity):
     """Compact square bays centered in the available view, in slot-ID order."""
-    columns = max(1, ceil(sqrt(capacity)))
+    columns = 2 if capacity <= 4 else 4
     rows = max(1, ceil(capacity / columns))
     gap = PARKING_SLOT_GAP
     size = max(1, min(PARKING_SLOT_SIZE,

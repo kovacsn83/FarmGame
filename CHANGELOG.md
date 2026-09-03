@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Új Farmház II. fejlesztés: Garázs II. ($3 000). Minden meglévő és később épített Garázs 8 férőhelyessé válik, a popup 4×2 négyzetes parkolóhelyet mutat, a Központi géptelep automatikusan az új kapacitással számol.
+
 - A Garázsok közös Központi géptelepet alkotnak: a vásárlási kapacitás az összes Garázsból számolódik, a vásárlás bármelyik szabad helyet használhatja. A Dispatcher továbbra is az egyetlen közös flottából dolgozik. A popup külön mutatja a bent parkolókat és a birtokolt flotta kapacitását; biztonságos bontáskor a nyugalomban lévő eszközök átrendeződnek.
 - A grafikus parkolónézet kompakt, négyzetes helyeket és eredeti méretű járműsprite-okat használ, nagyítás nélkül.
 

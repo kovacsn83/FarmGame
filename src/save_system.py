@@ -16,6 +16,7 @@ from buildings import (
     FARMHOUSE_LEGACY_LEVEL, FARMHOUSE_LEVELS, GARAGE_PARKING_SLOTS,
     WAREHOUSE_CAPACITY,
     get_garage_capacity,
+    apply_garage_upgrades,
 )
 from constants import (
     BUILDING, FIELD, GRASS, ROAD, WORLD_HEIGHT_TILES, WORLD_WIDTH_TILES,
@@ -348,7 +349,8 @@ def _create_save_data(game_state):
         "world_width_tiles": len(game_state.world[0]) if game_state.world else 0,
         "world_height_tiles": len(game_state.world),
         "fields": game_state.fields,
-        "buildings": game_state.buildings,
+        "buildings": [{k: v for k, v in b.items() if k != "_garage_level"}
+                      for b in game_state.buildings],
         "purchased_upgrades": sorted(game_state.purchased_upgrades),
         "tractors": vehicles.save_records() if vehicles is not None else [],
         "vehicle_runtime": (
@@ -678,6 +680,7 @@ def _validate_fields(data):
 
 
 def _validate_vehicles(data):
+    apply_garage_upgrades(data["buildings"], data.get("purchased_upgrades", []))
     vehicles = data.get("tractors", [])
     if not isinstance(vehicles, list):
         return False

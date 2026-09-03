@@ -202,6 +202,17 @@ UPGRADES = {
         "tree_column": 3,
         "tree_order": 1,
     },
+    "garage_level_2": {
+        "name": "Garázs II.",
+        "description": "A Garázs kapacitását 8 járműre növeli.",
+        "price": 3000.00,
+        "unlocks": None,
+        "state_key": "garage_level_2",
+        "requires": None,
+        "required_farmhouse_level": 2,
+        "tree_column": 2,
+        "tree_order": 5,
+    },
     "processing_plant_level_2": {
         "name": "Feldolgozó üzem II.",
         "description": "A Feldolgozó üzem heti kapacitását 10 db-ra növeli.",
