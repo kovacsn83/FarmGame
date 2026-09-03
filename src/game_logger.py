@@ -9,7 +9,7 @@ LOG_CATEGORIES = frozenset({
     "Fertilizing", "Harvest", "Economy", "Inventory", "Animals",
     "Quest", "Save", "Load", "Time", "Building", "Watering", "Supply",
     "Market", "Bank", "Road", "Automation", "Orchard", "Processing",
-    "Restaurant", "Storage", "Spraying",
+    "Restaurant", "Storage", "Spraying", "GarageFleet",
 })
 
 

@@ -1513,6 +1513,8 @@ class Vehicle:
         )
 
     def _begin_return_home(self, world, now, buildings=None):
+        if self.assigned_parking_building is not None:
+            self._refresh_preferred_parking(world, [self.assigned_parking_building])
         vehicle_name = VEHICLE_TYPE_DEFINITIONS[self.vehicle_type]["name"]
         if self._orchard_exit_path and self._orchard_exit_road is not None:
             road_route = find_road_path(
@@ -1562,6 +1564,8 @@ class Vehicle:
         self._begin_return_home(world, now, buildings)
 
     def _arrive_home(self, world, economy, now):
+        if self._continue_to_reassigned_home(world, now):
+            return
         if self.state != TRACTOR_RELOCATING_TO_PARKING:
             self._parking_arrival_reason = "return"
         self._set_tile_position(*self.parking_tile)
@@ -1575,6 +1579,8 @@ class Vehicle:
         self._finish_parking(world, economy, now)
 
     def _finish_parking(self, world, economy, now):
+        if self._continue_to_reassigned_home(world, now):
+            return
         self._set_world_position(*self.parking_world_position)
         if self.attached_implement is not None:
             implement = self.attached_implement
@@ -1593,6 +1599,19 @@ class Vehicle:
         self._orchard_exit_path = None
         self._orchard_exit_road = None
         self.movement_accumulator_ms = 0.0
+
+    def _continue_to_reassigned_home(self, world, now):
+        """Finish an existing route first, then follow the current home assignment."""
+        home = self.assigned_parking_building
+        if home is None:
+            return False
+        destination_tile = find_building_parking(world, home)
+        destination = self._parking_world_position(home, destination_tile)
+        if (destination_tile != (self.row, self.col)
+                or not self._positions_match(destination, self.parking_world_position)):
+            self._begin_return_home(world, now, [home])
+            return True
+        return False
 
     def demolition_block_reason(self, row, col, building=None, field=None):
         if field is not None and field.get("vehicle_task_status") is not None:

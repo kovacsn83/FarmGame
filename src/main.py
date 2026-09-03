@@ -443,6 +443,7 @@ def main():
                     vehicles.on_garage_built(
                         world, buildings, new_building,
                     )
+                    vehicles.compact_garage_assignments(world, buildings)
                 elif selected_building == "pond":
                     quest_manager.record_event(QUEST_EVENT_POND_BUILT)
         elif selected_tool == TOOL_PLANT:

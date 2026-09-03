@@ -65,11 +65,14 @@ class GarageFleetTests(unittest.TestCase):
         self.assertEqual(self.manager.fleet_capacity(self.buildings), {"capacity": 8, "owned": 6, "free": 2})
         self.assertIsNotNone(self.manager.demolition_block_reason(5, 12, self.garages[1], buildings=self.buildings))
 
-    def test_active_home_garage_cannot_be_demolished(self):
+    def test_active_home_garage_can_be_reassigned_without_teleport(self):
         self.buy()
-        self.manager.vehicles[0].state = "moving"
-        self.assertFalse(self.manager.prepare_garage_demolition(self.world, self.buildings, self.garages[0]))
-        self.assertIs(self.manager.vehicles[0].assigned_parking_building, self.garages[0])
+        vehicle = self.manager.vehicles[0]
+        vehicle.state = "moving"
+        before = (vehicle.world_x, vehicle.world_y, vehicle.state)
+        self.assertTrue(self.manager.prepare_garage_demolition(self.world, self.buildings, self.garages[0]))
+        self.assertIs(vehicle.assigned_parking_building, self.garages[1])
+        self.assertEqual(before, (vehicle.world_x, vehicle.world_y, vehicle.state))
 
     def test_save_load_preserves_home_slots_and_validation(self):
         for _ in range(5):

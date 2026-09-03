@@ -293,6 +293,37 @@ class VehicleManager:
                 for slot in range(get_garage_capacity(garage))
                 if slot not in self.occupied_slot_ids(garage)]
 
+    def compact_garage_assignments(self, world, buildings):
+        """Plan the complete stable assignment before changing any home or slot."""
+        from tractor import find_building_parking
+        from garage_view import is_parked_in_garage
+        garages = sorted((b for b in buildings if b["type"] == "garage"),
+                         key=lambda b: (b["row"], b["col"]))
+        assets = sorted(self.managed_assets, key=lambda a: a.vehicle_id)
+        slots = [(garage, slot) for garage in garages
+                 for slot in range(get_garage_capacity(garage))]
+        if len(slots) < len(assets) or len({a.vehicle_id for a in assets}) != len(assets):
+            return False
+        plan = list(zip(assets, slots))
+        if any(find_building_parking(world, garage) is None for _, (garage, _) in plan):
+            return False
+        parked = {id(asset): is_parked_in_garage(asset) for asset in assets}
+        changed = False
+        for asset, (garage, slot) in plan:
+            if asset.assigned_parking_building is garage and asset.parking_slot_id == slot:
+                continue
+            changed = True
+            asset.assigned_parking_building = garage
+            asset.parking_slot_id = slot
+            if parked[id(asset)]:
+                asset.row = asset.col = None
+                asset.ensure_idle_position(world, buildings)
+        if changed:
+            used = len({id(garage) for _, (garage, _) in plan})
+            log(f"Flotta átrendezve: {len(assets)} jármű, {used} használt Garázs, "
+                f"{len(garages) - used} üres Garázs.", "GarageFleet")
+        return True
+
     def count_by_type(self, vehicle_type):
         normalized_type = normalize_vehicle_type(vehicle_type)
         return sum(
@@ -1964,9 +1995,6 @@ class VehicleManager:
             remaining = [b for b in buildings if b is not building]
             if self.fleet_capacity(remaining)["capacity"] < len(self.managed_assets):
                 return "A Garázs nem bontható le, mert nincs elegendő parkolókapacitás a járműállomány számára."
-            from garage_view import is_parked_in_garage
-            if any(not is_parked_in_garage(a, building) for a in self.assets_in_garage(building)):
-                return "A Garázs nem bontható, amíg hozzá tartozó jármű dolgozik vagy közlekedik."
             return None
         if building is not None and any(
                 vehicle.assigned_parking_building is building
@@ -1996,22 +2024,11 @@ class VehicleManager:
         return None
 
     def prepare_garage_demolition(self, world, buildings, garage):
-        """Plan all assignments first; idle assets move safely before demolition."""
+        """Compact into the remaining garages before removing the building."""
         if self.demolition_block_reason(garage["row"], garage["col"], garage, buildings=buildings):
             return False
         remaining = [b for b in buildings if b is not garage]
-        assets = self.assets_in_garage(garage)
-        slots = self.free_parking_slots(remaining)
-        from tractor import find_building_parking
-        slots = [(b, slot) for b, slot in slots if find_building_parking(world, b) is not None]
-        if len(slots) < len(assets):
-            return False
-        for asset, (target, slot) in zip(assets, slots):
-            asset.assigned_parking_building = target
-            asset.parking_slot_id = slot
-            asset.row = asset.col = None
-            asset.ensure_idle_position(world, remaining)
-        return True
+        return self.compact_garage_assignments(world, remaining)
 
     def can_save(self, world, buildings):
         return (

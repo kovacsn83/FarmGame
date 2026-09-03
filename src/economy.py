@@ -459,6 +459,8 @@ class Economy:
             game_state.synchronize_processing_upgrades()
         if upgrade_id == "garage_level_2":
             game_state.synchronize_garage_upgrades()
+            if game_state.vehicles is not None:
+                game_state.vehicles.compact_garage_assignments(game_state.world, game_state.buildings)
         self.record_expense(EXPENSE_UPGRADE, upgrade["price"], upgrade_id)
         log(f"Fejlesztés megvásárolva: {upgrade['name']}", "Economy")
         return True

@@ -1032,6 +1032,7 @@ def _apply_game_data(game_state, data):
             data.get("tractors"), animals=getattr(game_state, "animals", []),
             runtime_record=data.get("vehicle_runtime"),
         )
+        vehicles.compact_garage_assignments(game_state.world, game_state.buildings)
     else:
         tractor = getattr(game_state, "tractor", None)
         if tractor is not None:
