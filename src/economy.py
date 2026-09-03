@@ -2,6 +2,7 @@ from buildings import (
     BUILDING_TYPES, get_building_maintenance_base, get_total_crop_amount,
     get_marketable_item_amount, get_total_inventory, get_warehouses,
     remove_marketable_item, store_crop,
+    GARAGE_UPGRADE_LEVELS,
 )
 from constants import (
     ROAD, ROAD_BUILD_COST, STARTING_MONEY, TRACTOR_PURCHASE_PRICE,
@@ -457,7 +458,7 @@ class Economy:
         game_state.purchased_upgrades.add(upgrade_id)
         if upgrade_id == "processing_plant_level_2":
             game_state.synchronize_processing_upgrades()
-        if upgrade_id == "garage_level_2":
+        if upgrade_id in GARAGE_UPGRADE_LEVELS:
             game_state.synchronize_garage_upgrades()
             if game_state.vehicles is not None:
                 game_state.vehicles.compact_garage_assignments(game_state.world, game_state.buildings)

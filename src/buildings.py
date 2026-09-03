@@ -54,15 +54,20 @@ FARMHOUSE_BUILDING_OFFSET = tuple(
 # A helyek sorrendje: bal felső, jobb felső, bal alsó, jobb alsó.
 GARAGE_PARKING_SLOTS = ((0, 0), (0, 2), (2, 0), (2, 2))
 GARAGE_UPGRADE_ID = "garage_level_2"
+GARAGE_UPGRADE_LEVELS = {GARAGE_UPGRADE_ID: 2, "garage_level_3": 3}
 GARAGE_LEVEL_SLOTS = {
     1: GARAGE_PARKING_SLOTS,
     2: GARAGE_PARKING_SLOTS + ((0, 1), (1, 0), (1, 2), (2, 1)),
 }
+GARAGE_LEVEL_SLOTS[3] = GARAGE_LEVEL_SLOTS[2] + (
+    (0.5, 0.5), (0.5, 1.5), (1.5, 0.5), (1.5, 1.5),
+)
 
 
 def apply_garage_upgrades(buildings, purchased_upgrades):
     """Derived runtime level; existing home/slot and task records stay untouched."""
-    level = 2 if GARAGE_UPGRADE_ID in purchased_upgrades else 1
+    level = max((level for upgrade, level in GARAGE_UPGRADE_LEVELS.items()
+                 if upgrade in purchased_upgrades), default=1)
     for building in buildings:
         if building["type"] == "garage":
             building["_garage_level"] = level

@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Új Farmház III. fejlesztés: Garázs III. ($6 000), Garázs II. előfeltétellel. Minden meglévő és új Garázs 12 férőhelyes lesz; a popup 4×3 parkolónézetet használ, a Központi géptelep automatikusan újraszámolja a kapacitást és összerendezi a flottát.
+
 - A Központi géptelep fejlesztéskor és betöltéskor automatikusan tömöríti a parkolóhely-hozzárendeléseket, kihasználva a Garázs II. új helyeit. Bontás előtt a flotta a megmaradó Garázsokba rendeződik; a dolgozó járművek feladata változatlan, a munka végén az új otthonukhoz térnek vissza.
 
 - Új Farmház II. fejlesztés: Garázs II. ($3 000). Minden meglévő és később épített Garázs 8 férőhelyessé válik, a popup 4×2 négyzetes parkolóhelyet mutat, a Központi géptelep automatikusan az új kapacitással számol.

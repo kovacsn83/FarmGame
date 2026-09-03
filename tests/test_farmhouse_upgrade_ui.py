@@ -190,6 +190,7 @@ class FarmhouseUpgradeUiTests(unittest.TestCase):
         self.assertEqual(columns[2], (
             "automated_field_harvesting",
             "processing_plant_level_2",
+            "garage_level_3",
         ))
         for column in columns:
             tops = [self.panel.upgrade_card_rects[item].top for item in column]
