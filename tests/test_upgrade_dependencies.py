@@ -142,14 +142,14 @@ class UpgradeDependencyTests(unittest.TestCase):
             self.assertTrue(load_game(state, path))
             self.assertIn(upgrade_id, state.purchased_upgrades)
 
-    def test_processing_upgrade_does_not_increase_production_yet(self):
+    def test_processing_upgrade_expands_storage_but_keeps_single_line_limit(self):
         state, economy = self.make_state(3, ("automated_field_harvesting",))
         plant = initialize_processing_plant({"type": "processing_plant"})
         state.buildings.append(plant)
         self.assertTrue(economy.purchase_upgrade(state, "processing_plant_level_2"))
         plant["processing_inventory"]["tomato"] = 20
         self.assertEqual(start_processing_batch(plant, 1), 5)
-        self.assertEqual(plant["processing_capacity"], 200)
+        self.assertEqual(plant["processing_capacity"], 400)
 
 
 if __name__ == "__main__":

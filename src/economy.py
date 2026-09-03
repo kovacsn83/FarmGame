@@ -455,6 +455,8 @@ class Economy:
             log("Nincs elegendő pénz.", "Economy")
             return False
         game_state.purchased_upgrades.add(upgrade_id)
+        if upgrade_id == "processing_plant_level_2":
+            game_state.synchronize_processing_upgrades()
         self.record_expense(EXPENSE_UPGRADE, upgrade["price"], upgrade_id)
         log(f"Fejlesztés megvásárolva: {upgrade['name']}", "Economy")
         return True

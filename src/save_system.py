@@ -26,7 +26,7 @@ from inventory import get_inventory_item_ids
 from financial_history import is_valid_transaction
 from orchards import is_valid_tree_record, synchronize_orchard_seasons
 from processing import (
-    PROCESSING_RECIPES, PROCESSING_STORAGE_CAPACITY,
+    PROCESSING_RECIPES, PROCESSING_LEVELS, PROCESSING_UPGRADE_ID,
     initialize_processing_plant,
 )
 from restaurant import is_valid_restaurant_save_record
@@ -331,6 +331,7 @@ def _prepare_world_data(data):
 
 def _create_save_data(game_state):
     """Csak a nem újraszámolható, JSON-kompatibilis játékállapotot gyűjti össze."""
+    game_state.synchronize_processing_upgrades()
     vehicles = getattr(game_state, "vehicles", None)
     bank_system = getattr(game_state, "bank_system", None)
     quest_manager = getattr(game_state, "quest_manager", None)
@@ -468,48 +469,55 @@ def _area_is_inside(row, col, width, height, world_width, world_height):
     )
 
 
+def _validate_processing_line(line):
+    if not isinstance(line, dict):
+        return False
+    batch = line.get("processing_batch")
+    return (
+        (line.get("active_recipe") is None or line.get("active_recipe") in PROCESSING_RECIPES)
+        and _is_plain_int(line.get("processing_week"))
+        and _is_plain_int(line.get("processed_this_week"))
+        and line["processed_this_week"] >= 0
+        and (batch is None or (
+            isinstance(batch, dict)
+            and batch.get("recipe_id") in PROCESSING_RECIPES
+            and _is_plain_int(batch.get("started_week"))
+            and all(isinstance(items, dict) and all(
+                item_id in get_inventory_item_ids()
+                and _is_plain_int(amount) and amount >= 0
+                for item_id, amount in items.items()
+            ) for items in (batch.get("inputs"), batch.get("outputs")))
+        ))
+    )
+
+
 def _validate_inventory(building):
     if building["type"] == "processing_plant":
         inventory = building.get("processing_inventory")
         in_transit = building.get("processing_in_transit")
-        batch = building.get("processing_batch")
-        valid_batch = batch is None or (
-            isinstance(batch, dict)
-            and batch.get("recipe_id") in PROCESSING_RECIPES
-            and _is_plain_int(batch.get("started_week"))
-            and all(
-                isinstance(items, dict)
-                and all(
-                    item_id in get_inventory_item_ids()
-                    and _is_plain_int(amount) and amount >= 0
-                    for item_id, amount in items.items()
-                )
-                for items in (batch.get("inputs"), batch.get("outputs"))
-            )
-        )
+        additional_lines = building.get("additional_processing_lines", [])
+        if not isinstance(additional_lines, list):
+            return False
+        definition = next((level for level in PROCESSING_LEVELS.values()
+                           if level["lines"] == len(additional_lines) + 1), None)
         return (
-            building.get("processing_capacity") == PROCESSING_STORAGE_CAPACITY
-            and (
-                building.get("active_recipe") is None
-                or building.get("active_recipe") in PROCESSING_RECIPES
-            )
+            definition is not None
+            and building.get("processing_capacity") == definition["storage"]
+            and all(_validate_processing_line(line)
+                    for line in [building, *additional_lines])
             and isinstance(inventory, dict)
             and all(
                 item_id in get_inventory_item_ids()
                 and _is_plain_int(amount) and amount >= 0
                 for item_id, amount in inventory.items()
             )
-            and sum(inventory.values()) <= PROCESSING_STORAGE_CAPACITY
+            and sum(inventory.values()) <= building["processing_capacity"]
             and isinstance(in_transit, dict)
             and all(
                 item_id in get_inventory_item_ids()
                 and _is_plain_int(amount) and amount >= 0
                 for item_id, amount in in_transit.items()
             )
-            and _is_plain_int(building.get("processing_week"))
-            and _is_plain_int(building.get("processed_this_week"))
-            and building.get("processed_this_week") >= 0
-            and valid_batch
         )
     if building["type"] != "warehouse":
         return True
@@ -561,6 +569,10 @@ def _validate_buildings(data):
             return False
         occupied.update(tiles)
         if not _validate_inventory(building):
+            return False
+        if (building_type == "processing_plant"
+                and building.get("additional_processing_lines")
+                and PROCESSING_UPGRADE_ID not in data.get("purchased_upgrades", [])):
             return False
         if (
             building_type == "farmhouse"
@@ -996,6 +1008,7 @@ def _apply_game_data(game_state, data):
     )
     game_state.purchased_upgrades.clear()
     game_state.purchased_upgrades.update(data.get("purchased_upgrades", []))
+    game_state.synchronize_processing_upgrades()
     quest_manager = getattr(game_state, "quest_manager", None)
     if quest_manager is not None:
         quest_manager.load_save_record(data.get("quest"))

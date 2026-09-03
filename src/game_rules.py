@@ -206,7 +206,7 @@ UPGRADES = {
         "name": "Feldolgozó üzem II.",
         "description": "A Feldolgozó üzem heti kapacitását 10 db-ra növeli.",
         "price": 6000.00,
-        # Előkészített upgrade: a termelési rendszer még nem használja.
+        # Globális kapacitásfejlesztés; a feldolgozás szintkonfigurációja kezeli.
         "unlocks": None,
         "state_key": "processing_plant_level_2",
         "requires": "automated_field_harvesting",

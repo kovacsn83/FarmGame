@@ -32,6 +32,7 @@ from processing import (
     PROCESSING_STATUS_IN_TRANSIT, PROCESSING_STATUS_NO_MONEY,
     cancel_processing_delivery,
     initialize_processing_plant,
+    get_processing_lines,
 )
 from quest_system import (
     QUEST_EVENT_ALFALFA_HARVESTED, QUEST_EVENT_ALFALFA_PLANTED,
@@ -1185,7 +1186,12 @@ class VehicleManager:
         amount = max(0, int(amount))
         if amount <= 0 or plant not in buildings:
             return 0
-        if self._has_equivalent_task(TASK_PROCESSING_SUPPLY, plant):
+        if (len(get_processing_lines(plant)) == 1
+                and self._has_equivalent_task(TASK_PROCESSING_SUPPLY, plant)):
+            return 0
+        if any(task.task_type == TASK_PROCESSING_SUPPLY
+               and task.field is plant and task.cargo_type == item_id
+               and task.source_type == "warehouse" for task in self._all_tasks()):
             return 0
         trailers = [
             implement for implement in self.implements
@@ -1238,7 +1244,12 @@ class VehicleManager:
         amount = max(0, int(amount))
         if amount <= 0 or plant not in buildings:
             return 0
-        if self._has_equivalent_task(TASK_PROCESSING_SUPPLY, plant):
+        if (len(get_processing_lines(plant)) == 1
+                and self._has_equivalent_task(TASK_PROCESSING_SUPPLY, plant)):
+            return 0
+        if any(task.task_type == TASK_PROCESSING_SUPPLY
+               and task.field is plant and task.cargo_type == item_id
+               and task.source_type == "market" for task in self._all_tasks()):
             return 0
         trailers = [
             implement for implement in self.implements

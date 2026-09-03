@@ -48,6 +48,8 @@ from processing import (
     get_processing_inventory_used, get_processing_output_ids,
     get_processing_recipe_ids, initialize_processing_plant,
     select_processing_recipe,
+    get_processing_lines, get_processing_weekly_capacity,
+    apply_processing_upgrades,
 )
 from restaurant import (
     get_restaurant_bonus_percent, get_restaurant_period,
@@ -2088,6 +2090,15 @@ class InfoPanel(PopupWindow):
                 if event.button != 1:
                     return True
                 return self._handle_content_click(event.pos)
+        if (self.visible and self.building_type == "processing_plant"
+                and event.type == pygame.MOUSEBUTTONDOWN and event.button != 1):
+            if event.button in (4, 5):
+                self.processing_recipe_scroll = max(0, min(
+                    self.processing_recipe_max_scroll,
+                    self.processing_recipe_scroll
+                    + (-1 if event.button == 4 else 1) * PROCESSING_RECIPE_ROW_HEIGHT,
+                ))
+            return True
         if (
             self.visible
             and self.building_type == "processing_plant"
@@ -2178,7 +2189,11 @@ class InfoPanel(PopupWindow):
         elif self.building_type == "processing_plant":
             for recipe_id, row_rect in self.processing_recipe_rects.items():
                 if row_rect.collidepoint(position):
-                    select_processing_recipe(self.building, recipe_id)
+                    if isinstance(recipe_id, tuple):
+                        selected_id, line_index = recipe_id
+                        select_processing_recipe(self.building, selected_id, line_index)
+                    else:
+                        select_processing_recipe(self.building, recipe_id)
                     return True
         return True
 
@@ -2222,13 +2237,16 @@ class InfoPanel(PopupWindow):
         elif self.building_type == "pond":
             self._draw_pond(screen, font)
         elif self.building_type == "processing_plant":
+            apply_processing_upgrades(
+                [self.building], getattr(game_state, "purchased_upgrades", ()),
+            )
             self._draw_processing_plant(screen, font)
 
     def _draw_processing_plant(self, screen, font):
         """Az üzem termékválasztását, készletét és állapotát mutatja."""
         initialize_processing_plant(self.building)
+        lines = get_processing_lines(self.building)
         active_recipe_id = self.building.get("active_recipe")
-        recipe = PROCESSING_RECIPES.get(active_recipe_id)
         inventory = self.building["processing_inventory"]
         recipe_ids = get_processing_recipe_ids(self.building)
         output_ids = get_processing_output_ids(self.building)
@@ -2243,21 +2261,20 @@ class InfoPanel(PopupWindow):
             PROCESSING_STATUS_STOPPED: "Leállítva",
             "waiting_input": "Alapanyagra vár",
         }
-        weekly_capacity = (
-            recipe["weekly_capacity"] if recipe is not None
-            else max(
-                (PROCESSING_RECIPES[item_id]["weekly_capacity"]
-                 for item_id in recipe_ids),
-                default=0,
-            )
-        )
+        weekly_capacity = get_processing_weekly_capacity(self.building)
         visible_recipe_rows = min(
             len(recipe_ids), PROCESSING_RECIPE_VISIBLE_ROWS,
         )
         recipe_view_height = visible_recipe_rows * PROCESSING_RECIPE_ROW_HEIGHT
+        panel_width = INFO_PANEL_WIDTH
+        if len(lines) > 1:
+            label_width = max(font.size(PROCESSING_RECIPES[item]["name"])[0]
+                              for item in recipe_ids)
+            panel_width = max(panel_width,
+                              label_width + INFO_PANEL_PADDING * 2 + 180)
         self.rect.size = (
-            responsive_panel_width(INFO_PANEL_WIDTH),
-            320 + recipe_view_height + len(output_ids) * 28,
+            responsive_panel_width(panel_width),
+            320 + recipe_view_height + len(output_ids) * 28 + (len(lines) - 1) * 98,
         )
         self.rect.center = get_screen_center()
         self.draw_frame(screen)
@@ -2278,6 +2295,11 @@ class InfoPanel(PopupWindow):
         y += 38
 
         self.draw_text(screen, font, "Gyártandó termék:", x, y)
+        if len(lines) > 1:
+            y += 26
+            for line_index in range(len(lines)):
+                self.draw_text(screen, font, f"{line_index + 1}. sor",
+                               self.rect.right - INFO_PANEL_PADDING - 140 + line_index * 70, y)
         y += 26
         list_width = self.rect.width - INFO_PANEL_PADDING * 2
         self.processing_recipe_view_rect = pygame.Rect(
@@ -2301,6 +2323,24 @@ class InfoPanel(PopupWindow):
             row_rect = pygame.Rect(
                 x, row_y, list_width, PROCESSING_RECIPE_ROW_HEIGHT,
             )
+            if len(lines) > 1:
+                self.draw_text(screen, font, PROCESSING_RECIPES[recipe_id]["name"], x + 2, row_y + 4)
+                for line_index, line in enumerate(lines):
+                    checkbox = pygame.Rect(
+                        self.rect.right - INFO_PANEL_PADDING - 128 + line_index * 70,
+                        row_y + 4, PROCESSING_RECIPE_CHECKBOX_SIZE,
+                        PROCESSING_RECIPE_CHECKBOX_SIZE,
+                    )
+                    if checkbox.colliderect(self.processing_recipe_view_rect):
+                        self.processing_recipe_rects[(recipe_id, line_index)] = checkbox.clip(self.processing_recipe_view_rect)
+                    pygame.draw.rect(screen, INFO_PANEL_BORDER, checkbox, 1)
+                    if line.get("active_recipe") == recipe_id:
+                        pygame.draw.lines(screen, PROCESSING_RECIPE_CHECK_COLOR, False, (
+                            (checkbox.left + 4, checkbox.centery),
+                            (checkbox.left + 8, checkbox.bottom - 4),
+                            (checkbox.right - 3, checkbox.top + 4),
+                        ), 2)
+                continue
             if row_rect.colliderect(self.processing_recipe_view_rect):
                 self.processing_recipe_rects[recipe_id] = row_rect.clip(
                     self.processing_recipe_view_rect,
@@ -2334,15 +2374,18 @@ class InfoPanel(PopupWindow):
 
         self.draw_text(screen, font, "Alapanyag:", x, y)
         y += 26
-        if recipe is None:
+        input_ids = list(dict.fromkeys(
+            PROCESSING_RECIPES[line["active_recipe"]]["input_product"]
+            for line in lines if line.get("active_recipe") in PROCESSING_RECIPES
+        ))
+        if not input_ids:
             self.draw_text(screen, font, "  Nincs kiválasztott termék.", x, y)
         else:
-            input_id = recipe["input_product"]
-            self.draw_text(
-                screen, font,
-                f"  {get_inventory_item_name(input_id)}: "
-                f"{inventory.get(input_id, 0)} db", x, y,
-            )
+            for index, input_id in enumerate(input_ids):
+                self.draw_text(screen, font,
+                    f"  {get_inventory_item_name(input_id)}: {inventory.get(input_id, 0)} db",
+                    x, y + index * 28)
+            y += (len(input_ids) - 1) * 28
         y += 38
         self.draw_text(screen, font, "Késztermékek:", x, y)
         y += 26
@@ -2354,12 +2397,11 @@ class InfoPanel(PopupWindow):
             )
             y += 28
         y += 10
-        self.draw_text(
-            screen, font,
-            "Állapot: Leállítva" if active_recipe_id is None else
-            f"Állapot: {status_labels.get(self.building['processing_status'], 'Alapanyagra vár')}",
-            x, y,
-        )
+        for line_index, line in enumerate(lines):
+            prefix = "Állapot" if len(lines) == 1 else f"{line_index + 1}. sor"
+            status = "Leállítva" if line.get("active_recipe") is None else status_labels.get(line["processing_status"], "Alapanyagra vár")
+            self.draw_text(screen, font, f"{prefix}: {status}", x, y)
+            y += 28
 
     def _draw_pond(self, screen, font):
         """A későbbi öntözéshez előkészített Tó statikus adatlapja."""

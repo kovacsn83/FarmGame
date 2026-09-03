@@ -15,6 +15,7 @@ class GameState:
         if hasattr(self.economy, "bind_game_time"):
             self.economy.bind_game_time(game_time)
         self.purchased_upgrades = set(purchased_upgrades or ())
+        self.synchronize_processing_upgrades()
         self.tractor = tractor
         self.vehicles = vehicles
         self.animals = animals if animals is not None else []
@@ -26,3 +27,7 @@ class GameState:
     def time_speed(self):
         """Az idősebességet másolat készítése nélkül teszi elérhetővé."""
         return self.game_time.current_time_speed
+
+    def synchronize_processing_upgrades(self):
+        from processing import apply_processing_upgrades
+        apply_processing_upgrades(self.buildings, self.purchased_upgrades)

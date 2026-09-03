@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- A Feldolgozó üzem II. tényleges kapacitásfejlesztést kapott: két független, egyenként 5 db/hetes gyártósor (összesen 10 db/hét), azonos vagy eltérő termékválasztással. A közös Üzemi raktár 200-ról 400-ra bővül, a meglévő készlet és a régi mentések első gyártósora megmarad.
+
 - Új Farmház III. fejlesztési node: Feldolgozó üzem II. ($6 000), az Automatizált veteményes aratás után. Egyelőre megvásárolható és menthető; a tényleges kapacitásnövelés a következő fejlesztési lépésben készül el.
 
 - Új Farmház III. fejlesztés készült: a $30 000 értékű „Automatizált veteményes aratás” az aratható Veteményesekhez automatikusan, a meglévő Kombájn- és Dispatcher-rendszeren keresztül hoz létre Aratási feladatot.

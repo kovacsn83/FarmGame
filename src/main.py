@@ -402,6 +402,7 @@ def main():
                     world, buildings, mouse_row, mouse_col,
                     selected_building,
                 )
+                game_state.synchronize_processing_upgrades()
                 economy.spend(cost)
                 economy.record_expense(
                     EXPENSE_CONSTRUCTION, cost, selected_building,
