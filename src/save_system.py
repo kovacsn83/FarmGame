@@ -15,6 +15,7 @@ from buildings import (
     BUILDING_TYPES, FARMHOUSE_BUILDING_OFFSET, FARMHOUSE_BUILDING_SIZE,
     FARMHOUSE_LEGACY_LEVEL, FARMHOUSE_LEVELS, GARAGE_PARKING_SLOTS,
     WAREHOUSE_CAPACITY,
+    get_garage_capacity,
 )
 from constants import (
     BUILDING, FIELD, GRASS, ROAD, WORLD_HEIGHT_TILES, WORLD_WIDTH_TILES,
@@ -680,6 +681,10 @@ def _validate_vehicles(data):
     vehicles = data.get("tractors", [])
     if not isinstance(vehicles, list):
         return False
+    garage_capacity = sum(get_garage_capacity(b) for b in data["buildings"])
+    # The original starter tractor may live at the Farmhouse before a garage exists.
+    if garage_capacity and len(vehicles) > garage_capacity:
+        return False
     vehicle_ids = set()
     vehicle_types_by_id = {}
     attachments = []
@@ -724,8 +729,10 @@ def _validate_vehicles(data):
                 return False
         slot_id = vehicle.get("slot_id")
         if parking[0] == "garage":
+            home = next(b for b in data["buildings"]
+                        if (b["type"], b["row"], b["col"]) == parking)
             if (not _is_plain_int(slot_id)
-                    or not 0 <= slot_id < len(GARAGE_PARKING_SLOTS)):
+                    or not 0 <= slot_id < get_garage_capacity(home)):
                 return False
             occupancy = (parking[1], parking[2], slot_id)
             if occupancy in occupied_slots:

@@ -166,6 +166,11 @@ def get_garage_parking_position(building, slot_index=0):
     )
 
 
+def get_garage_capacity(building):
+    """Single capacity entry point for current and future garage levels."""
+    return len(GARAGE_PARKING_SLOTS) if building.get("type") == "garage" else 0
+
+
 def has_adjacent_road(world, row, col, width, height):
     """Ellenőrzi, hogy az épület valamelyik oldala érintkezik-e úttal."""
     if row > 0:

@@ -61,7 +61,8 @@ class GaragePopupLayoutTests(unittest.TestCase):
             asset.world_x, asset.world_y = get_garage_parking_position(
                 asset.assigned_parking_building, asset.parking_slot_id)
         self.panel.open_for_building(self.garage)
-        self.state = type("State", (), {"vehicles": self.manager})()
+        self.state = type("State", (), {"vehicles": self.manager,
+                                      "buildings": [self.garage, self.other_garage]})()
 
     def _drawn_entries(self):
         entries = []
@@ -123,7 +124,21 @@ class GaragePopupLayoutTests(unittest.TestCase):
         for capacity in (4, 8, 12, 16):
             rects = parking_slot_rects(pygame.Rect(0, 0, 400, 240), capacity)
             self.assertEqual(len(rects), capacity)
+            self.assertTrue(all(rect.size == (36, 36) for rect in rects))
             self.assertTrue(all(not a.colliderect(b) for i, a in enumerate(rects) for b in rects[i + 1:]))
+
+    def test_compact_layout_keeps_native_sprites_and_fits_future_capacities(self):
+        from garage_view import parking_slot_rects, parking_view_height
+        for capacity in (4, 8, 12, 16):
+            for width in (280, 400):
+                bounds = pygame.Rect(10, 20, width, parking_view_height(capacity))
+                slots = parking_slot_rects(bounds, capacity)
+                self.assertTrue(all(bounds.contains(slot) for slot in slots))
+                self.assertTrue(all(slot.size == (36, 36) for slot in slots))
+                self.assertLessEqual(bounds.height, 164)
+        with patch("ui.pygame.transform.scale", side_effect=AssertionError("No enlargement")):
+            self._drawn_texts()
+        self.assertEqual(self.panel.rect.height, 788)
 
     def test_scroll_and_close_consume_events_without_purchase(self):
         set_screen_size(640, 480)

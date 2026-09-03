@@ -1,5 +1,8 @@
 # CHANGELOG
 
+- A Garázsok közös Központi géptelepet alkotnak: a vásárlási kapacitás az összes Garázsból számolódik, a vásárlás bármelyik szabad helyet használhatja. A Dispatcher továbbra is az egyetlen közös flottából dolgozik. A popup külön mutatja a bent parkolókat és a birtokolt flotta kapacitását; biztonságos bontáskor a nyugalomban lévő eszközök átrendeződnek.
+- A grafikus parkolónézet kompakt, négyzetes helyeket és eredeti méretű járműsprite-okat használ, nagyítás nélkül.
+
 - A Garázs zárt, fedett épületként jelenik meg; a bent parkoló járműveket a térkép helyett a popup új, élő grafikus parkolónézete mutatja. A meglévő járműgrafikák és parkolóhely-adatok változatlanul használatban maradnak.
 
 - Egyszerre maximum 2 Feldolgozó üzem építhető. Az Épületek menü jelzi a darabszámot és a limitet, a betelt kártya nem indít építést; bontás után újra felszabadul a hely.

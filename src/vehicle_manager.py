@@ -10,6 +10,7 @@ from buildings import (
     GARAGE_PARKING_SLOTS, get_animal_pen_groups, get_free_capacity,
     get_orchard_groups, get_total_inventory, get_warehouses, remove_item,
     store_item,
+    get_garage_capacity,
 )
 from constants import FIELD
 from crops import (
@@ -272,12 +273,25 @@ class VehicleManager:
 
     def garage_status(self, garage):
         occupied = len(self.occupied_slot_ids(garage))
-        capacity = len(GARAGE_PARKING_SLOTS)
+        capacity = get_garage_capacity(garage)
         return {
             "occupied": occupied,
             "capacity": capacity,
             "free": capacity - occupied,
         }
+
+    def fleet_capacity(self, buildings):
+        """Owned units reserve capacity even while working away from home."""
+        capacity = sum(get_garage_capacity(b) for b in buildings)
+        owned = len(self.managed_assets)
+        return {"capacity": capacity, "owned": owned, "free": max(0, capacity - owned)}
+
+    def free_parking_slots(self, buildings):
+        garages = sorted((b for b in buildings if b["type"] == "garage"),
+                         key=lambda b: (b["row"], b["col"]))
+        return [(garage, slot) for garage in garages
+                for slot in range(get_garage_capacity(garage))
+                if slot not in self.occupied_slot_ids(garage)]
 
     def count_by_type(self, vehicle_type):
         normalized_type = normalize_vehicle_type(vehicle_type)
@@ -308,7 +322,7 @@ class VehicleManager:
     def first_free_slot(self, garage):
         occupied = self.occupied_slot_ids(garage)
         return next(
-            (slot_id for slot_id in range(len(GARAGE_PARKING_SLOTS))
+            (slot_id for slot_id in range(get_garage_capacity(garage))
              if slot_id not in occupied),
             None,
         )
@@ -329,10 +343,13 @@ class VehicleManager:
         definition = VEHICLE_TYPE_DEFINITIONS.get(normalized_type)
         if definition is None:
             return False
-        slot_id = self.first_free_slot(garage)
-        if slot_id is None:
+        if garage not in buildings or garage.get("type") != "garage":
+            return False
+        slots = self.free_parking_slots(buildings)
+        if self.fleet_capacity(buildings)["free"] == 0 or not slots:
             log("Nincs szabad parkolóhely. Építs új Garázst.", "Vehicle")
             return False
+        garage, slot_id = slots[0]
         if not economy.can_afford(definition["purchase_price"]):
             log(
                 f"Nincs elegendő pénz új {definition['name'].lower()} "
@@ -1942,7 +1959,15 @@ class VehicleManager:
         for vehicle in self.vehicles:
             vehicle.last_update_ticks = now
 
-    def demolition_block_reason(self, row, col, building=None, field=None):
+    def demolition_block_reason(self, row, col, building=None, field=None, buildings=None):
+        if building is not None and building.get("type") == "garage" and buildings is not None:
+            remaining = [b for b in buildings if b is not building]
+            if self.fleet_capacity(remaining)["capacity"] < len(self.managed_assets):
+                return "A Garázs nem bontható le, mert nincs elegendő parkolókapacitás a járműállomány számára."
+            from garage_view import is_parked_in_garage
+            if any(not is_parked_in_garage(a, building) for a in self.assets_in_garage(building)):
+                return "A Garázs nem bontható, amíg hozzá tartozó jármű dolgozik vagy közlekedik."
+            return None
         if building is not None and any(
                 vehicle.assigned_parking_building is building
                 for vehicle in self.managed_assets):
@@ -1969,6 +1994,24 @@ class VehicleManager:
                              or building.get("type") == task.source_type)):
                     return "Az épület alapanyag-szállítás közben nem bontható."
         return None
+
+    def prepare_garage_demolition(self, world, buildings, garage):
+        """Plan all assignments first; idle assets move safely before demolition."""
+        if self.demolition_block_reason(garage["row"], garage["col"], garage, buildings=buildings):
+            return False
+        remaining = [b for b in buildings if b is not garage]
+        assets = self.assets_in_garage(garage)
+        slots = self.free_parking_slots(remaining)
+        from tractor import find_building_parking
+        slots = [(b, slot) for b, slot in slots if find_building_parking(world, b) is not None]
+        if len(slots) < len(assets):
+            return False
+        for asset, (target, slot) in zip(assets, slots):
+            asset.assigned_parking_building = target
+            asset.parking_slot_id = slot
+            asset.row = asset.col = None
+            asset.ensure_idle_position(world, remaining)
+        return True
 
     def can_save(self, world, buildings):
         return (

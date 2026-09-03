@@ -5,6 +5,16 @@ import pygame
 from buildings import get_garage_parking_position
 
 
+PARKING_SLOT_SIZE = 36
+PARKING_SLOT_GAP = 4
+
+
+def parking_view_height(capacity):
+    columns = max(1, ceil(sqrt(capacity)))
+    rows = max(1, ceil(capacity / columns))
+    return rows * (PARKING_SLOT_SIZE + PARKING_SLOT_GAP) + PARKING_SLOT_GAP
+
+
 def is_parked_in_garage(asset, garage=None):
     assigned = asset.assigned_parking_building
     if (assigned is None or assigned.get("type") != "garage"
@@ -21,13 +31,19 @@ def is_parked_in_garage(asset, garage=None):
 
 
 def parking_slot_rects(rect, capacity):
-    """Capacity-driven grid; slot IDs, never vehicle list order, define positions."""
+    """Compact square bays centered in the available view, in slot-ID order."""
     columns = max(1, ceil(sqrt(capacity)))
     rows = max(1, ceil(capacity / columns))
+    gap = PARKING_SLOT_GAP
+    size = max(1, min(PARKING_SLOT_SIZE,
+                     (rect.width - (columns + 1) * gap) // columns,
+                     (rect.height - (rows + 1) * gap) // rows))
+    left = rect.centerx - (columns * size + (columns - 1) * gap) // 2
+    top = rect.centery - (rows * size + (rows - 1) * gap) // 2
     return [pygame.Rect(
-        rect.x + (index % columns) * rect.width // columns + 4,
-        rect.y + (index // columns) * rect.height // rows + 4,
-        rect.width // columns - 8, rect.height // rows - 8,
+        left + (index % columns) * (size + gap),
+        top + (index // columns) * (size + gap),
+        size, size,
     ) for index in range(capacity)]
 
 

@@ -347,10 +347,14 @@ def main():
                 building, buildings, animals,
             ) or vehicles.demolition_block_reason(
                 mouse_row, mouse_col, building, field,
+                buildings=buildings,
             )
             if block_reason:
                 logger.log(block_reason, "Building")
             elif building:
+                if building["type"] == "garage" and not vehicles.prepare_garage_demolition(world, buildings, building):
+                    logger.log("A Garázs járművei nem helyezhetők át biztonságosan.", "Building")
+                    return
                 if remove_building(world, buildings, building):
                     synchronize_pen_group_stocks(buildings, animals)
             elif is_field(world, mouse_row, mouse_col):

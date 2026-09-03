@@ -31,7 +31,9 @@ from inventory import (
 )
 from maintenance import format_annual_maintenance_rate
 from money_format import format_money
-from garage_view import is_parked_in_garage, parking_slot_rects, parked_sprite
+from garage_view import (
+    is_parked_in_garage, parking_slot_rects, parked_sprite, parking_view_height,
+)
 from financial_history import (
     EXPENSE_ANIMAL_FEED, EXPENSE_ANIMAL_PURCHASE, EXPENSE_CONSTRUCTION,
     EXPENSE_FRUIT_TREE, EXPENSE_LOAN_REPAYMENT, EXPENSE_MAINTENANCE,
@@ -2457,7 +2459,9 @@ class InfoPanel(PopupWindow):
     def _draw_garage(self, screen, font, game_state):
         manager = game_state.vehicles
         status = manager.garage_status(self.building)
-        self.rect.size = (responsive_panel_width(440), min(840, get_screen_size()[1] - 100))
+        parking_height = parking_view_height(status["capacity"])
+        self.rect.size = (responsive_panel_width(440),
+                          min(704 + parking_height, get_screen_size()[1] - 100))
         self.rect.center = get_screen_center()
         self.draw_frame(screen)
         x = self.rect.x + INFO_PANEL_PADDING
@@ -2465,16 +2469,18 @@ class InfoPanel(PopupWindow):
         self.garage_content_rect = pygame.Rect(
             x, self.rect.y + 54, self.rect.width - 2 * INFO_PANEL_PADDING,
             self.rect.height - 72)
-        self.garage_max_scroll = max(0, 750 - self.garage_content_rect.height)
+        self.garage_max_scroll = max(0, 614 + parking_height - self.garage_content_rect.height)
         self.garage_scroll = max(0, min(self.garage_scroll, self.garage_max_scroll))
         previous_clip = screen.get_clip()
         screen.set_clip(self.garage_content_rect)
         y = self.garage_content_rect.top - self.garage_scroll
         self.draw_text(screen, font, "Parkolónézet", x, y)
         y += 28
-        parking_rect = pygame.Rect(x, y, self.garage_content_rect.width, 164)
-        pygame.draw.rect(screen, (112, 111, 103), parking_rect)
+        parking_rect = pygame.Rect(x, y, self.garage_content_rect.width, parking_height)
         self.garage_slot_rects = parking_slot_rects(parking_rect, status["capacity"])
+        if self.garage_slot_rects:
+            floor = self.garage_slot_rects[0].unionall(self.garage_slot_rects).inflate(8, 8)
+            pygame.draw.rect(screen, (112, 111, 103), floor)
         self.garage_parked_assets = {
             asset.parking_slot_id: asset
             for asset in manager.assets_in_garage(self.building)
@@ -2487,17 +2493,18 @@ class InfoPanel(PopupWindow):
             asset = self.garage_parked_assets.get(slot_id)
             if asset is not None:
                 sprite = parked_sprite(asset)
-                size = min(64, slot.width - 12, slot.height - 12)
-                sprite = pygame.transform.scale(sprite, (size, size))
                 screen.blit(sprite, sprite.get_rect(center=slot.center))
                 if slot.collidepoint(pygame.mouse.get_pos()) and self.garage_content_rect.collidepoint(pygame.mouse.get_pos()):
                     definition = VEHICLE_TYPE_DEFINITIONS[asset.vehicle_type]
                     tooltip = (f"{definition['name']} #{asset.vehicle_id}\nÁllapot: Garázsban", slot)
         y = parking_rect.bottom + 14
         self.draw_text(screen, font,
-                       f"Parkolóhelyek: {status['occupied']} / {status['capacity']}", x, y)
+                       f"Parkolóhelyek: {len(self.garage_parked_assets)} / {status['capacity']}", x, y)
         y += 28
-        self.draw_text(screen, font, f"Szabad hely: {status['free']}", x, y)
+        fleet = manager.fleet_capacity(game_state.buildings)
+        self.draw_text(screen, font, f"Központi géptelep: {fleet['owned']} / {fleet['capacity']}", x, y)
+        y += 28
+        self.draw_text(screen, font, f"Szabad flottakapacitás: {fleet['free']}", x, y)
         y += 38
         self.draw_text(screen, font, "Járműállomány:", x, y)
         y += 28

@@ -79,7 +79,7 @@ class FruitHarvesterTests(unittest.TestCase):
     def test_garage_purchase_list_contains_the_vehicle(self):
         panel = InfoPanel()
         panel.open_for_building(self.garage)
-        game_state = type("State", (), {"vehicles": self.manager})()
+        game_state = type("State", (), {"vehicles": self.manager, "buildings": self.buildings})()
         surface = pygame.Surface((1500, 1000))
         font = pygame.font.Font(None, 20)
         panel.draw(surface, font, game_state)
