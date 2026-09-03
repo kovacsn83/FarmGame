@@ -646,111 +646,30 @@ def _garage_parking_rect(footprint, row_offset, col_offset):
 
 
 def draw_garage(screen, building):
-    """Nyitott gépszínt és a négy valódi parkolóhely jelölését rajzolja."""
+    """Fedett géptároló, változatlan 4x4-es logikai alapterülettel."""
     footprint = _building_rect(building)
-
     _draw_building_shadow(screen, footprint, PROCEDURAL_SHADOW_COLOR)
-    pygame.draw.rect(
-        screen, GARAGE_FLOOR, footprint, border_radius=2,
-    )
-
-    # Finom burkolati fény és árnyék jelzi a közös bal alsó fényirányt.
-    pygame.draw.line(
-        screen,
-        GARAGE_FLOOR_LIGHT,
-        (footprint.left + 2, footprint.bottom - 2),
-        (footprint.right - 2, footprint.bottom - 2),
-        2,
-    )
-    pygame.draw.line(
-        screen,
-        GARAGE_FLOOR_SHADE,
-        (footprint.right - 2, footprint.top + 2),
-        (footprint.right - 2, footprint.bottom - 2),
-        2,
-    )
-
-    # A jelölések ugyanabból a négy logikai parkolóhelyből készülnek,
-    # amelyeket a traktorok parkolási rendszere is használ.
-    for row_offset, col_offset in GARAGE_PARKING_SLOTS:
-        parking_rect = _garage_parking_rect(
-            footprint, row_offset, col_offset,
-        ).inflate(-6, -6)
-        pygame.draw.rect(
-            screen, GARAGE_PARKING_MARK, parking_rect, 1,
-        )
-
-    # A hátsó keskeny fémtető nem fedi el a nyitott parkolóterületet.
-    roof = pygame.Rect(
-        footprint.x + 3,
-        footprint.y + 3,
-        footprint.width - 6,
-        14,
-    )
-    roof_split = roof.centery
-    pygame.draw.rect(
-        screen,
-        GARAGE_ROOF_DARK,
-        (roof.left, roof.top, roof.width, roof_split - roof.top),
-    )
-    pygame.draw.rect(
-        screen,
-        GARAGE_ROOF_LIGHT,
-        (roof.left, roof_split, roof.width, roof.bottom - roof_split),
-    )
-    for panel_x in range(roof.left + 13, roof.right, 13):
-        pygame.draw.line(
-            screen,
-            GARAGE_ROOF_PANEL,
-            (panel_x, roof.top + 2),
-            (panel_x, roof.bottom - 2),
-            1,
-        )
+    pygame.draw.rect(screen, GARAGE_FLOOR_LIGHT, footprint)
+    roof = footprint.inflate(-6, -6)
+    roof.height -= 12
+    pygame.draw.rect(screen, GARAGE_ROOF_LIGHT, roof)
+    pygame.draw.rect(screen, GARAGE_ROOF_DARK,
+                     (roof.x, roof.y, roof.width, roof.height // 2))
+    for panel_x in range(roof.left + 10, roof.right, 10):
+        pygame.draw.line(screen, GARAGE_ROOF_PANEL,
+                         (panel_x, roof.top + 2), (panel_x, roof.bottom - 2))
     pygame.draw.rect(screen, GARAGE_OUTLINE, roof, 2)
-
-    # A két oldalsó tartósor szabadon hagyja az alsó behajtási oldalt.
-    post_size = 5
-    for post_center in (
-        (footprint.left + 5, footprint.top + 8),
-        (footprint.right - 6, footprint.top + 8),
-        (footprint.left + 5, footprint.centery),
-        (footprint.right - 6, footprint.centery),
-        (footprint.left + 5, footprint.bottom - 12),
-        (footprint.right - 6, footprint.bottom - 12),
-    ):
-        post = pygame.Rect(0, 0, post_size, post_size)
-        post.center = post_center
-        pygame.draw.rect(screen, GARAGE_POST, post)
-        pygame.draw.line(
-            screen,
-            GARAGE_POST_LIGHT,
-            post.bottomleft,
-            post.bottomright,
-            1,
-        )
-
-    # A gépszín külső kerete alul nyitva marad a behajtáshoz.
-    pygame.draw.line(
-        screen,
-        GARAGE_OUTLINE,
-        footprint.topleft,
-        footprint.topright,
-        2,
-    )
-    pygame.draw.line(
-        screen,
-        GARAGE_OUTLINE,
-        footprint.topleft,
-        footprint.bottomleft,
-        2,
-    )
-    pygame.draw.line(
-        screen,
-        GARAGE_OUTLINE,
-        footprint.topright,
-        footprint.bottomright,
-        2,
-    )
+    pygame.draw.line(screen, GARAGE_ROOF_DARK, roof.topright, roof.bottomright, 3)
+    gate = pygame.Rect(footprint.x + footprint.width // 4, roof.bottom + 2,
+                       footprint.width // 2, 10)
+    pygame.draw.rect(screen, GARAGE_FLOOR_SHADE, gate)
+    for y in range(gate.top + 2, gate.bottom, 3):
+        pygame.draw.line(screen, GARAGE_ROOF_PANEL, (gate.left, y), (gate.right, y))
+    pygame.draw.rect(screen, GARAGE_OUTLINE, gate, 1)
+    vent = pygame.Rect(roof.x + 8, roof.y + 8, 12, 7)
+    pygame.draw.rect(screen, GARAGE_FLOOR_SHADE, vent)
+    pygame.draw.rect(screen, GARAGE_OUTLINE, vent, 1)
+    pygame.draw.rect(screen, GARAGE_OUTLINE, footprint, 1)
 
 
 def draw_processing_plant(screen, building):

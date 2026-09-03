@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- A Garázs zárt, fedett épületként jelenik meg; a bent parkoló járműveket a térkép helyett a popup új, élő grafikus parkolónézete mutatja. A meglévő járműgrafikák és parkolóhely-adatok változatlanul használatban maradnak.
+
 - Egyszerre maximum 2 Feldolgozó üzem építhető. Az Épületek menü jelzi a darabszámot és a limitet, a betelt kártya nem indít építést; bontás után újra felszabadul a hely.
 
 - A Feldolgozó üzem II. tényleges kapacitásfejlesztést kapott: két független, egyenként 5 db/hetes gyártósor (összesen 10 db/hét), azonos vagy eltérő termékválasztással. A közös Üzemi raktár 200-ról 400-ra bővül, a meglévő készlet és a régi mentések első gyártósora megmarad.

@@ -1663,6 +1663,9 @@ class Vehicle:
         self._orchard_exit_road = None
 
     def draw(self, screen):
+        from garage_view import is_parked_in_garage
+        if is_parked_in_garage(self):
+            return
         if self.world_x is None or self.world_y is None:
             return
         screen_x, screen_y = world_to_screen(self.world_x, self.world_y)
@@ -1981,6 +1984,9 @@ class TowableImplement:
 
     def draw(self, screen):
         if self.world_x is None or self.world_y is None:
+            return
+        from garage_view import is_parked_in_garage
+        if is_parked_in_garage(self):
             return
         screen_x, screen_y = world_to_screen(self.world_x, self.world_y)
         center = round(screen_x), round(screen_y)

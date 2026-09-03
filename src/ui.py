@@ -31,6 +31,7 @@ from inventory import (
 )
 from maintenance import format_annual_maintenance_rate
 from money_format import format_money
+from garage_view import is_parked_in_garage, parking_slot_rects, parked_sprite
 from financial_history import (
     EXPENSE_ANIMAL_FEED, EXPENSE_ANIMAL_PURCHASE, EXPENSE_CONSTRUCTION,
     EXPENSE_FRUIT_TREE, EXPENSE_LOAN_REPAYMENT, EXPENSE_MAINTENANCE,
@@ -2004,6 +2005,9 @@ class InfoPanel(PopupWindow):
     def __init__(self):
         super().__init__(INFO_PANEL_WIDTH, 200)
         self.building_type = None
+        self.garage_scroll = 0
+        self.garage_max_scroll = 0
+        self.garage_content_rect = pygame.Rect(0, 0, 0, 0)
         self.market_card_rects = {}
         self.market_list_rect = pygame.Rect(0, 0, 0, 0)
         self.market_scroll_offset = 0
@@ -2028,6 +2032,7 @@ class InfoPanel(PopupWindow):
         self.processing_recipe_max_scroll = 0
 
     def open_for_building(self, building):
+        self.garage_scroll = 0
         """Megnyitja a panelt, ha az épülettípushoz már tartozik nézet."""
         if building["type"] not in (
                 "warehouse", "market", "farmhouse", "garage", "pond",
@@ -2056,6 +2061,14 @@ class InfoPanel(PopupWindow):
             if sale is not None:
                 self.pending_sale_selection = sale
             return handled
+        if self.visible and self.building_type == "garage":
+            if event.type == pygame.MOUSEWHEEL:
+                self.garage_scroll = max(0, min(self.garage_max_scroll, self.garage_scroll - event.y * 36))
+                return True
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button != 1:
+                if event.button in (4, 5):
+                    self.garage_scroll = max(0, min(self.garage_max_scroll, self.garage_scroll + (-36 if event.button == 4 else 36)))
+                return True
         if self.visible and self.building_type == "market":
             if event.type == pygame.MOUSEWHEEL:
                 self._scroll_market(-event.y * MARKET_SCROLL_STEP)
@@ -2183,6 +2196,8 @@ class InfoPanel(PopupWindow):
                     self.pending_upgrade_selection = upgrade_id
                     return True
         elif self.building_type == "garage":
+            if not self.garage_content_rect.collidepoint(position):
+                return True
             for vehicle_type, purchase_rect in self.garage_purchase_rects.items():
                 if purchase_rect.collidepoint(position):
                     self.pending_vehicle_purchase = vehicle_type
@@ -2442,46 +2457,48 @@ class InfoPanel(PopupWindow):
     def _draw_garage(self, screen, font, game_state):
         manager = game_state.vehicles
         status = manager.garage_status(self.building)
-        garage_assets = manager.assets_in_garage(self.building)
-        self.rect.size = (
-            responsive_panel_width(INFO_PANEL_WIDTH),
-            700 + len(garage_assets) * 24,
-        )
+        self.rect.size = (responsive_panel_width(440), min(840, get_screen_size()[1] - 100))
         self.rect.center = get_screen_center()
         self.draw_frame(screen)
         x = self.rect.x + INFO_PANEL_PADDING
-        y = self.rect.y + INFO_PANEL_PADDING
-        self.draw_text(screen, font, POPUP_TITLES["garage"], x, y)
-        y += 42
-        self.draw_text(
-            screen, font,
-            f"Parkolóhelyek: {status['occupied']} / {status['capacity']}", x, y,
-        )
+        self.draw_text(screen, font, POPUP_TITLES["garage"], x, self.rect.y + 18)
+        self.garage_content_rect = pygame.Rect(
+            x, self.rect.y + 54, self.rect.width - 2 * INFO_PANEL_PADDING,
+            self.rect.height - 72)
+        self.garage_max_scroll = max(0, 750 - self.garage_content_rect.height)
+        self.garage_scroll = max(0, min(self.garage_scroll, self.garage_max_scroll))
+        previous_clip = screen.get_clip()
+        screen.set_clip(self.garage_content_rect)
+        y = self.garage_content_rect.top - self.garage_scroll
+        self.draw_text(screen, font, "Parkolónézet", x, y)
+        y += 28
+        parking_rect = pygame.Rect(x, y, self.garage_content_rect.width, 164)
+        pygame.draw.rect(screen, (112, 111, 103), parking_rect)
+        self.garage_slot_rects = parking_slot_rects(parking_rect, status["capacity"])
+        self.garage_parked_assets = {
+            asset.parking_slot_id: asset
+            for asset in manager.assets_in_garage(self.building)
+            if is_parked_in_garage(asset, self.building)
+        }
+        tooltip = None
+        for slot_id, slot in enumerate(self.garage_slot_rects):
+            pygame.draw.rect(screen, (146, 145, 134), slot)
+            pygame.draw.rect(screen, (197, 195, 177), slot, 1)
+            asset = self.garage_parked_assets.get(slot_id)
+            if asset is not None:
+                sprite = parked_sprite(asset)
+                size = min(64, slot.width - 12, slot.height - 12)
+                sprite = pygame.transform.scale(sprite, (size, size))
+                screen.blit(sprite, sprite.get_rect(center=slot.center))
+                if slot.collidepoint(pygame.mouse.get_pos()) and self.garage_content_rect.collidepoint(pygame.mouse.get_pos()):
+                    definition = VEHICLE_TYPE_DEFINITIONS[asset.vehicle_type]
+                    tooltip = (f"{definition['name']} #{asset.vehicle_id}\nÁllapot: Garázsban", slot)
+        y = parking_rect.bottom + 14
+        self.draw_text(screen, font,
+                       f"Parkolóhelyek: {status['occupied']} / {status['capacity']}", x, y)
         y += 28
         self.draw_text(screen, font, f"Szabad hely: {status['free']}", x, y)
-        y += 30
-        self.draw_text(screen, font, "Parkoló eszközök:", x, y)
-        y += 28
-        if garage_assets:
-            for asset in garage_assets:
-                definition = VEHICLE_TYPE_DEFINITIONS[asset.vehicle_type]
-                status_text = ""
-                if definition.get("towable"):
-                    status_text = (
-                        " – Felcsatolva"
-                        if asset.is_attached
-                        else " – Garázsban"
-                    )
-                self.draw_text(
-                    screen, font,
-                    f"• {definition['name']} #{asset.vehicle_id}{status_text}",
-                    x + 12, y,
-                )
-                y += 24
-        else:
-            self.draw_text(screen, font, "–", x + 12, y)
-            y += 24
-        y += 10
+        y += 38
         self.draw_text(screen, font, "Járműállomány:", x, y)
         y += 28
         self.draw_text(
@@ -2552,6 +2569,9 @@ class InfoPanel(PopupWindow):
                 details.get_rect(center=(purchase_rect.centerx, purchase_rect.y + 38)),
             )
             y += 62
+        screen.set_clip(previous_clip)
+        if tooltip is not None:
+            draw_tooltip(screen, font, tooltip[0], tooltip[1])
 
     def _draw_warehouse(self, screen, font, game_state):
         inventory = {

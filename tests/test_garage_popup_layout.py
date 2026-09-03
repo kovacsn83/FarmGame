@@ -56,6 +56,10 @@ class GaragePopupLayoutTests(unittest.TestCase):
             VehicleType.TRACTOR, self.other_garage, 0,
         )
         self.panel = InfoPanel()
+        from buildings import get_garage_parking_position
+        for asset in self.manager.managed_assets:
+            asset.world_x, asset.world_y = get_garage_parking_position(
+                asset.assigned_parking_building, asset.parking_slot_id)
         self.panel.open_for_building(self.garage)
         self.state = type("State", (), {"vehicles": self.manager})()
 
@@ -76,55 +80,66 @@ class GaragePopupLayoutTests(unittest.TestCase):
     def _drawn_texts(self):
         return [text for text, _x, _y in self._drawn_entries()]
 
-    def test_parking_list_precedes_the_fleet_counts(self):
+    def test_graphical_parking_precedes_counts_and_has_no_duplicate_list(self):
         texts = self._drawn_texts()
-        parking_index = texts.index("Parkoló eszközök:")
-        fleet_index = texts.index("Járműállomány:")
-
-        self.assertLess(texts.index("Parkolóhelyek: 4 / 4"), parking_index)
-        self.assertLess(texts.index("Szabad hely: 0"), parking_index)
-        self.assertLess(parking_index, texts.index("• Traktor #1"))
-        self.assertLess(texts.index("• Kombájn #4"), fleet_index)
-        self.assertLess(fleet_index, texts.index("• Traktorok: 2"))
-        self.assertIn("• Locsolótartály #2 – Garázsban", texts)
-        self.assertIn("• Pótkocsi #3 – Garázsban", texts)
+        self.assertLess(texts.index("Parkolónézet"), texts.index("Parkolóhelyek: 4 / 4"))
+        self.assertNotIn("Parkoló eszközök:", texts)
+        self.assertEqual(len(self.panel.garage_slot_rects), 4)
+        self.assertEqual(set(self.panel.garage_parked_assets), {0, 1, 2, 3})
+        self.assertIn("• Traktorok: 2", texts)
         self.assertIn("• Kombájnok: 1", texts)
-        self.assertIn("• Gyümölcs szüretelőgépek: 0", texts)
-        self.assertIn("• Locsolótartályok: 1", texts)
         self.assertIn("• Pótkocsik: 1", texts)
 
-    def test_fleet_rows_use_the_same_indent_as_parked_assets(self):
-        entries = self._drawn_entries()
-        positions = {text: x for text, x, _y in entries}
-        self.assertEqual(
-            positions["• Traktor #1"], positions["• Traktorok: 2"],
-        )
-        self.assertGreater(
-            positions["• Traktorok: 2"], positions["Járműállomány:"],
-        )
+    def test_fleet_rows_remain_indented(self):
+        positions = {text: x for text, x, _ in self._drawn_entries()}
+        self.assertGreater(positions["• Traktorok: 2"], positions["Járműállomány:"])
 
-    def test_redraw_uses_current_garage_assets_without_changing_panel_size(self):
-        initial_texts = self._drawn_texts()
+    def test_departure_and_return_refresh_without_mutating_slots(self):
+        self._drawn_texts()
         initial_height = self.panel.rect.height
-        self.assertIn("• Pótkocsi #3 – Garázsban", initial_texts)
+        self.tractor.state = "moving"
+        self._drawn_texts()
+        self.assertNotIn(0, self.panel.garage_parked_assets)
+        self.assertEqual(self.tractor.parking_slot_id, 0)
+        self.tractor.state = "idle"
+        self._drawn_texts()
+        self.assertIs(self.panel.garage_parked_assets[0], self.tractor)
+        self.assertEqual(initial_height, self.panel.rect.height)
+        self.assertEqual(len(self.panel.garage_purchase_rects), 5)
 
-        self.trailer.assigned_parking_building = self.other_garage
-        self.trailer.parking_slot_id = 1
-        updated_texts = self._drawn_texts()
+    def test_all_sprites_hidden_only_when_parked_and_grid_extensible(self):
+        from garage_view import is_parked_in_garage, parked_sprite, parking_slot_rects
+        harvester = self.manager._create_managed_asset(VehicleType.FRUIT_HARVESTER, self.other_garage, 1)
+        from buildings import get_garage_parking_position
+        harvester.world_x, harvester.world_y = get_garage_parking_position(self.other_garage, 1)
+        for asset in self.manager.managed_assets:
+            self.assertTrue(is_parked_in_garage(asset))
+            self.assertGreater(parked_sprite(asset).get_bounding_rect().width, 0)
+            screen = pygame.Surface((500, 500), pygame.SRCALPHA)
+            asset.draw(screen)
+            self.assertEqual(screen.get_bounding_rect().width, 0)
+            asset.world_x += 50
+            self.assertFalse(is_parked_in_garage(asset))
+        for capacity in (4, 8, 12, 16):
+            rects = parking_slot_rects(pygame.Rect(0, 0, 400, 240), capacity)
+            self.assertEqual(len(rects), capacity)
+            self.assertTrue(all(not a.colliderect(b) for i, a in enumerate(rects) for b in rects[i + 1:]))
 
-        self.assertNotIn("• Pótkocsi #3 – Garázsban", updated_texts)
-        self.assertIn("Parkolóhelyek: 3 / 4", updated_texts)
-        self.assertIn("Szabad hely: 1", updated_texts)
-        self.assertIn("• Pótkocsik: 1", updated_texts)
-        self.assertEqual(initial_height - 24, self.panel.rect.height)
-        self.assertEqual(
-            {
-                VehicleType.TRACTOR, VehicleType.COMBINE,
-                VehicleType.FRUIT_HARVESTER, VehicleType.WATER_TANK,
-                VehicleType.TRAILER,
-            },
-            set(self.panel.garage_purchase_rects),
-        )
+    def test_scroll_and_close_consume_events_without_purchase(self):
+        set_screen_size(640, 480)
+        self._drawn_texts()
+        self.assertLessEqual(self.panel.rect.bottom, 480)
+        self.assertTrue(self.panel.handle_event(pygame.event.Event(pygame.MOUSEWHEEL, y=-3)))
+        self.assertGreater(self.panel.garage_scroll, 0)
+        self._drawn_texts()
+        self.assertIsNone(self.panel.take_vehicle_purchase())
+        self.assertTrue(self.panel.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE)))
+        self.assertFalse(self.panel.visible)
+        self.panel.open_for_building(self.garage)
+        self._drawn_texts()
+        self.assertTrue(self.panel.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(0, 0))))
+        self.assertFalse(self.panel.visible)
+        set_screen_size(1500, 1000)
 
 
 if __name__ == "__main__":
