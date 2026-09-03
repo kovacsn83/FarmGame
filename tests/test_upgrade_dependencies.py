@@ -10,6 +10,8 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from economy import Economy
+from financial_history import EXPENSE_UPGRADE
+from processing import initialize_processing_plant, start_processing_batch
 from game_rules import UPGRADES, get_upgrade_status, get_upgrade_tree_columns
 from game_state import GameState
 from save_system import load_game, save_game
@@ -99,6 +101,55 @@ class UpgradeDependencyTests(unittest.TestCase):
             state.purchased_upgrades.clear()
             self.assertTrue(load_game(state, path))
         self.assertIn("automated_field_spraying", state.purchased_upgrades)
+
+    def test_processing_upgrade_requires_level_and_harvesting(self):
+        upgrade_id = "processing_plant_level_2"
+        for level, purchased in ((1, ()), (2, ("automated_field_harvesting",)), (3, ())):
+            with self.subTest(level=level, purchased=purchased):
+                state, economy = self.make_state(level, purchased)
+                self.assertTrue(get_upgrade_status(upgrade_id, purchased, level).startswith("Zárolt"))
+                self.assertFalse(economy.purchase_upgrade(state, upgrade_id))
+                self.assertEqual(economy.money, 200000)
+        state, economy = self.make_state(3, ("automated_field_harvesting",))
+        self.assertEqual(get_upgrade_status(upgrade_id, state.purchased_upgrades, 3), "Fejleszthető")
+        economy.money = 5999
+        self.assertFalse(economy.purchase_upgrade(state, upgrade_id))
+        economy.money = 6000
+        before = economy.get_farm_value_breakdown(state)["upgrades"]
+        self.assertTrue(economy.purchase_upgrade(state, upgrade_id))
+        self.assertEqual(economy.money, 0)
+        self.assertEqual(economy.get_farm_value_breakdown(state)["upgrades"], before + 6000)
+        entry = economy.financial_history[-1]
+        self.assertEqual((entry["category"], entry["subcategory"], entry["amount"]), (EXPENSE_UPGRADE, upgrade_id, 6000))
+        self.assertEqual(get_upgrade_status(upgrade_id, state.purchased_upgrades, 3), "Kifejlesztve")
+        self.assertFalse(economy.purchase_upgrade(state, upgrade_id))
+
+    def test_processing_upgrade_roundtrip_and_legacy_default(self):
+        upgrade_id = "processing_plant_level_2"
+        state, economy = self.make_state(3, ("automated_field_harvesting",))
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "upgrade.json"
+            farmhouse = state.buildings.pop()
+            self.assertTrue(save_game(state, path))
+            state.purchased_upgrades.add(upgrade_id)
+            self.assertTrue(load_game(state, path))
+            self.assertNotIn(upgrade_id, state.purchased_upgrades)
+            state.buildings.append(farmhouse)
+            self.assertTrue(economy.purchase_upgrade(state, upgrade_id))
+            state.buildings.clear()
+            self.assertTrue(save_game(state, path))
+            state.purchased_upgrades.clear()
+            self.assertTrue(load_game(state, path))
+            self.assertIn(upgrade_id, state.purchased_upgrades)
+
+    def test_processing_upgrade_does_not_increase_production_yet(self):
+        state, economy = self.make_state(3, ("automated_field_harvesting",))
+        plant = initialize_processing_plant({"type": "processing_plant"})
+        state.buildings.append(plant)
+        self.assertTrue(economy.purchase_upgrade(state, "processing_plant_level_2"))
+        plant["processing_inventory"]["tomato"] = 20
+        self.assertEqual(start_processing_batch(plant, 1), 5)
+        self.assertEqual(plant["processing_capacity"], 200)
 
 
 if __name__ == "__main__":

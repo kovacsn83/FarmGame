@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Új Farmház III. fejlesztési node: Feldolgozó üzem II. ($6 000), az Automatizált veteményes aratás után. Egyelőre megvásárolható és menthető; a tényleges kapacitásnövelés a következő fejlesztési lépésben készül el.
+
 - Új Farmház III. fejlesztés készült: a $30 000 értékű „Automatizált veteményes aratás” az aratható Veteményesekhez automatikusan, a meglévő Kombájn- és Dispatcher-rendszeren keresztül hoz létre Aratási feladatot.
 
 - Javítva a Farmház fejlesztési popup inputkezelése: fejlesztésvásárlás mostantól kizárólag bal egérgombbal indítható, az egérgörgő és a többi egérgomb nem aktivál node-ot.

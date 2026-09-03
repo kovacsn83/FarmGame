@@ -188,6 +188,7 @@ class FarmhouseUpgradeUiTests(unittest.TestCase):
         ))
         self.assertEqual(columns[2], (
             "automated_field_harvesting",
+            "processing_plant_level_2",
         ))
         for column in columns:
             tops = [self.panel.upgrade_card_rects[item].top for item in column]
@@ -225,6 +226,32 @@ class FarmhouseUpgradeUiTests(unittest.TestCase):
         with patch("pygame.mouse.get_pos", return_value=self.panel.rect.center):
             self.assertTrue(self.panel.handle_event(event))
         self.assertGreater(self.panel.upgrade_tree_scroll, initial_scroll)
+
+    def test_processing_upgrade_tooltip_and_purchase_input(self):
+        upgrade_id = "processing_plant_level_2"
+        self.panel.building["farmhouse_level"] = 3
+        self._draw_at((-1, -1))
+        self.assertNotIn(upgrade_id, self.panel.upgrade_clickable_ids)
+        self.state.purchased_upgrades.add("automated_field_harvesting")
+        self._draw_at((-1, -1))
+        self.assertIn(upgrade_id, self.panel.upgrade_clickable_ids)
+        card = self.panel.upgrade_card_rects[upgrade_id]
+        parent = self.panel.upgrade_card_rects["automated_field_harvesting"]
+        self.assertEqual(card.centerx, parent.centerx)
+        self.assertGreater(card.top, parent.bottom)
+        info = self.panel.upgrade_info_rects[upgrade_id]
+        with patch("pygame.mouse.get_pos", return_value=info.center), patch("ui.draw_tooltip") as tooltip:
+            self.panel.draw(self.screen, self.font, self.state)
+        tooltip.assert_called_once_with(self.screen, self.font,
+            "A Feldolgozó üzem heti kapacitását 10 db-ra növeli.", info)
+        position = (card.left + 10, card.bottom - 10)
+        for button in (2, 3, 4, 5, 1):
+            self.panel.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN,
+                {"button": button, "pos": position}))
+            self.assertEqual(self.panel.take_upgrade_selection(), upgrade_id if button == 1 else None)
+        self.state.purchased_upgrades.add(upgrade_id)
+        self._draw_at((-1, -1))
+        self.assertNotIn(upgrade_id, self.panel.upgrade_clickable_ids)
 
 
 if __name__ == "__main__":
