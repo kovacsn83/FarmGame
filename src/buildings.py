@@ -23,13 +23,9 @@ WAREHOUSE_UPGRADE_LEVELS = {"warehouse_level_2": 2, "warehouse_level_3": 3}
 # Épületenkénti fenntartási alapok, nem összeadódó fejlesztési árak.
 BUILDING_LEVEL_MAINTENANCE_BASES = {
     "garage": {1: GARAGE_BUILD_COST, 2: 3000.00, 3: 6000.00},
-    "warehouse": {1: WAREHOUSE_BUILD_COST, 2: 2000.00},
+    "warehouse": {1: WAREHOUSE_BUILD_COST, 2: 2000.00, 3: 5000.00},
     "processing_plant": {1: PROCESSING_PLANT_BUILD_COST, 2: 6000.00},
 }
-# A III. szint kizárólag kapacitást növel, fenntartása a II. szinttel azonos.
-BUILDING_LEVEL_MAINTENANCE_BASES["warehouse"][3] = BUILDING_LEVEL_MAINTENANCE_BASES["warehouse"][2]
-
-
 def get_warehouse_capacity(purchased_upgrades=()):
     level = max((level for upgrade, level in WAREHOUSE_UPGRADE_LEVELS.items()
                  if upgrade in purchased_upgrades), default=1)

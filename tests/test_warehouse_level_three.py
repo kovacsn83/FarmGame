@@ -71,7 +71,7 @@ class WarehouseLevelThreeTests(unittest.TestCase):
         self.assertEqual(get_total_inventory(self.state.buildings), inventory)
         for warehouse in self.warehouses:
             self.assertEqual(warehouse["capacity"], 1500)
-            self.assertEqual(get_building_maintenance_base(warehouse), 2000)
+            self.assertEqual(get_building_maintenance_base(warehouse), 5000)
         self.assertEqual(BUILDING_LIMITS["warehouse"], 2)
         self.assertIsNone(place_building(self.state.world, self.state.buildings, 5, 22, "warehouse"))
         self.assertTrue(remove_building(self.state.world, self.state.buildings, self.warehouses[0]))
