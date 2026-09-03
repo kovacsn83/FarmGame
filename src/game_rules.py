@@ -301,6 +301,7 @@ def get_upgrade_tree_columns():
 
 # Az itt nem szereplő épülettípusok korlátlan számban építhetők.
 BUILDING_LIMITS = {
+    "warehouse": 2,
     "garage": 3,
     "farmhouse": 1,
     "market": 1,
@@ -308,6 +309,7 @@ BUILDING_LIMITS = {
 }
 
 BUILDING_LIMIT_MESSAGES = {
+    "warehouse": f"Legfeljebb {BUILDING_LIMITS['warehouse']} Raktár építhető.",
     "garage": f"Legfeljebb {BUILDING_LIMITS['garage']} Garázs építhető.",
     "farmhouse": "Már van farmházad.",
     "market": "Már van piacod.",

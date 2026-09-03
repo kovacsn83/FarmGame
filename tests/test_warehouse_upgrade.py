@@ -24,7 +24,7 @@ class WarehouseUpgradeTests(unittest.TestCase):
     def setUp(self):
         self.world = [[GRASS]*45 for _ in range(40)]
         self.buildings = []
-        self.warehouses = [place_building(self.world,self.buildings,5,2+10*i,"warehouse") for i in range(3)]
+        self.warehouses = [place_building(self.world,self.buildings,5,2+10*i,"warehouse") for i in range(2)]
         self.house = place_building(self.world,self.buildings,15,2,"farmhouse")
         self.economy = Economy()
         self.economy.money = 10000
@@ -37,27 +37,28 @@ class WarehouseUpgradeTests(unittest.TestCase):
     def test_cost_prerequisite_inventory_value_and_new_warehouse(self):
         self.assertTrue(get_upgrade_status("warehouse_level_2",set(),1).startswith("Zárolt"))
         self.assertFalse(self.economy.purchase_upgrade(self.state,"warehouse_level_2"))
-        store_item(self.buildings,"wheat",1400)
+        store_item(self.buildings,"wheat",900)
         before = deepcopy([w["inventory"] for w in self.warehouses])
         self.house["farmhouse_level"] = 2
         value = self.economy.calculate_net_farm_value(self.state)
-        self.assertEqual(get_total_capacity(self.buildings),1500)
+        self.assertEqual(get_total_capacity(self.buildings),1000)
         self.upgrade()
         self.assertEqual(self.economy.money,8000)
         self.assertEqual(self.economy.calculate_net_farm_value(self.state),value)
         self.assertEqual([w["inventory"] for w in self.warehouses],before)
-        self.assertEqual(get_total_capacity(self.buildings),3000)
+        self.assertEqual(get_total_capacity(self.buildings),2000)
         record = self.economy.financial_history_save_record()[-1]
         self.assertEqual((record["category"],record["amount"]), (EXPENSE_UPGRADE,2000))
         self.assertFalse(self.economy.purchase_upgrade(self.state,"warehouse_level_2"))
+        self.assertTrue(remove_building(self.world,self.buildings,self.warehouses[-1]))
         new = place_building(self.world,self.buildings,25,2,"warehouse")
         self.state.synchronize_processing_upgrades()
         self.assertEqual(new["capacity"],1000)
-        self.assertEqual(get_total_capacity(self.buildings),4000)
+        self.assertEqual(get_total_capacity(self.buildings),2000)
 
     def test_full_capacity_rejects_whole_delivery(self):
         self.upgrade()
-        self.assertTrue(store_item(self.buildings,"wheat",2995))
+        self.assertTrue(store_item(self.buildings,"wheat",1995))
         before = deepcopy(get_total_inventory(self.buildings))
         self.assertEqual(get_free_capacity(self.buildings),5)
         self.assertFalse(store_item(self.buildings,"wheat",10))
@@ -65,7 +66,6 @@ class WarehouseUpgradeTests(unittest.TestCase):
 
     def test_demolition_capacity_guard_and_safe_transfer(self):
         self.upgrade()
-        remove_building(self.world,self.buildings,self.warehouses[-1])
         store_item(self.buildings,"wheat",1600)
         before = deepcopy((self.world,self.buildings))
         self.assertFalse(remove_building(self.world,self.buildings,self.warehouses[0]))
@@ -90,7 +90,7 @@ class WarehouseUpgradeTests(unittest.TestCase):
                 self.assertTrue(load_game(self.state,path))
             self.house=next(b for b in self.buildings if b["type"]=="farmhouse")
             self.assertEqual(get_total_inventory(self.buildings),expected)
-            self.assertEqual(get_total_capacity(self.buildings),3000 if upgraded else 1500)
+            self.assertEqual(get_total_capacity(self.buildings),2000 if upgraded else 1000)
 
     def test_processing_storage_unchanged_and_hud(self):
         plant=place_building(self.world,self.buildings,25,20,"processing_plant")
