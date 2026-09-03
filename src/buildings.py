@@ -17,8 +17,8 @@ from money_format import format_money
 
 
 WAREHOUSE_CAPACITY = 500
-WAREHOUSE_LEVEL_CAPACITIES = {1: WAREHOUSE_CAPACITY, 2: 1000}
-WAREHOUSE_UPGRADE_LEVELS = {"warehouse_level_2": 2}
+WAREHOUSE_LEVEL_CAPACITIES = {1: WAREHOUSE_CAPACITY, 2: 1000, 3: 1500}
+WAREHOUSE_UPGRADE_LEVELS = {"warehouse_level_2": 2, "warehouse_level_3": 3}
 
 # Épületenkénti fenntartási alapok, nem összeadódó fejlesztési árak.
 BUILDING_LEVEL_MAINTENANCE_BASES = {
@@ -26,6 +26,8 @@ BUILDING_LEVEL_MAINTENANCE_BASES = {
     "warehouse": {1: WAREHOUSE_BUILD_COST, 2: 2000.00},
     "processing_plant": {1: PROCESSING_PLANT_BUILD_COST, 2: 6000.00},
 }
+# A III. szint kizárólag kapacitást növel, fenntartása a II. szinttel azonos.
+BUILDING_LEVEL_MAINTENANCE_BASES["warehouse"][3] = BUILDING_LEVEL_MAINTENANCE_BASES["warehouse"][2]
 
 
 def get_warehouse_capacity(purchased_upgrades=()):

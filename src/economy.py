@@ -2,7 +2,7 @@ from buildings import (
     BUILDING_TYPES, get_building_maintenance_base, get_building_asset_value, get_total_crop_amount,
     get_marketable_item_amount, get_total_inventory, get_warehouses,
     remove_marketable_item, store_crop,
-    GARAGE_UPGRADE_LEVELS,
+    GARAGE_UPGRADE_LEVELS, WAREHOUSE_UPGRADE_LEVELS,
 )
 from constants import (
     ROAD, ROAD_BUILD_COST, STARTING_MONEY, TRACTOR_PURCHASE_PRICE,
@@ -462,7 +462,7 @@ class Economy:
             game_state.synchronize_garage_upgrades()
             if game_state.vehicles is not None:
                 game_state.vehicles.compact_garage_assignments(game_state.world, game_state.buildings)
-        if upgrade_id == "warehouse_level_2":
+        if upgrade_id in WAREHOUSE_UPGRADE_LEVELS:
             game_state.synchronize_warehouse_upgrades()
         self.record_expense(EXPENSE_UPGRADE, upgrade["price"], upgrade_id)
         log(f"Fejlesztés megvásárolva: {upgrade['name']}", "Economy")

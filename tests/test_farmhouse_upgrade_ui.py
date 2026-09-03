@@ -192,6 +192,7 @@ class FarmhouseUpgradeUiTests(unittest.TestCase):
             "automated_field_harvesting",
             "processing_plant_level_2",
             "garage_level_3",
+            "warehouse_level_3",
         ))
         for column in columns:
             tops = [self.panel.upgrade_card_rects[item].top for item in column]
@@ -204,6 +205,27 @@ class FarmhouseUpgradeUiTests(unittest.TestCase):
             self.panel.upgrade_card_rects["farmhouse_level_2"].left,
             self.panel.upgrade_card_rects["farmhouse_level_3"].left,
         )
+
+    def test_warehouse_third_level_only_left_click_selects(self):
+        upgrade_id = "warehouse_level_3"
+        self.panel.building["farmhouse_level"] = 3
+        self._draw_at((-1, -1))
+        self.assertNotIn(upgrade_id, self.panel.upgrade_clickable_ids)
+        self.state.purchased_upgrades.add("warehouse_level_2")
+        self._draw_at((-1, -1))
+        self.assertIn(upgrade_id, self.panel.upgrade_clickable_ids)
+        card = self.panel.upgrade_card_rects[upgrade_id]
+        pos = (card.left + 10, card.bottom - 10)
+        self.assertTrue(self.panel.upgrade_tree_view_rect.collidepoint(pos))
+        for button in (2, 3, 4, 5):
+            self.panel.handle_event(pygame.event.Event(
+                pygame.MOUSEBUTTONDOWN, button=button, pos=pos))
+            self.assertIsNone(self.panel.take_upgrade_selection())
+        self.panel.upgrade_tree_scroll = 0
+        self._draw_at((-1, -1))
+        self.panel.handle_event(pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN, button=1, pos=pos))
+        self.assertEqual(self.panel.take_upgrade_selection(), upgrade_id)
 
     def test_locked_node_is_visible_but_not_clickable(self):
         self._draw_at((-1, -1))

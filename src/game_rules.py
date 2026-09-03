@@ -224,6 +224,17 @@ UPGRADES = {
         "tree_column": 2,
         "tree_order": 6,
     },
+    "warehouse_level_3": {
+        "name": "Raktár III.",
+        "description": "A Raktár kapacitását 1500-ra emeli.",
+        "price": 5000.00,
+        "unlocks": None,
+        "state_key": "warehouse_level_3",
+        "requires": "warehouse_level_2",
+        "required_farmhouse_level": 3,
+        "tree_column": 3,
+        "tree_order": 4,
+    },
     "garage_level_3": {
         "name": "Garázs III.",
         "description": "A Garázs kapacitását 12 járműre növeli.",

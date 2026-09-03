@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Új Farmház III. fejlesztés: Raktár III. ($5 000), a Raktár II. után. Minden meglévő és később épített normál Raktár kapacitása 1500-ra nő, a teljes kapacitás automatikusan frissül (két Raktárnál 3000). A 2 db-os limit, a bontási készletvédelem és a II. szint fenntartási alapja változatlan.
+
 - A Garázs, Raktár és Feldolgozó üzem fenntartási alapja mostantól szintfüggő: Garázs I–III. $500 / $3 000 / $6 000, Raktár I–II. $500 / $2 000, Feldolgozó üzem I–II. $3 000 / $6 000. Az éves 10%-os, hetente levont fenntartás épületenként érvényes; a Gazdaság értékének számítása nem változott.
 
 - Egyszerre maximum 2 Raktár építhető. Az Épületek menü kijelzi az aktuális darabszámot és a limitet; a korlát a Raktár II. fejlesztéssel és a meglévő bontási kapacitásvédelemmel együtt működik.
