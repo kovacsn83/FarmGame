@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- A fedett Garázsból induló járművek és vontatmányaik csak az első útcsempére érve jelennek meg. Visszatéréskor az útról a Garázsba belépve eltűnnek; a láthatóság a meglévő mozgásállapotból és pozícióból áll vissza betöltéskor is.
+
 - Új Farmház III. fejlesztés: Garázs III. ($6 000), Garázs II. előfeltétellel. Minden meglévő és új Garázs 12 férőhelyes lesz; a popup 4×3 parkolónézetet használ, a Központi géptelep automatikusan újraszámolja a kapacitást és összerendezi a flottát.
 
 - A Központi géptelep fejlesztéskor és betöltéskor automatikusan tömöríti a parkolóhely-hozzárendeléseket, kihasználva a Garázs II. új helyeit. Bontás előtt a flotta a megmaradó Garázsokba rendeződik; a dolgozó járművek feladata változatlan, a munka végén az új otthonukhoz térnek vissza.
