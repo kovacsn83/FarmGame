@@ -236,6 +236,8 @@ def can_place_building(
 
 def place_building(world, buildings, row, col, building_type):
     """Elhelyezi az épületet a rácson és eltárolja a részletes adatait."""
+    if not can_build_more(buildings, building_type, show_message=True):
+        return None
     building = BUILDING_TYPES[building_type]
     data = {
         "type": building_type,

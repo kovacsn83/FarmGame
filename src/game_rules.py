@@ -270,11 +270,15 @@ def get_upgrade_tree_columns():
 BUILDING_LIMITS = {
     "farmhouse": 1,
     "market": 1,
+    "processing_plant": 2,
 }
 
 BUILDING_LIMIT_MESSAGES = {
     "farmhouse": "Már van farmházad.",
     "market": "Már van piacod.",
+    "processing_plant": (
+        f"Legfeljebb {BUILDING_LIMITS['processing_plant']} Feldolgozó üzem építhető."
+    ),
 }
 
 

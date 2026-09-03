@@ -21,6 +21,7 @@ from constants import (
 )
 from crops import CROPS, get_crop_growth_weeks, get_crop_week_intervals
 from game_rules import (
+    BUILDING_LIMITS, BUILDING_LIMIT_MESSAGES, can_build_more,
     UPGRADES, get_upgrade_status, get_upgrade_tree_columns,
     is_build_option_unlocked,
 )
@@ -3173,11 +3174,42 @@ class BuildingSelectionPanel(SelectionPanel):
     def __init__(self):
         super().__init__(BUILDING_PANEL_WIDTH, 200)
         self.purchased_upgrades = set()
+        self.buildings = []
+        self.scroll_offset = 0
+        self.pending_limit_message = None
 
     def open(self, game_state=None):
         if game_state is not None:
             self.purchased_upgrades = game_state.purchased_upgrades
+            self.buildings = game_state.buildings
+        self.scroll_offset = 0
+        self.pending_limit_message = None
         super().open()
+
+    def handle_event(self, event):
+        if not self.visible:
+            return False
+        if event.type == pygame.MOUSEWHEEL:
+            self.scroll_offset -= event.y * 36
+            self._update_layout()
+            return True
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button != 1:
+            if event.button in (4, 5):
+                self.scroll_offset += -36 if event.button == 4 else 36
+                self._update_layout()
+            return True
+        return super().handle_event(event)
+
+    def _handle_content_click(self, position):
+        if not self.content_rect.collidepoint(position):
+            return True
+        for option_id, rect in self.card_rects.items():
+            if rect.collidepoint(position) and not can_build_more(self.buildings, option_id):
+                self.pending_limit_message = BUILDING_LIMIT_MESSAGES.get(
+                    option_id, "Elérted az épülettípus építési korlátját.",
+                )
+                return True
+        return super()._handle_content_click(position)
 
     def _available_options(self):
         return {
@@ -3193,13 +3225,26 @@ class BuildingSelectionPanel(SelectionPanel):
         self.rect.width = responsive_panel_width(BUILDING_PANEL_WIDTH, 320)
         column_count = 2 if self.rect.width >= 600 else 1
         row_count = (option_count + column_count - 1) // column_count
-        desired_height = 78 + row_count * BUILDING_CARD_HEIGHT
+        option_ids = list(available_options)
+        row_heights = [
+            BUILDING_CARD_HEIGHT + (48 if any(
+                item in BUILDING_LIMITS
+                for item in option_ids[row * column_count:(row + 1) * column_count]
+            ) else 0)
+            for row in range(row_count)
+        ]
+        desired_height = 78 + sum(row_heights)
         desired_height += max(0, row_count - 1) * BUILDING_CARD_GAP + 20
         self.rect.height = min(
             desired_height,
             max(140, screen_height - TOP_BAR_HEIGHT - BOTTOM_BAR_HEIGHT - 40),
         )
         self.rect.center = get_screen_center()
+        self.content_rect = pygame.Rect(
+            self.rect.x + INFO_PANEL_PADDING, self.rect.y + 58,
+            self.rect.width - 2 * INFO_PANEL_PADDING, self.rect.height - 78,
+        )
+        self.scroll_offset = max(0, min(self.scroll_offset, desired_height - self.rect.height))
 
         self.card_rects = {}
         card_width = (
@@ -3211,11 +3256,10 @@ class BuildingSelectionPanel(SelectionPanel):
             self.card_rects[option_id] = pygame.Rect(
                 self.rect.x + INFO_PANEL_PADDING
                 + col * (card_width + BUILDING_CARD_GAP),
-                self.rect.y + 58 + row * (
-                    BUILDING_CARD_HEIGHT + BUILDING_CARD_GAP
-                ),
+                self.rect.y + 58 + sum(row_heights[:row])
+                + row * BUILDING_CARD_GAP - self.scroll_offset,
                 card_width,
-                BUILDING_CARD_HEIGHT,
+                row_heights[row],
             )
 
     def draw(self, screen, font, game_state=None):
@@ -3223,6 +3267,7 @@ class BuildingSelectionPanel(SelectionPanel):
             return
         if game_state is not None:
             self.purchased_upgrades = game_state.purchased_upgrades
+            self.buildings = game_state.buildings
         self._update_layout()
         self.draw_frame(screen)
         x = self.rect.x + INFO_PANEL_PADDING
@@ -3232,9 +3277,13 @@ class BuildingSelectionPanel(SelectionPanel):
         )
 
         mouse_position = pygame.mouse.get_pos()
+        previous_clip = screen.get_clip()
+        screen.set_clip(self.content_rect)
         for option_id, option in self._available_options().items():
             card_rect = self.card_rects[option_id]
+            enabled = can_build_more(self.buildings, option_id)
             card_color = (
+                UPGRADE_LOCKED_FILL if not enabled else
                 CROP_CARD_HOVER
                 if card_rect.collidepoint(mouse_position)
                 else CROP_CARD_BACKGROUND
@@ -3258,6 +3307,14 @@ class BuildingSelectionPanel(SelectionPanel):
                 screen, font, f"Méret: {option['width']}x{option['height']}",
                 text_x, text_y + 72,
             )
+            if option_id in BUILDING_LIMITS:
+                count = sum(b['type'] == option_id for b in self.buildings)
+                self.draw_text(screen, font,
+                               f"Megépítve: {count} / {BUILDING_LIMITS[option_id]}",
+                               text_x, text_y + 96)
+                if not enabled:
+                    self.draw_text(screen, font, "Maximum elérve", text_x, text_y + 120)
+        screen.set_clip(previous_clip)
 
 
 def draw_ui(

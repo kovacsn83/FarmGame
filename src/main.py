@@ -41,7 +41,9 @@ from fields import (
     remove_field, remove_field_data,
 )
 from game_state import GameState
-from game_rules import FIELD_TYPES, is_build_option_unlocked
+from game_rules import (
+    FIELD_TYPES, is_build_option_unlocked, can_build_more, BUILDING_LIMIT_MESSAGES,
+)
 from game_menu import GameMenu
 from game_logger import get_logger
 from notification_system import NotificationManager
@@ -393,6 +395,10 @@ def main():
                             QUEST_EVENT_FIELD_COUNT_CHANGED,
                             current_value=len(fields),
                         )
+            elif not can_build_more(buildings, selected_building):
+                message = BUILDING_LIMIT_MESSAGES[selected_building]
+                if message not in notification_manager.active_messages:
+                    notification_manager.enqueue(message)
             elif (can_place_building(
                     world, buildings, mouse_row, mouse_col,
                     selected_building, show_limit_message=True,
@@ -402,6 +408,8 @@ def main():
                     world, buildings, mouse_row, mouse_col,
                     selected_building,
                 )
+                if new_building is None:
+                    return
                 game_state.synchronize_processing_upgrades()
                 economy.spend(cost)
                 economy.record_expense(
@@ -754,6 +762,11 @@ def main():
                 continue
     
             if building_selection_panel.handle_event(event):
+                if building_selection_panel.pending_limit_message:
+                    message = building_selection_panel.pending_limit_message
+                    if message not in notification_manager.active_messages:
+                        notification_manager.enqueue(message)
+                    building_selection_panel.pending_limit_message = None
                 building_selection = building_selection_panel.take_selection()
                 if building_selection is not None:
                     road_drag.cancel()
