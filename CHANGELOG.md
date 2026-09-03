@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Egyszerre maximum 3 Garázs építhető. Az Épületek menü jelzi az aktuális darabszámot és a limitet; a korlát a meglévő Központi gépteleppel és Garázs II./III. kapacitásfejlesztésekkel együtt működik.
+
 - A fedett Garázsból induló járművek és vontatmányaik csak az első útcsempére érve jelennek meg. Visszatéréskor az útról a Garázsba belépve eltűnnek; a láthatóság a meglévő mozgásállapotból és pozícióból áll vissza betöltéskor is.
 
 - Új Farmház III. fejlesztés: Garázs III. ($6 000), Garázs II. előfeltétellel. Minden meglévő és új Garázs 12 férőhelyes lesz; a popup 4×3 parkolónézetet használ, a Központi géptelep automatikusan újraszámolja a kapacitást és összerendezi a flottát.

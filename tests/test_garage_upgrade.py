@@ -40,10 +40,11 @@ class GarageUpgradeTests(GarageFleetTests):
         self.assertEqual([get_garage_parking_position(self.garages[0], i) for i in range(4)], positions)
         self.assertTrue(all(get_garage_capacity(g) == 8 for g in self.garages))
         self.assertFalse(self.economy.purchase_upgrade(state, "garage_level_2"))
+        remove_building(self.world, self.buildings, self.garages[-1])
         new = place_building(self.world, self.buildings, 15, 25, "garage")
         state.synchronize_processing_upgrades()
         self.assertEqual(get_garage_capacity(new), 8)
-        self.assertEqual(self.manager.fleet_capacity(self.buildings)["capacity"], 32)
+        self.assertEqual(self.manager.fleet_capacity(self.buildings)["capacity"], 24)
 
     def test_sixteen_units_save_and_demolition(self):
         remove_building(self.world, self.buildings, self.garages.pop())

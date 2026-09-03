@@ -42,6 +42,7 @@ class GarageLevelThreeTests(fleet_tests.GarageFleetTests):
         self.assertEqual(previous_positions, [get_garage_parking_position(self.garages[0], i) for i in range(8)])
         self.assertEqual(len({get_garage_parking_position(self.garages[0], i) for i in range(12)}), 12)
         self.assertFalse(self.economy.purchase_upgrade(state, "garage_level_3"))
+        remove_building(self.world, self.buildings, self.garages[-1])
         new = place_building(self.world, self.buildings, 15, 25, "garage")
         state.synchronize_processing_upgrades()
         self.assertEqual(get_garage_capacity(new), 12)

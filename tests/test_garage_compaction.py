@@ -1,5 +1,6 @@
 import unittest
 from copy import deepcopy
+from unittest.mock import patch
 import test_garage_fleet as fleet_tests
 from buildings import place_building, remove_building, apply_garage_upgrades
 from constants import GRASS, ROAD
@@ -13,7 +14,9 @@ class GarageCompactionTests(fleet_tests.GarageFleetTests):
         self.world = [[GRASS] * 90 for _ in range(30)]
         self.world[4] = [ROAD] * 90
         self.buildings = []
-        self.garages = [place_building(self.world, self.buildings, 5, 2+10*i, "garage") for i in range(7)]
+        # Legacy over-limit fixture: loading must preserve existing buildings.
+        with patch.dict("game_rules.BUILDING_LIMITS", {"garage": 7}):
+            self.garages = [place_building(self.world, self.buildings, 5, 2+10*i, "garage") for i in range(7)]
         for i in range(27):
             asset = self.manager._create_managed_asset(
                 VehicleType.TRAILER if i % 3 == 0 else VehicleType.TRACTOR,
