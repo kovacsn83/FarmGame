@@ -30,9 +30,14 @@ class GameState:
 
     def synchronize_processing_upgrades(self):
         self.synchronize_garage_upgrades()
+        self.synchronize_warehouse_upgrades()
         from processing import apply_processing_upgrades
         apply_processing_upgrades(self.buildings, self.purchased_upgrades)
 
     def synchronize_garage_upgrades(self):
         from buildings import apply_garage_upgrades
         apply_garage_upgrades(self.buildings, self.purchased_upgrades)
+
+    def synchronize_warehouse_upgrades(self):
+        from buildings import apply_warehouse_upgrades
+        apply_warehouse_upgrades(self.buildings, self.purchased_upgrades)

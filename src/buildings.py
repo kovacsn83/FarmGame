@@ -17,6 +17,21 @@ from money_format import format_money
 
 
 WAREHOUSE_CAPACITY = 500
+WAREHOUSE_LEVEL_CAPACITIES = {1: WAREHOUSE_CAPACITY, 2: 1000}
+WAREHOUSE_UPGRADE_LEVELS = {"warehouse_level_2": 2}
+
+
+def get_warehouse_capacity(purchased_upgrades=()):
+    level = max((level for upgrade, level in WAREHOUSE_UPGRADE_LEVELS.items()
+                 if upgrade in purchased_upgrades), default=1)
+    return WAREHOUSE_LEVEL_CAPACITIES[level]
+
+
+def apply_warehouse_upgrades(buildings, purchased_upgrades):
+    capacity = get_warehouse_capacity(purchased_upgrades)
+    for building in buildings:
+        if building["type"] == "warehouse":
+            building["capacity"] = capacity
 GARAGE_PARKING_SLOT_SIZE = 2
 
 # A Farmház teljes telke és a telken belüli házgrafika helye külön
@@ -584,10 +599,13 @@ def find_building_data(buildings, row, col):
 
 def remove_building(world, buildings, building):
     """Az épület összes mezőjét és a hozzá tartozó adatot is törli."""
-    if (building["type"] == "warehouse"
-            and sum(building["inventory"].values()) > 0):
-        print("A raktár nem bontható le, amíg termény van benne.")
-        return False
+    if building["type"] == "warehouse":
+        remaining = [b for b in buildings if b is not building]
+        if get_free_capacity(remaining) < sum(building["inventory"].values()):
+            print("A Raktár nem bontható le, mert a fennmaradó tárolókapacitás nem elegendő a jelenlegi készlet számára.")
+            return False
+        if not store_items(remaining, building["inventory"]):
+            return False
     for r in range(building["height"]):
         for c in range(building["width"]):
             world[building["row"] + r][building["col"] + c] = GRASS

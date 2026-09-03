@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Új Farmház II. fejlesztés: Raktár II. ($2 000). Minden meglévő és később épített normál Raktár kapacitása 500-ról 1000-re nő, a teljes kapacitás automatikusan követi ezt. Bontás csak elegendő megmaradó hely esetén történhet, a készlet megőrzésével.
+
 - Egyszerre maximum 3 Garázs építhető. Az Épületek menü jelzi az aktuális darabszámot és a limitet; a korlát a meglévő Központi gépteleppel és Garázs II./III. kapacitásfejlesztésekkel együtt működik.
 
 - A fedett Garázsból induló járművek és vontatmányaik csak az első útcsempére érve jelennek meg. Visszatéréskor az útról a Garázsba belépve eltűnnek; a láthatóság a meglévő mozgásállapotból és pozícióból áll vissza betöltéskor is.

@@ -16,6 +16,7 @@ from buildings import (
     FARMHOUSE_LEGACY_LEVEL, FARMHOUSE_LEVELS, GARAGE_PARKING_SLOTS,
     WAREHOUSE_CAPACITY,
     get_garage_capacity,
+    get_warehouse_capacity,
     apply_garage_upgrades,
 )
 from constants import (
@@ -146,7 +147,7 @@ def _migrate_legacy_crop_data(data):
             if building.get("type") == "warehouse":
                 # A Raktár kapacitása konfigurációs érték, ezért a régi mentések
                 # is automatikusan a mindenkori alapkapacitást használják.
-                building["capacity"] = WAREHOUSE_CAPACITY
+                building["capacity"] = get_warehouse_capacity(data.get("purchased_upgrades", ()))
                 inventory = building.get("inventory")
                 if not isinstance(inventory, dict):
                     inventory = {"wheat": building.pop("wheat", 0)}
