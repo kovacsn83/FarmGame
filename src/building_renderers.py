@@ -28,7 +28,7 @@ FARMHOUSE_CHIMNEY_OUTLINE = (112, 88, 63)
 FARMHOUSE_PORCH = (190, 145, 91)
 FARMHOUSE_PORCH_DARK = (126, 86, 51)
 FARMHOUSE_FENCE_COLOR = (48, 104, 55)
-FARMHOUSE_FENCE_WIDTH = 2
+FARMHOUSE_FENCE_WIDTH = 3
 FARMHOUSE_BUILDING_INSET = 4
 FARMHOUSE_DRIVEWAY = (174, 177, 171)
 FARMHOUSE_DRIVEWAY_LIGHT = (193, 195, 188)
@@ -275,7 +275,8 @@ def _draw_farmhouse_level_one(screen, footprint):
 
 def _draw_farmhouse_level_three_yard(screen, plot):
     """A III. szint rendezett felhajtóját, mellékgarázsát és medencéjét rajzolja."""
-    inset = FARMHOUSE_FENCE_WIDTH + 3
+    # A kerítés vastagságának finomítása ne mozdítsa el az udvar elemeit.
+    inset = 5
 
     # A teljes fejlesztés a telek jobb felén marad. A keskeny beálló a
     # középvonal mellett fut, így a bal oldali füves terület későbbi

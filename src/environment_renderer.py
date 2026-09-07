@@ -10,12 +10,13 @@ from screen_layout import world_to_screen
 ENVIRONMENT_SHADOW = (48, 56, 45, 64)
 FENCE_COLOR = (112, 72, 38)
 FENCE_LIGHT = (142, 104, 65)
+FENCE_WIDTH = 3
 FENCE_PADDING = 2
 
 
 @lru_cache(maxsize=16)
 def _fence_tile(mask):
-    """Bake short upper-right shadows and two-pixel timber once per mask."""
+    """Bake short upper-right shadows and three-pixel timber once per mask."""
     surface = pygame.Surface((TILE_SIZE + 4, TILE_SIZE + 4), pygame.SRCALPHA)
     p, end = FENCE_PADDING, FENCE_PADDING + TILE_SIZE
     edges = (((p, p), (end, p)), ((end, p), (end, end)),
@@ -27,7 +28,7 @@ def _fence_tile(mask):
                              (stop[0] + 1, stop[1] - 1), 2)
     for bit, (start, stop) in enumerate(edges):
         if mask & (1 << bit):
-            pygame.draw.line(surface, FENCE_COLOR, start, stop, 2)
+            pygame.draw.line(surface, FENCE_COLOR, start, stop, FENCE_WIDTH)
             # Sparse material light; leave the actual boundary easy to read.
             if bit == 2:
                 pygame.draw.line(surface, FENCE_LIGHT, (p + 3, end + 1), (end - 3, end + 1))

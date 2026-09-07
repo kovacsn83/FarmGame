@@ -19,8 +19,8 @@ Az M1 tényleges hatókörét a felhasználó Environment Polish feladata határ
 | Utak | Visszafogottabb nyom- és peremtónus, állandó perempozíció, kevesebb textúrapont | Nyugodtabb burkolat; a textúra nem szakítja meg a keréknyomot; a szomszédok illeszkedése stabil |
 | Kereszteződések | Eltűnt az erős középső világos pont | Kevésbé foltos csomópont, jól követhető úthálózat |
 | Tó és part | Közvetlen 120×120 px-es rajz, simítás nélkül; földszínhez közelebb álló part; rövid vízfény a körbefutó belső kontúr helyett | A tó illeszkedik a pixelrajzokhoz, miközben a négy organikus változat és a nyugodt víz megmarad |
-| Karám- és gyümölcsöskerítés | 2 px-es faelem, kis bal/alsó anyagfény, rövid jobb felső áttetsző árnyék | A határ olvasható, de nem vastag területjelölés; az összeolvadó területek belső éle továbbra sem rajzolódik |
-| Farmházi telekkerítés | Csak a keret vastagsága változott 4-ről 2 px-re | A zöld, sövényszerű karakter marad; a ház, melléképület, beálló és medence rajza nem változik |
+| Karám- és gyümölcsöskerítés | Az M1 utáni felhasználói finomítással 2 helyett 3 px-es faelem, kis bal/alsó anyagfény, rövid jobb felső áttetsző árnyék | Határozottabb körvonal; az összeolvadó területek belső éle továbbra sem rajzolódik |
+| Farmházi telekkerítés | Az M1 utáni felhasználói finomítással 2 helyett 3 px-es keret | A zöld, sövényszerű karakter marad; az udvari elemek helyzete a vastagítástól nem változik |
 | Fák | Megmaradt a három faj mérete, lombszíne és külső formája; lépcsőzött lombfény, közös áttetsző talajárnyék | A fény a bal alsó oldalról jön; az árnyék fűre, talajra és hóra is természetesen keveredik |
 | Bokrok és kisebb dekoráció | Nincs új faj vagy dekoráció; az út apró részletei ritkultak | A projektben nincs meglévő bokorrenderelő; M1 nem növeli a vizuális zajt |
 
