@@ -1,4 +1,5 @@
 import math
+from functools import lru_cache
 
 import pygame
 
@@ -14,7 +15,8 @@ from screen_layout import world_to_screen
 # A vetett árnyék ennek ellentétes irányába, jobbra és felfelé tolódik.
 PROCEDURAL_LIGHT_DIRECTION = (-1, 1)
 PROCEDURAL_SHADOW_OFFSET = (4, -4)
-PROCEDURAL_SHADOW_COLOR = (61, 105, 58)
+# Semleges, áttetsző árnyék: az alatta lévő anyag színe megmarad.
+PROCEDURAL_SHADOW_COLOR = (0, 0, 0, 64)
 
 FARMHOUSE_FOUNDATION = (118, 78, 48)
 FARMHOUSE_ROOF_LIGHT = (205, 91, 54)
@@ -123,10 +125,17 @@ def _building_rect(building):
     )
 
 
+@lru_cache(maxsize=32)
+def _building_shadow_surface(size, color):
+    surface = pygame.Surface(size, pygame.SRCALPHA)
+    pygame.draw.rect(surface, color, surface.get_rect(), border_radius=2)
+    return surface
+
+
 def _draw_building_shadow(screen, footprint, color):
     """Közös, bal alsó fényirányhoz igazított vetett árnyékot rajzol."""
     shadow = footprint.move(*PROCEDURAL_SHADOW_OFFSET)
-    pygame.draw.rect(screen, color, shadow, border_radius=2)
+    screen.blit(_building_shadow_surface(footprint.size, color), shadow)
 
 
 def _draw_building_outline(screen, footprint, color):

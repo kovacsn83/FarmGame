@@ -77,4 +77,10 @@ python -B tools/benchmark_environment.py --source C:\Temp\farmgame-before-src
 
 ## Következő lépés
 
+### M1 utáni felhasználói finomítások
+
+- A Karám, Gyümölcsös és Farmház kerítése 2-ről 3 px-re vastagodott; az udvari elemek helyzete változatlan. A 22 kapcsolódó teszt sikeres.
+- Külön felhasználói kérésre az épületek korábbi fedő zöld árnyéka semleges, 25%-os áttetsző sötétítésre változott. Az alatta lévő út, veteményes vagy fű színe és textúrája megmarad. Az eltolás továbbra is jobbra-felfelé mutat; az épülettestek rajza változatlan.
+- Az épületárnyék méret és szín szerint gyorsítótárazott, legfeljebb 32 felülettel; nem készül új felület minden képkockán. Három új árnyékteszt vizsgálja a különböző talajokat, az öt épülettípust és a háttértől független cache-t. Az árnyékjavítás után 20 kapcsolódó teszt sikeres. Érintett fájlok: `src/building_renderers.py`, `tests/test_building_shadows.py`, jelen dokumentum. A fenti teljesítménymérés az eredeti M1 állapotra vonatkozik.
+
 Az M1 környezeti alapja kész. A következő javasolt terület a UI olvashatósága és kisablakos tartalomelérése, majd a gépek és állatok egységesítése. Ezek ebben a mérföldkőben nem indultak el; a részletes hatókör új feladatban jelölhető ki.
