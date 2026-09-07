@@ -168,10 +168,13 @@ class OrchardTreeTests(unittest.TestCase):
             TREE_TYPES["apple"]["canopy_color"],
             surface.get_at((228, 262))[:3],
         )
-        self.assertEqual(
-            TREE_GROUND_SHADOW_COLOR,
-            surface.get_at((238, 264))[:3],
-        )
+        # Shadows now blend with the ground instead of painting opaque green.
+        reference = pygame.Surface((1, 1))
+        reference.fill((0, 0, 0))
+        shadow = pygame.Surface((1, 1), pygame.SRCALPHA)
+        shadow.fill(TREE_GROUND_SHADOW_COLOR)
+        reference.blit(shadow, (0, 0))
+        self.assertEqual(reference.get_at((0, 0)), surface.get_at((238, 264)))
 
         tree["age_weeks"] = 2 * 52
         tooltip = get_tree_tooltip_lines(tree)

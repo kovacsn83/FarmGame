@@ -1,4 +1,5 @@
 import math
+from functools import lru_cache
 
 import pygame
 
@@ -13,6 +14,7 @@ from field_renderer import draw_harvest_ready_border
 from inventory import get_inventory_item_name
 from screen_layout import world_to_screen
 from constants import AUTO_PURCHASE_DELIVERY_COST_PER_UNIT, TILE_SIZE
+from environment_renderer import ENVIRONMENT_SHADOW
 from calendar_utils import get_year_and_week
 
 
@@ -91,7 +93,7 @@ TREE_GROUND_SHADOW_OFFSET = (
     PROCEDURAL_SHADOW_OFFSET[0] + 2,
     PROCEDURAL_SHADOW_OFFSET[1] - 2,
 )
-TREE_GROUND_SHADOW_COLOR = (55, 72, 48)
+TREE_GROUND_SHADOW_COLOR = ENVIRONMENT_SHADOW
 
 
 def get_tree_slot_at(buildings, row, col):
@@ -416,6 +418,33 @@ def is_valid_tree_record(tree, orchard):
     )
 
 
+@lru_cache(maxsize=6)
+def _tree_surface(tree_type, ripe):
+    """Three species × two fruit states; lighting never touches simulation data."""
+    definition = TREE_TYPES[tree_type]
+    surface = pygame.Surface((48, 48), pygame.SRCALPHA)
+    center = (24, 24)
+    sx, sy = TREE_GROUND_SHADOW_OFFSET
+    pygame.draw.ellipse(surface, TREE_GROUND_SHADOW_COLOR,
+                        (24 + sx - 14, 24 + sy - 4, 28, 9))
+    pygame.draw.circle(surface, (105, 72, 40), center, 5)
+    for dx, dy, radius in definition.get('canopy_lobes', ((0, 0, 14),)):
+        pygame.draw.circle(surface, definition['canopy_color'],
+                           (24 + dx, 24 + dy), radius)
+    # Broad, stepped leaf cluster instead of a circular highlight badge.
+    x, y = 24 + TREE_CANOPY_LIGHT_OFFSET[0], 24 + TREE_CANOPY_LIGHT_OFFSET[1]
+    r = definition.get('canopy_light_radius', 8)
+    pygame.draw.polygon(surface, definition['canopy_light_color'], (
+        (x-r, y-2), (x-r+2, y-r+2), (x-1, y-r), (x+3, y-r+3),
+        (x+r-1, y-2), (x+r-2, y+3), (x+2, y+r-1),
+        (x-3, y+r-1), (x-r+1, y+3),
+    ))
+    if ripe:
+        for dx, dy in definition.get('fruit_offsets', ((-6, 3), (5, -3), (4, 6))):
+            pygame.draw.circle(surface, definition['fruit_color'], (24+dx, 24+dy), 2)
+    return surface
+
+
 def draw_orchard_trees(screen, buildings):
     """Kis méretben is felismerhető, egyszerű felülnézetes fákat rajzol."""
     # Minden keret a talaj fölé, de az összes fa grafikája alá kerül.
@@ -442,34 +471,6 @@ def draw_orchard_trees(screen, buildings):
                 (tree["col"] + 1) * TILE_SIZE,
                 (tree["row"] + 1) * TILE_SIZE,
             )
-            center = round(center_x), round(center_y)
-            shadow_center = (
-                center[0] + TREE_GROUND_SHADOW_OFFSET[0],
-                center[1] + TREE_GROUND_SHADOW_OFFSET[1],
-            )
-            pygame.draw.ellipse(
-                screen, TREE_GROUND_SHADOW_COLOR,
-                (shadow_center[0] - 14, shadow_center[1] - 4, 28, 9),
-            )
-            pygame.draw.circle(screen, (105, 72, 40), center, 5)
-            for offset_x, offset_y, radius in definition.get(
-                    "canopy_lobes", ((0, 0, 14),)):
-                pygame.draw.circle(
-                    screen, definition["canopy_color"],
-                    (center[0] + offset_x, center[1] + offset_y), radius,
-                )
-            pygame.draw.circle(
-                screen, definition["canopy_light_color"],
-                (
-                    center[0] + TREE_CANOPY_LIGHT_OFFSET[0],
-                    center[1] + TREE_CANOPY_LIGHT_OFFSET[1],
-                ),
-                definition.get("canopy_light_radius", 8),
-            )
-            if is_tree_harvestable(tree):
-                for offset_x, offset_y in definition.get(
-                        "fruit_offsets", ((-6, 3), (5, -3), (4, 6))):
-                    pygame.draw.circle(
-                        screen, definition["fruit_color"],
-                        (center[0] + offset_x, center[1] + offset_y), 2,
-                    )
+            rect = pygame.Rect(round(center_x) - 24, round(center_y) - 24, 48, 48)
+            if screen.get_clip().colliderect(rect):
+                screen.blit(_tree_surface(tree['type'], is_tree_harvestable(tree)), rect)

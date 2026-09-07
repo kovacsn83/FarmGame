@@ -18,6 +18,7 @@ from building_renderers import (
 )
 from fields import can_place_field, find_field_data, is_field
 from field_renderer import draw_field
+from environment_renderer import draw_area_fence
 from road_renderer import draw_road_tile
 from road_building import is_valid_road_tile
 from orchards import can_plant_tree, get_tree_slot_at
@@ -159,28 +160,7 @@ def draw_orchard_fences(screen, buildings):
 
 def _draw_merged_area_fence(screen, area_tiles):
     """Csak egy területszerű objektum rácsának külső éleit keríti körbe."""
-    fence_color = (112, 72, 38)
-    fence_width = 4
-    for row, col in area_tiles:
-        left, top = world_to_screen(col * TILE_SIZE, row * TILE_SIZE)
-        right = left + TILE_SIZE
-        bottom = top + TILE_SIZE
-        if (row - 1, col) not in area_tiles:
-            pygame.draw.line(
-                screen, fence_color, (left, top), (right, top), fence_width,
-            )
-        if (row + 1, col) not in area_tiles:
-            pygame.draw.line(
-                screen, fence_color, (left, bottom), (right, bottom), fence_width,
-            )
-        if (row, col - 1) not in area_tiles:
-            pygame.draw.line(
-                screen, fence_color, (left, top), (left, bottom), fence_width,
-            )
-        if (row, col + 1) not in area_tiles:
-            pygame.draw.line(
-                screen, fence_color, (right, top), (right, bottom), fence_width,
-            )
+    draw_area_fence(screen, area_tiles)
 
 
 def draw_grid(screen, world, selected_tool, selected_building, mouse_row, mouse_col):

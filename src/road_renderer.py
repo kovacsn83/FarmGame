@@ -11,13 +11,13 @@ ROAD_LEFT = 8
 
 ROAD_BASE_COLOR = (133, 112, 86)
 ROAD_COMPACTED_COLOR = (148, 126, 97)
-ROAD_TRACK_COLOR = (101, 82, 65)
-ROAD_DARK_PATCH_COLOR = (116, 94, 72)
-ROAD_LIGHT_PATCH_COLOR = (157, 136, 106)
+ROAD_TRACK_COLOR = (116, 96, 74)
+ROAD_DARK_PATCH_COLOR = (132, 110, 84)
+ROAD_LIGHT_PATCH_COLOR = (153, 130, 100)
 ROAD_STONE_COLOR = (105, 100, 89)
-ROAD_EDGE_DARK_COLOR = (91, 77, 59)
-ROAD_EDGE_LIGHT_COLOR = (169, 146, 110)
-ROAD_GRASS_DETAIL_COLOR = (47, 126, 45)
+ROAD_EDGE_DARK_COLOR = (111, 91, 68)
+ROAD_EDGE_LIGHT_COLOR = (157, 134, 101)
+ROAD_GRASS_DETAIL_COLOR = (80, 125, 64)
 ROAD_TRACK_WIDTH = 2
 ROAD_TEXTURE_VARIANTS = 4
 
@@ -66,8 +66,8 @@ def _draw_road_base(surface, mask, variant):
     if _connected(mask, ROAD_LEFT):
         pygame.draw.rect(surface, ROAD_COMPACTED_COLOR, (0, 2, TILE_SIZE // 2, TILE_SIZE - 4))
 
-    # A nem csatlakozó széleken finom, koordinált szabálytalanság marad.
-    wobble = variant % 2
+    # A szegély helye állandó: a variáns nem törheti meg a csempehatárt.
+    wobble = 0
     if not _connected(mask, ROAD_UP):
         pygame.draw.line(surface, ROAD_EDGE_DARK_COLOR, (0, 1 + wobble), (TILE_SIZE - 1, 1), 1)
     if not _connected(mask, ROAD_RIGHT):
@@ -144,7 +144,6 @@ def _draw_junction_tracks(surface, mask):
         if _connected(mask, direction):
             _draw_arm_tracks(surface, direction)
     pygame.draw.circle(surface, ROAD_COMPACTED_COLOR, (10, 10), 5)
-    pygame.draw.circle(surface, ROAD_LIGHT_PATCH_COLOR, (10, 10), 3)
 
 
 def _draw_isolated_tracks(surface):
@@ -170,17 +169,14 @@ def _draw_tracks(surface, mask):
 
 
 def _draw_road_edge_details(surface, mask, variant):
-    for index in range(3):
+    for index in range(2):
         value = _stable_value(variant, mask, index)
         x = 3 + value % (TILE_SIZE - 6)
         y = 3 + (value // 17) % (TILE_SIZE - 6)
         color = ROAD_DARK_PATCH_COLOR if index % 2 == 0 else ROAD_LIGHT_PATCH_COLOR
-        pygame.draw.circle(surface, color, (x, y), 1 + (value % 2))
-    stone_value = _stable_value(variant, mask, 41)
-    pygame.draw.circle(
-        surface, ROAD_STONE_COLOR,
-        (4 + stone_value % 12, 4 + (stone_value // 13) % 12), 1,
-    )
+        # Ne szakítsuk meg a funkcionális keréknyomot textúrapöttyel.
+        if surface.get_at((x, y))[:3] != ROAD_TRACK_COLOR:
+            surface.set_at((x, y), color)
 
     open_edges = [
         direction for direction in (ROAD_UP, ROAD_RIGHT, ROAD_DOWN, ROAD_LEFT)

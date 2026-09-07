@@ -28,7 +28,7 @@ FARMHOUSE_CHIMNEY_OUTLINE = (112, 88, 63)
 FARMHOUSE_PORCH = (190, 145, 91)
 FARMHOUSE_PORCH_DARK = (126, 86, 51)
 FARMHOUSE_FENCE_COLOR = (48, 104, 55)
-FARMHOUSE_FENCE_WIDTH = 4
+FARMHOUSE_FENCE_WIDTH = 2
 FARMHOUSE_BUILDING_INSET = 4
 FARMHOUSE_DRIVEWAY = (174, 177, 171)
 FARMHOUSE_DRIVEWAY_LIGHT = (193, 195, 188)
@@ -95,16 +95,16 @@ PROCESSING_WINDOW_LIGHT = (157, 192, 193)
 PROCESSING_VENT = (76, 80, 78)
 PROCESSING_VENT_LIGHT = (142, 143, 132)
 
-POND_SHORE = (111, 101, 73)
-POND_SHORE_DARK = (80, 76, 59)
-POND_SHORE_LIGHT = (137, 124, 86)
+POND_SHORE = (137, 113, 78)
+POND_SHORE_DARK = (108, 90, 65)
+POND_SHORE_LIGHT = (155, 131, 92)
 POND_SHALLOW_WATER = (91, 153, 164)
 POND_MAIN_WATER = (65, 133, 153)
 POND_DEEP_WATER = (48, 111, 140)
 POND_WATER_DARK = (43, 96, 124)
 POND_WATER_LIGHT = (132, 184, 187)
 POND_DARK_PATCH = (48, 105, 132)
-POND_RENDER_SCALE = 2
+POND_RENDER_SCALE = 1
 
 _POND_SURFACE_CACHE = {}
 
@@ -809,11 +809,9 @@ def _create_pond_surface(width, height, variant):
     pygame.draw.lines(
         surface, POND_SHORE_LIGHT, False, shore[10:27], 2 * scale,
     )
+    # Rövid part menti fény: nincs körbefutó, térképszerű belső kontúr.
     pygame.draw.lines(
-        surface, POND_WATER_DARK, False, deep[35:] + deep[:5], scale,
-    )
-    pygame.draw.lines(
-        surface, POND_WATER_LIGHT, False, deep[10:27], scale,
+        surface, POND_WATER_LIGHT, False, shallow[14:21], scale,
     )
 
     # A részletek kizárólag a stabil változatból származnak, ezért nem villognak.
@@ -831,7 +829,7 @@ def _create_pond_surface(width, height, variant):
         pygame.draw.circle(
             surface, POND_DARK_PATCH, (patch_x, patch_y), 2 * scale,
         )
-    return pygame.transform.smoothscale(surface, (width, height))
+    return surface
 
 
 def draw_pond(screen, building):
