@@ -108,11 +108,13 @@ class StartupFlowTests(unittest.TestCase):
             patch.object(main_module, "initialize_user_data"),
             patch.object(main_module, "initialize_save_system", return_value=True),
             patch.object(main_module, "load_player_profile", return_value=SimpleNamespace()),
+            patch.object(main_module.pygame.display, "set_caption") as set_caption,
             patch.object(main_module, "create_world") as create_world,
             patch.object(pygame.event, "get", return_value=[quit_event]),
         ):
             main_module.main()
         create_world.assert_not_called()
+        set_caption.assert_called_once_with("FarmGame Alpha v0.1.0")
         pygame.init()
         pygame.display.set_mode((1, 1))
 

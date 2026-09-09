@@ -126,7 +126,7 @@ def main():
     set_screen_size(*screen.get_size())
     camera = Camera()
     set_camera(camera)
-    pygame.display.set_caption("FarmGame")
+    pygame.display.set_caption(get_full_version_display())
 
     app_state = AppStateManager()
     splash_screen = SplashScreen()
