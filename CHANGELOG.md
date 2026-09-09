@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- A FarmGame mentései mostantól a központi felhasználói adatkönyvtárban, Windows alatt a `%LOCALAPPDATA%\FarmGame\saves` helyen tárolódnak. A korábbi projektbeli mentések ütközésmentesen és törlés nélkül átmásolódnak; az új mentés az elsődleges, a JSON save formátum és sémaverzió változatlan.
+
 - Elkészült a központi felhasználói adatkönyvtár-rendszer: Windows alatt a FarmGame későbbi írható adatai a `%LOCALAPPDATA%\FarmGame` könyvtárba kerülhetnek, biztonságos felhasználói fallback mellett. Induláskor létrejön a `saves`, `logs` és `screenshots` könyvtár; a jelenlegi mentések tényleges átköltöztetése még nem része ennek a változtatásnak.
 
 - Elkészült a központi felhasználói adatkönyvtár-rendszer: Windows alatt a későbbi írható adatok a `%LOCALAPPDATA%/FarmGame` könyvtárba kerülhetnek, biztonságos felhasználói fallbackkel. A `saves`, `logs` és `screenshots` mappák induláskor létrejönnek; a jelenlegi mentések tényleges átköltöztetése még nem része ennek a változtatásnak.

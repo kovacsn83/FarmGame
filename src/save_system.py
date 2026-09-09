@@ -37,12 +37,13 @@ from time_system import TIME_FAST, TIME_NORMAL, TIME_WEEK_LENGTHS_MS
 from vehicle_types import (
     VEHICLE_TYPE_DEFINITIONS, VehicleType, normalize_vehicle_type,
 )
+from user_data import get_saves_dir
 
 
 SAVE_VERSION = 4
 LEGACY_SAVE_VERSIONS = {1, 2, 3}
-SAVE_DIRECTORY = Path(__file__).resolve().parent.parent / "saves"
-DEFAULT_SAVE_PATH = SAVE_DIRECTORY / "savegame.json"
+LEGACY_SAVE_DIRECTORY = Path(__file__).resolve().parent.parent / "saves"
+LEGACY_DEFAULT_SAVE_PATH = LEGACY_SAVE_DIRECTORY / "savegame.json"
 SAVE_SLOT_COUNT = 8
 MAX_SAVE_NAME_LENGTH = 32
 
@@ -68,11 +69,12 @@ def _atomic_write_json(path, data):
             os.fsync(save_file.fileno())
         os.replace(temporary_path, path)
         return True
-    except (OSError, TypeError, ValueError):
+    except (OSError, TypeError, ValueError) as error:
         try:
             temporary_path.unlink(missing_ok=True)
         except OSError:
             pass
+        log(f"Mentési fájl írása sikertelen: {path} ({error})", "Save")
         return False
 
 
@@ -839,8 +841,9 @@ def _validate_animals(data):
     return True
 
 
-def save_game(game_state, save_path=DEFAULT_SAVE_PATH):
+def save_game(game_state, save_path=None):
     """A teljes központi játékállapotot UTF-8 JSON-fájlba menti."""
+    save_path = get_saves_dir() / "savegame.json" if save_path is None else save_path
     if not _atomic_write_json(
             Path(save_path), _create_save_data(game_state)):
         log("A játék mentése nem sikerült.", "Save")
@@ -855,7 +858,7 @@ def get_slot_path(slot_id):
     if (not isinstance(slot_id, int) or isinstance(slot_id, bool)
             or not 1 <= slot_id <= SAVE_SLOT_COUNT):
         raise ValueError("Érvénytelen mentésihely-azonosító.")
-    return SAVE_DIRECTORY / f"save_slot_{slot_id}.json"
+    return get_saves_dir() / f"save_slot_{slot_id}.json"
 
 
 def _read_json(path):
@@ -895,12 +898,16 @@ def _validate_slot_document(document, expected_slot_id):
     return metadata, game_data
 
 
-def _migrate_legacy_save():
+def _migrate_legacy_single_save(legacy_directory=None):
     """A régi savegame.json fájlt adatvesztés nélkül az üres első slotba másolja."""
+    legacy_default_path = (
+        LEGACY_DEFAULT_SAVE_PATH if legacy_directory is None
+        else Path(legacy_directory) / "savegame.json"
+    )
     first_slot = get_slot_path(1)
-    if first_slot.exists() or not DEFAULT_SAVE_PATH.exists():
+    if first_slot.exists() or not legacy_default_path.exists():
         return
-    game_data = _read_json(DEFAULT_SAVE_PATH)
+    game_data = _read_json(legacy_default_path)
     if not isinstance(game_data, dict):
         return
     if not _migrate_save_schema(game_data):
@@ -916,7 +923,7 @@ def _migrate_legacy_save():
             "slot_id": 1,
             "save_version": SAVE_VERSION,
             "saved_at": datetime.fromtimestamp(
-                DEFAULT_SAVE_PATH.stat().st_mtime
+                legacy_default_path.stat().st_mtime
             ).strftime("%Y-%m-%d %H:%M"),
             "game_day": game_data["day"],
         },
@@ -925,6 +932,68 @@ def _migrate_legacy_save():
     if not _atomic_write_json(first_slot, document):
         # A régi fájl érintetlen marad; a többi slot ettől még használható.
         return
+
+
+def migrate_legacy_saves(legacy_directory=None):
+    """Copy legacy slot files once without replacing user-data saves."""
+    source_directory = (
+        LEGACY_SAVE_DIRECTORY if legacy_directory is None
+        else Path(legacy_directory)
+    )
+    destination_directory = get_saves_dir()
+    try:
+        destination_directory.mkdir(parents=True, exist_ok=True)
+    except OSError as error:
+        log(f"Mentési könyvtár nem hozható létre: {destination_directory} ({error})", "Save")
+        return 0
+    migrated = 0
+    if source_directory.is_dir() and source_directory.resolve() != destination_directory.resolve():
+        for slot_id in range(1, SAVE_SLOT_COUNT + 1):
+            source = source_directory / f"save_slot_{slot_id}.json"
+            destination = destination_directory / source.name
+            if not source.is_file():
+                continue
+            if destination.exists():
+                log(
+                    f"Legacy mentés kihagyva, mert a cél már létezik: {destination.name}",
+                    "Save",
+                )
+                continue
+            try:
+                with source.open("rb") as source_file, destination.open("xb") as destination_file:
+                    while chunk := source_file.read(1024 * 1024):
+                        destination_file.write(chunk)
+                    destination_file.flush()
+                    os.fsync(destination_file.fileno())
+                migrated += 1
+            except FileExistsError:
+                log(
+                    f"Legacy mentés kihagyva, mert a cél már létezik: {destination.name}",
+                    "Save",
+                )
+            except OSError as error:
+                try:
+                    destination.unlink(missing_ok=True)
+                except OSError:
+                    pass
+                log(f"Legacy mentés másolása sikertelen: {source.name} ({error})", "Save")
+    _migrate_legacy_single_save(source_directory)
+    if migrated:
+        log(f"{migrated} legacy mentés átmásolva.", "Save")
+    return migrated
+
+
+def initialize_save_system():
+    """Prepare and migrate the single user-data save directory at startup."""
+    directory = get_saves_dir()
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+    except OSError as error:
+        log(f"Mentési könyvtár nem hozható létre: {directory} ({error})", "Save")
+        return False
+    log(f"Save directory: {directory}", "Save")
+    migrate_legacy_saves()
+    return True
 
 
 def get_slot_metadata(slot_id):
@@ -949,7 +1018,6 @@ def get_slot_metadata(slot_id):
 
 def get_save_slots():
     """Mindig pontosan nyolc, sorszám szerint rendezett slotleírást ad vissza."""
-    _migrate_legacy_save()
     return [
         get_slot_metadata(slot_id)
         for slot_id in range(1, SAVE_SLOT_COUNT + 1)
@@ -1061,9 +1129,9 @@ def load_game_from_slot(game_state, slot_id):
     return True
 
 
-def load_game(game_state, save_path=DEFAULT_SAVE_PATH):
+def load_game(game_state, save_path=None):
     """A mentett adatokat a meglévő GameState objektumaiba tölti vissza."""
-    path = Path(save_path)
+    path = get_saves_dir() / "savegame.json" if save_path is None else Path(save_path)
     if not path.exists():
         log("Nem található mentés.", "Load")
         return False

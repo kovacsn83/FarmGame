@@ -66,7 +66,8 @@ from progress_tooltips import find_timed_object_tooltip
 from road_building import RoadDragState, build_road_segment
 from save_slots_ui import LoadSlotsMenu, SaveSlotsMenu
 from save_system import (
-    load_game, load_game_from_slot, save_game, save_game_to_slot,
+    initialize_save_system, load_game, load_game_from_slot, save_game,
+    save_game_to_slot,
 )
 from screen_layout import set_camera, set_screen_size, world_to_screen
 from startup_ui import MainMenu, SplashScreen
@@ -102,6 +103,8 @@ def main():
         logger.log(error, "UserData", level="ERROR")
         return
     logger.log(f"Data directory: {user_data_directory}", "UserData")
+    if not initialize_save_system():
+        return
     pygame.init()
     clock = pygame.time.Clock()
     font = pygame.font.SysFont(None, 24)

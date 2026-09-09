@@ -135,7 +135,7 @@ python src/main.py
 ```
 
 New games use a 1500 × 1000 resizable window and a scrollable 100 × 80 tile
-world. Local save files are stored under `saves/`, which is excluded from Git.
+world.
 
 ## Application data and user data
 
@@ -149,10 +149,11 @@ the game creates `saves/`, `logs/`, and `screenshots/` below that root. Paths fo
 future `player.json` and `settings.json` files are reserved, but those files are
 not created yet.
 
-The current SaveSystem still reads and writes the repository-level `saves/`
-directory. Moving existing saves into the user-data directory will be handled
-by a later, dedicated migration; this change does not copy, move, or delete
-save files.
+The SaveSystem reads and writes `%LOCALAPPDATA%\FarmGame\saves` on Windows.
+The repository-level `saves/` directory is now a legacy source: on startup its
+slot files are copied into user data when the destination does not yet exist.
+User-data saves always win filename conflicts, and legacy files are never
+deleted. The JSON save schema is unchanged.
 
 ## Controls
 

@@ -71,8 +71,6 @@ class UserDataTests(unittest.TestCase):
         pygame_init.assert_not_called()
         log.assert_called_once_with(error, "UserData", level="ERROR")
 
-    def test_save_system_and_assets_keep_their_existing_locations(self):
+    def test_assets_keep_their_application_resource_location(self):
         from asset_loader import get_asset_root
-        from save_system import SAVE_DIRECTORY
-        self.assertEqual(SAVE_DIRECTORY, ROOT / "saves")
         self.assertEqual(get_asset_root(), ROOT / "assets")

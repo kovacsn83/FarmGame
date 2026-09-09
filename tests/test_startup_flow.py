@@ -105,6 +105,7 @@ class StartupFlowTests(unittest.TestCase):
         with (
             patch.object(main_module, "AppStateManager", return_value=manager),
             patch.object(main_module, "initialize_user_data"),
+            patch.object(main_module, "initialize_save_system", return_value=True),
             patch.object(main_module, "create_world") as create_world,
             patch.object(pygame.event, "get", return_value=[quit_event]),
         ):
@@ -127,6 +128,7 @@ class StartupFlowTests(unittest.TestCase):
         with (
             patch.object(main_module, "AppStateManager", return_value=manager),
             patch.object(main_module, "initialize_user_data"),
+            patch.object(main_module, "initialize_save_system", return_value=True),
             patch.object(
                 main_module, "create_world", wraps=real_create_world,
             ) as create_world,
