@@ -50,6 +50,9 @@ backup/
 !.env.example
 *.pem
 *.key
+*.db
+*.sqlite
+*.sqlite3
 
 # Operációs rendszer fájljai
 .DS_Store
