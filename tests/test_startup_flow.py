@@ -114,7 +114,7 @@ class StartupFlowTests(unittest.TestCase):
         ):
             main_module.main()
         create_world.assert_not_called()
-        set_caption.assert_called_once_with("FarmGame Alpha v0.1.0")
+        set_caption.assert_called_once_with("FarmGame Alpha v0.1.1")
         pygame.init()
         pygame.display.set_mode((1, 1))
 

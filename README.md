@@ -286,7 +286,7 @@ Simulation reports are stored in `reports/` and excluded from version control.
 
 The single release-version source is `src/game_version.py`. FarmGame uses
 manually managed `MAJOR.MINOR.PATCH` versions and currently identifies itself
-as **Alpha v0.1.0**. `MAJOR` denotes broad compatibility or full-release
+as **Alpha v0.1.1**. `MAJOR` denotes broad compatibility or full-release
 milestones, `MINOR` a substantial feature milestone, and `PATCH` a corrective
 release for an already distributed build.
 

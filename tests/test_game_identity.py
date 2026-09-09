@@ -138,7 +138,7 @@ class GameIdentityTests(unittest.TestCase):
             )
 
     def test_public_version_and_save_schema_do_not_change(self):
-        self.assertEqual(GAME_VERSION, "0.1.0")
+        self.assertEqual(GAME_VERSION, "0.1.1")
         self.assertEqual(save_system.SAVE_VERSION, 4)
 
 

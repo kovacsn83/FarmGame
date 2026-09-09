@@ -67,6 +67,7 @@ class ChallengeSubmissionTests(unittest.TestCase):
         self.finish(controller)
         record = self.store.find(GAME_ID)
         self.assertEqual(record.submission_status, "submitted")
+        self.assertEqual(record.game_version, "0.1.0")
         self.assertEqual(record.server_result_id, 8)
         self.assertEqual(controller.feedback.rank, 3)
 
