@@ -26,6 +26,7 @@ from buildings import (
     print_building_info, remove_building,
 )
 from challenge import ChallengeManager
+from challenge_leaderboard import ChallengeLeaderboardController
 from challenge_results import ChallengeResultStore
 from challenge_submission import ChallengeSubmissionController
 from challenge_ui import ChallengeCompletionPanel
@@ -52,6 +53,7 @@ from game_menu import GameMenu
 from game_logger import get_logger
 from game_data_ui import GameDataPanel
 from game_identity import generate_game_id
+from leaderboard_ui import ChallengeLeaderboardPanel
 from game_version import get_full_version_display
 from notification_system import NotificationManager
 from player_profile import (
@@ -145,6 +147,8 @@ def main():
     )
     load_slots_menu = LoadSlotsMenu()
     game_data_panel = GameDataPanel()
+    leaderboard_controller = ChallengeLeaderboardController()
+    leaderboard_panel = ChallengeLeaderboardPanel(leaderboard_controller)
 
     # A tényleges farmállapot kizárólag Új játék vagy Betöltés választásakor készül el.
     world = fields = buildings = animals = None
@@ -582,8 +586,15 @@ def main():
                     set_screen_size(*screen.get_size())
                     continue
 
+                if leaderboard_panel.visible:
+                    leaderboard_panel.handle_event(event)
+                    continue
+
                 if game_data_panel.visible:
                     game_data_panel.handle_event(event)
+                    if game_data_panel.take_leaderboard_request():
+                        game_data_panel.close()
+                        leaderboard_panel.open()
                     continue
 
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -644,6 +655,8 @@ def main():
                 player_name_prompt.draw(screen, font)
             load_slots_menu.draw(screen, font)
             game_data_panel.draw(screen, font)
+            leaderboard_controller.update()
+            leaderboard_panel.draw(screen, font)
             pygame.display.flip()
             clock.tick(60)
             continue
@@ -669,6 +682,13 @@ def main():
 
             if game_data_panel.visible:
                 game_data_panel.handle_event(event)
+                if game_data_panel.take_leaderboard_request():
+                    game_data_panel.close()
+                    leaderboard_panel.open()
+                continue
+
+            if leaderboard_panel.visible:
+                leaderboard_panel.handle_event(event)
                 continue
 
             if challenge_completion_panel.visible:
@@ -1011,6 +1031,7 @@ def main():
     
         save_slots_menu.update()
         challenge_submission.update()
+        leaderboard_controller.update()
         menu_system_active = (
             game_menu.visible
             or save_slots_menu.visible
@@ -1018,6 +1039,7 @@ def main():
             or bank_panel.visible
             or game_data_panel.visible
             or challenge_completion_panel.visible
+            or leaderboard_panel.visible
         )
         if menu_system_active:
             game_time.synchronize()
@@ -1194,6 +1216,7 @@ def main():
         save_slots_menu.draw(screen, font)
         load_slots_menu.draw(screen, font)
         game_data_panel.draw(screen, font)
+        leaderboard_panel.draw(screen, font)
         challenge_completion_panel.draw(screen, font)
         pygame.display.flip()
 

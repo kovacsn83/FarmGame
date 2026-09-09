@@ -34,6 +34,8 @@ class GameDataPanel:
         self.game_copy_rect = pygame.Rect(0, 0, 0, 0)
         self.close_rect = pygame.Rect(0, 0, 180, BUTTON_HEIGHT)
         self.submit_rect = pygame.Rect(0, 0, 240, BUTTON_HEIGHT)
+        self.leaderboard_rect = pygame.Rect(0, 0, 210, BUTTON_HEIGHT)
+        self.pending_leaderboard_request = False
         self.copy_feedback = {}
         self._update_layout()
 
@@ -42,11 +44,21 @@ class GameDataPanel:
         self.game_state = game_state
         self.submission_controller = submission_controller
         self.copy_feedback.clear()
+        self.pending_leaderboard_request = False
         self.visible = True
         self._update_layout()
+        data = self.get_display_data()
+        self._layout_challenge_buttons(
+            data["submission_status"] in ("not_submitted", "failed"),
+        )
 
     def close(self):
         self.visible = False
+
+    def take_leaderboard_request(self):
+        requested = self.pending_leaderboard_request
+        self.pending_leaderboard_request = False
+        return requested
 
     def _update_layout(self):
         width, height = get_screen_size()
@@ -64,6 +76,23 @@ class GameDataPanel:
         )
         self.close_rect.center = (self.rect.centerx, self.rect.bottom - 38)
         self.submit_rect.center = (self.rect.centerx, self.rect.bottom - 88)
+        if self.rect.width >= 540:
+            gap = 16
+            total = self.submit_rect.width + gap + self.leaderboard_rect.width
+            self.submit_rect.left = self.rect.centerx - total // 2
+            self.leaderboard_rect.topleft = (
+                self.submit_rect.right + gap, self.submit_rect.top,
+            )
+        else:
+            self.leaderboard_rect.center = (
+                self.rect.centerx, self.rect.bottom - 138,
+            )
+
+    def _layout_challenge_buttons(self, show_submit):
+        if not show_submit:
+            self.leaderboard_rect.center = (
+                self.rect.centerx, self.rect.bottom - 88,
+            )
 
     def get_display_data(self):
         """Mindig az aktuális központi objektumokból olvas, másolatot nem tárol."""
@@ -123,6 +152,9 @@ class GameDataPanel:
             self.close()
             return True
         data = self.get_display_data()
+        self._layout_challenge_buttons(
+            data["submission_status"] in ("not_submitted", "failed"),
+        )
         if self.player_copy_rect.collidepoint(event.pos):
             self._copy("player_id", data["player_id"], current_ticks)
         elif data["game_id"] and self.game_copy_rect.collidepoint(event.pos):
@@ -134,6 +166,8 @@ class GameDataPanel:
             and not self.submission_controller.submitting
         ):
             self.submission_controller.request_for_game(data["game_id"])
+        elif self.leaderboard_rect.collidepoint(event.pos):
+            self.pending_leaderboard_request = True
         elif self.close_rect.collidepoint(event.pos):
             self.close()
         return True
@@ -158,6 +192,9 @@ class GameDataPanel:
         self._update_layout()
         now = pygame.time.get_ticks() if current_ticks is None else int(current_ticks)
         data = self.get_display_data()
+        self._layout_challenge_buttons(
+            data["submission_status"] in ("not_submitted", "failed"),
+        )
         pygame.draw.rect(screen, INFO_PANEL_BACKGROUND, self.rect)
         pygame.draw.rect(screen, INFO_PANEL_BORDER, self.rect, 2)
         x = self.rect.left + PADDING
@@ -204,4 +241,7 @@ class GameDataPanel:
                 "Beküldés..." if submitting else "Beküldés a ranglistára",
                 not submitting,
             )
+        self._draw_button(
+            screen, font, self.leaderboard_rect, "Top 10 ranglista",
+        )
         self._draw_button(screen, font, self.close_rect, "Bezárás")

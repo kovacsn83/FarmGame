@@ -127,6 +127,15 @@ class GameDataPanelTests(unittest.TestCase):
         ))
         self.assertEqual(controller.requests, [])
 
+    def test_top_ten_request_is_available_without_completed_challenge(self):
+        self.panel.open(PROFILE, game_state())
+        self.panel.handle_event(pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN, button=1,
+            pos=self.panel.leaderboard_rect.center,
+        ))
+        self.assertTrue(self.panel.take_leaderboard_request())
+        self.assertFalse(self.panel.take_leaderboard_request())
+
     def test_copy_buttons_copy_full_identifiers_and_show_feedback(self):
         self.panel.open(PROFILE, game_state())
         with patch("game_data_ui.copy_text_to_clipboard", return_value=True) as copy:

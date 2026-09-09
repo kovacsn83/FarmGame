@@ -112,6 +112,13 @@ Later, going offline, restarting the game, or opening another save slot cannot
 lose or duplicate submission state. The Game Data panel provides the same
 shared submission action for results that have not yet been uploaded.
 
+The Game Data panel also opens the online **10-year Challenge – Top 10** view.
+Its background worker performs one leaderboard request when opened and one more
+only when the player chooses Refresh or Retry. The popup preserves backend rank
+and ordering, uses the shared money formatter, and handles loading, empty,
+offline, timeout, server-error, and invalid-response states without affecting
+offline gameplay.
+
 ## Screenshots
 
 Screenshots can be added to [`docs/screenshots`](docs/screenshots). Suggested
