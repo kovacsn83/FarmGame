@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Minden új farm saját, UUID-alapú `game_id` azonosítót kap, amely a teljes végigjátszás, mentés és más slotba másolás során változatlan marad. A régi mentések első betöltéskor kapnak azonosítót, és a 10 éves Challenge eredménye is ugyanezt tárolja; online ranglista továbbra sincs implementálva.
+
 - Elkészült a 10 éves Challenge helyi alaplogikája: a 10. év 52. hetéről a 11. év 1. hetére történő átmenetkor egyszeri, változatlan Farm Value snapshot készül, miközben a játék korlátlanul folytatható. Az eredmény a mentéssel együtt tárolódik; online ranglista még nem készült.
 
 - Elkészült a központi, manuálisan kezelt FarmGame verziórendszer. Az első verzió `Alpha v0.1.0`, amely diszkréten megjelenik a főmenüben és az új mentések `game_version` metadata mezőjében; a régi, verziómező nélküli mentések továbbra is betölthetők, a save-sémaverzió változatlanul külön fogalom.

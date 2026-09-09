@@ -81,6 +81,8 @@ practical and backed by an extensive automated regression test suite.
   vehicles, and spraying. Each completed Quest awards $100.
 - A local ten-year Challenge records one immutable Farm Value snapshot after
   Year 10, then lets the same farm continue without a time limit.
+- Every farm has a persistent UUID `game_id`, distinct from the player profile
+  and save slot, ready for later Challenge duplicate protection.
 - White notifications for important events and storage-capacity blocks.
 - Versioned JSON saves, eight named slots, validation, and compatibility
   migrations.
@@ -205,7 +207,9 @@ FarmGame/
 ├── src/                    Game source code
 │   ├── main.py             Initialization, input, and main loop
 │   ├── game_state.py       Central state and upgrade synchronisation
+│   ├── game_identity.py    Persistent per-farm UUID generation
 │   ├── game_version.py     Manually managed release version
+│   ├── challenge.py        Local Challenge snapshots and status
 │   ├── fields.py           Field state, growth, and harvest rules
 │   ├── crops.py            Crop definitions
 │   ├── orchards.py         Fruit-tree lifecycle and harvest rules

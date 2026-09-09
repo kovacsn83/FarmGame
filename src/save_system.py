@@ -26,6 +26,7 @@ from constants import (
 from crops import CROPS, get_crop_growth_weeks, get_crop_harvest_stages
 from game_rules import FIELD_TYPES, UPGRADES
 from game_logger import log
+from game_identity import restore_or_generate_game_id
 from game_version import get_game_version
 from inventory import get_inventory_item_ids
 from financial_history import is_valid_transaction
@@ -343,8 +344,14 @@ def _create_save_data(game_state):
     bank_system = getattr(game_state, "bank_system", None)
     quest_manager = getattr(game_state, "quest_manager", None)
     restaurant_system = getattr(game_state, "restaurant_system", None)
+    game_state.game_id, generated = restore_or_generate_game_id(
+        getattr(game_state, "game_id", None),
+    )
+    if generated:
+        log("GameState assigned a new game_id before saving.", "Game", level="WARNING")
     return {
         "save_version": SAVE_VERSION,
+        "game_id": game_state.game_id,
         "day": game_state.game_time.day,
         "time_speed": game_state.game_time.current_time_speed,
         "week_progress": game_state.game_time.week_progress,
@@ -1071,6 +1078,13 @@ def save_game_to_slot(game_state, slot_id, save_name, saved_at=None):
 
 def _apply_game_data(game_state, data):
     """Az ellenőrzött adatokat a meglévő objektumreferenciák megtartásával tölti be."""
+    saved_game_id = data.get("game_id")
+    game_state.game_id, generated_game_id = restore_or_generate_game_id(
+        saved_game_id, getattr(game_state, "game_id", None),
+    )
+    if generated_game_id:
+        reason = "Legacy" if saved_game_id is None else "Invalid"
+        log(f"{reason} save assigned a new game_id.", "Game", level="WARNING")
     game_state.world[:] = data["world"]
     game_state.fields[:] = data["fields"]
     game_state.buildings[:] = data["buildings"]
@@ -1101,6 +1115,7 @@ def _apply_game_data(game_state, data):
         challenge_manager.load_save_record(
             data.get("ten_year_challenge"),
             game_state.game_time.elapsed_weeks,
+            game_state.game_id,
         )
     synchronize_orchard_seasons(
         game_state.buildings, game_state.game_time.elapsed_weeks, legacy=True,

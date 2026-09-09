@@ -5,7 +5,7 @@ class GameState:
             self, world, fields, buildings, economy, game_time,
             purchased_upgrades=None, tractor=None, vehicles=None,
             animals=None, bank_system=None, quest_manager=None,
-            restaurant_system=None, challenge_manager=None):
+            restaurant_system=None, challenge_manager=None, game_id=None):
         # A meglévő objektumokat referenciaként tároljuk, másolatok nélkül.
         self.world = world
         self.fields = fields
@@ -23,6 +23,7 @@ class GameState:
         self.quest_manager = quest_manager
         self.restaurant_system = restaurant_system
         self.challenge_manager = challenge_manager
+        self.game_id = game_id
 
     @property
     def time_speed(self):

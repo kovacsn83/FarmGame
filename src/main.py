@@ -47,6 +47,7 @@ from game_rules import (
 )
 from game_menu import GameMenu
 from game_logger import get_logger
+from game_identity import generate_game_id
 from game_version import get_full_version_display
 from notification_system import NotificationManager
 from player_profile import (
@@ -217,6 +218,7 @@ def main():
             bank_system=bank_system, quest_manager=quest_manager,
             restaurant_system=restaurant_system,
             challenge_manager=challenge_manager,
+            game_id=generate_game_id() if start_quest else None,
         )
         info_panel = InfoPanel()
         crop_selection_panel = CropSelectionPanel()
@@ -254,6 +256,7 @@ def main():
             "System",
         )
         if start_quest:
+            logger.log("New game created.", "Game")
             logger.log("Új játék inicializálva.", "System")
 
     def finish_loaded_session():

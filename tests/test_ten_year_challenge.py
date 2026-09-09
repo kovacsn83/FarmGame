@@ -19,6 +19,7 @@ from challenge import (
     is_valid_challenge_save_record,
 )
 from game_version import GAME_VERSION
+from game_identity import generate_game_id, is_valid_game_id
 from notification_system import NotificationManager
 from simulation import SimulationBot
 from time_system import BASE_WEEK_DURATION_MS, TIME_NORMAL, TIME_PAUSED, GameTime
@@ -35,6 +36,7 @@ def challenge_state(seed=700):
     notifications = NotificationManager(start_ticks=0)
     manager = ChallengeManager(PROFILE, notifications)
     bot.state.challenge_manager = manager
+    bot.state.game_id = generate_game_id()
     return bot.state, manager, notifications
 
 
@@ -61,6 +63,8 @@ class TenYearChallengeTests(unittest.TestCase):
         state, manager, _ = challenge_state(701)
         result = manager.handle_week_transition(WEEK_10_52, WEEK_11_1, state)
         self.assertEqual(result.challenge_type, TEN_YEAR_CHALLENGE)
+        self.assertEqual(result.game_id, state.game_id)
+        self.assertTrue(is_valid_game_id(result.game_id))
         self.assertEqual(result.completed_year, 10)
         self.assertEqual(result.completed_week, 52)
         self.assertEqual(result.game_version, GAME_VERSION)
