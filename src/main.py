@@ -26,6 +26,7 @@ from buildings import (
     print_building_info, remove_building,
 )
 from challenge import ChallengeManager
+from challenge_results import ChallengeResultStore
 from constants import (
     COLOR_GRASS, GRASS, TILE_SIZE,
     TOOL_ANIMAL_HUSBANDRY, TOOL_BUILD, TOOL_BULLDOZER, TOOL_HARVEST,
@@ -209,7 +210,7 @@ def main():
         )
         bank_system = BankSystem(economy, notification_manager)
         challenge_manager = ChallengeManager(
-            player_profile, notification_manager,
+            player_profile, notification_manager, ChallengeResultStore(),
         )
         vehicles = VehicleManager(storage_block_manager)
         quest_manager = QuestManager(economy)

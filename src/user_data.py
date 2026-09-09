@@ -44,6 +44,11 @@ def get_player_profile_path():
     return get_user_data_dir() / "player.json"
 
 
+def get_challenge_results_path():
+    """Return the persistent local Challenge result collection path."""
+    return get_user_data_dir() / "challenge" / "results.json"
+
+
 def get_settings_path():
     """Return the future settings path without creating the file."""
     return get_user_data_dir() / "settings.json"

@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- A teljesített 10 éves Challenge-ekből mostantól tartós helyi eredményrekord készül a központi felhasználói adatkönyvtárban. A rekord a hiteles Farm Value snapshotot, a `player_id`, `game_id` és játékverzió adatokat őrzi; a `game_id + challenge_years` kulcs megakadályozza a mentés/betöltés miatti duplikációt.
+
 - Új „Játékadatok” menüpont készült: megjeleníti a játékos nevét és `player_id` azonosítóját, az aktuális farm `game_id` értékét, a játékverziót és a 10 éves Challenge állapotát. A teljes azonosítók külön gombbal a vágólapra másolhatók.
 
 - Minden új farm saját, UUID-alapú `game_id` azonosítót kap, amely a teljes végigjátszás, mentés és más slotba másolás során változatlan marad. A régi mentések első betöltéskor kapnak azonosítót, és a 10 éves Challenge eredménye is ugyanezt tárolja; online ranglista továbbra sincs implementálva.

@@ -88,9 +88,12 @@ def is_valid_challenge_save_record(record):
 class ChallengeManager:
     """A konkrét farm egyszeri Challenge-snapshotját kezeli."""
 
-    def __init__(self, player_profile, notification_manager=None):
+    def __init__(
+            self, player_profile, notification_manager=None,
+            result_store=None):
         self.player_profile = player_profile
         self.notification_manager = notification_manager
+        self.result_store = result_store
         self.status = ChallengeStatus.NOT_COMPLETED
         self.result = None
 
@@ -125,6 +128,8 @@ class ChallengeManager:
             ),
         )
         self.status = ChallengeStatus.COMPLETED
+        if self.result_store is not None:
+            self.result_store.save_snapshot(self.result)
         message = (
             "10 éves Challenge teljesítve! Gazdaság értéke: "
             f"{format_money(farm_value)}"
@@ -169,5 +174,9 @@ class ChallengeManager:
             # A game_id előtti Challenge-mentések ugyanazt a migrált farm-ID-t kapják.
             result["game_id"] = game_id
             self.result = ChallengeResult(**result)
+            # Egy korábbi, hiteles snapshotból biztonságosan pótolható a
+            # hiányzó helyi rekord. Aktuális Farm Value újraszámítás nincs.
+            if self.result_store is not None:
+                self.result_store.save_snapshot(self.result)
         else:
             self.result = None
