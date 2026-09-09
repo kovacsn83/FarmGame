@@ -47,6 +47,7 @@ from game_rules import (
 )
 from game_menu import GameMenu
 from game_logger import get_logger
+from game_data_ui import GameDataPanel
 from game_identity import generate_game_id
 from game_version import get_full_version_display
 from notification_system import NotificationManager
@@ -140,6 +141,7 @@ def main():
         )
     )
     load_slots_menu = LoadSlotsMenu()
+    game_data_panel = GameDataPanel()
 
     # A tényleges farmállapot kizárólag Új játék vagy Betöltés választásakor készül el.
     world = fields = buildings = animals = None
@@ -563,15 +565,20 @@ def main():
                 if event.type == pygame.QUIT:
                     running = False
                     continue
+                if event.type == pygame.VIDEORESIZE:
+                    screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
+                    set_screen_size(*screen.get_size())
+                    continue
+
+                if game_data_panel.visible:
+                    game_data_panel.handle_event(event)
+                    continue
+
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     if load_slots_menu.visible:
                         load_slots_menu.close()
                     else:
                         running = False
-                    continue
-                if event.type == pygame.VIDEORESIZE:
-                    screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
-                    set_screen_size(*screen.get_size())
                     continue
 
                 if player_name_prompt is not None:
@@ -612,6 +619,8 @@ def main():
                     app_state.start_playing()
                 elif menu_action == "load_game":
                     load_slots_menu.open()
+                elif menu_action == "game_data":
+                    game_data_panel.open(player_profile, None)
                 elif menu_action == "exit_game":
                     running = False
 
@@ -622,6 +631,7 @@ def main():
                 player_name_prompt.update()
                 player_name_prompt.draw(screen, font)
             load_slots_menu.draw(screen, font)
+            game_data_panel.draw(screen, font)
             pygame.display.flip()
             clock.tick(60)
             continue
@@ -643,6 +653,10 @@ def main():
                 buttons = create_buttons()
                 menu_button = create_menu_button()
                 calendar_button = create_calendar_button(menu_button)
+                continue
+
+            if game_data_panel.visible:
+                game_data_panel.handle_event(event)
                 continue
 
             if bank_panel.visible:
@@ -814,6 +828,9 @@ def main():
                 elif menu_action == "load_game":
                     game_menu.close()
                     load_slots_menu.open()
+                elif menu_action == "game_data":
+                    game_menu.close()
+                    game_data_panel.open(player_profile, game_state)
                 elif menu_action == "new_game":
                     screen = pygame.display.set_mode(
                         (WINDOW_WIDTH, WINDOW_HEIGHT), pygame.RESIZABLE,
@@ -980,6 +997,7 @@ def main():
             or save_slots_menu.visible
             or load_slots_menu.visible
             or bank_panel.visible
+            or game_data_panel.visible
         )
         if menu_system_active:
             game_time.synchronize()
@@ -1140,6 +1158,7 @@ def main():
         game_menu.draw(screen, font)
         save_slots_menu.draw(screen, font)
         load_slots_menu.draw(screen, font)
+        game_data_panel.draw(screen, font)
         pygame.display.flip()
 
     pygame.quit()

@@ -23,6 +23,7 @@ MAIN_MENU_BUTTON_GAP = 14
 MAIN_MENU_ITEMS = (
     {"id": "new_game", "label": "Új játék"},
     {"id": "load_game", "label": "Betöltés"},
+    {"id": "game_data", "label": "Játékadatok"},
     {"id": "exit_game", "label": "Kilépés"},
 )
 

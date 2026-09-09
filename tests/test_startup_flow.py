@@ -84,14 +84,14 @@ class StartupFlowTests(unittest.TestCase):
                     for point in edge_points
                 ))
 
-    def test_main_menu_exposes_only_the_three_startup_actions(self):
+    def test_main_menu_exposes_startup_actions_and_game_data(self):
         set_screen_size(1500, 1000)
         menu = MainMenu()
         self.assertEqual(
             [item["id"] for item in menu.items],
-            ["new_game", "load_game", "exit_game"],
+            ["new_game", "load_game", "game_data", "exit_game"],
         )
-        for action in ("new_game", "load_game", "exit_game"):
+        for action in ("new_game", "load_game", "game_data", "exit_game"):
             event = pygame.event.Event(
                 pygame.MOUSEBUTTONDOWN,
                 {"button": 1, "pos": menu.button_rects[action].center},

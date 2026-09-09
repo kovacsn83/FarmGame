@@ -61,6 +61,20 @@ class GameMenuEventTests(unittest.TestCase):
         self.assertTrue(self.menu.visible)
         self.assertEqual("save_game", self.menu.take_action())
 
+    def test_game_data_is_between_load_and_exit_and_opens_without_confirmation(self):
+        self.assertEqual(
+            [item["id"] for item in self.menu.items],
+            ["new_game", "save_game", "load_game", "game_data", "exit_game"],
+        )
+        event = pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN,
+            button=1,
+            pos=self.menu.item_rects["game_data"].center,
+        )
+        self.assertTrue(self.menu.handle_event(event))
+        self.assertEqual(self.menu.take_action(), "game_data")
+        self.assertIsNone(self.menu.confirmation)
+
 
 if __name__ == "__main__":
     unittest.main()

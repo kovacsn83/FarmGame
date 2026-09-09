@@ -12,6 +12,7 @@ GAME_MENU_ITEMS = (
     {"id": "new_game", "label": "Új játék", "confirmation": "new_game"},
     {"id": "save_game", "label": "Játék mentése"},
     {"id": "load_game", "label": "Játék betöltése"},
+    {"id": "game_data", "label": "Játékadatok"},
     {"id": "exit_game", "label": "Kilépés", "confirmation": "exit_game"},
 )
 
