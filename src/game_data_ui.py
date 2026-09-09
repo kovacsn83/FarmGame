@@ -14,7 +14,7 @@ from ui import (
 
 
 PANEL_WIDTH = 720
-PANEL_HEIGHT = 500
+PANEL_HEIGHT = 570
 PADDING = 28
 BUTTON_HEIGHT = 38
 COPY_BUTTON_WIDTH = 105
@@ -28,16 +28,19 @@ class GameDataPanel:
         self.visible = False
         self.player_profile = None
         self.game_state = None
+        self.submission_controller = None
         self.rect = pygame.Rect(0, 0, PANEL_WIDTH, PANEL_HEIGHT)
         self.player_copy_rect = pygame.Rect(0, 0, 0, 0)
         self.game_copy_rect = pygame.Rect(0, 0, 0, 0)
         self.close_rect = pygame.Rect(0, 0, 180, BUTTON_HEIGHT)
+        self.submit_rect = pygame.Rect(0, 0, 240, BUTTON_HEIGHT)
         self.copy_feedback = {}
         self._update_layout()
 
-    def open(self, player_profile, game_state=None):
+    def open(self, player_profile, game_state=None, submission_controller=None):
         self.player_profile = player_profile
         self.game_state = game_state
+        self.submission_controller = submission_controller
         self.copy_feedback.clear()
         self.visible = True
         self._update_layout()
@@ -60,6 +63,7 @@ class GameDataPanel:
             copy_x, self.rect.top + 241, COPY_BUTTON_WIDTH, BUTTON_HEIGHT,
         )
         self.close_rect.center = (self.rect.centerx, self.rect.bottom - 38)
+        self.submit_rect.center = (self.rect.centerx, self.rect.bottom - 88)
 
     def get_display_data(self):
         """Mindig az aktuális központi objektumokból olvas, másolatot nem tárol."""
@@ -77,6 +81,13 @@ class GameDataPanel:
         else:
             challenge_status = "Folyamatban"
             farm_value = None
+        local_result = (
+            self.submission_controller.get_record(game_id)
+            if self.submission_controller is not None and game_id else None
+        )
+        submission_status = (
+            local_result.submission_status if local_result is not None else None
+        )
         return {
             "player_name": get_player_name(self.player_profile),
             "player_id": get_player_id(self.player_profile),
@@ -84,6 +95,7 @@ class GameDataPanel:
             "game_version": get_game_version(),
             "challenge_status": challenge_status,
             "farm_value": farm_value,
+            "submission_status": submission_status,
         }
 
     def _copy(self, key, value, current_ticks=None):
@@ -115,6 +127,13 @@ class GameDataPanel:
             self._copy("player_id", data["player_id"], current_ticks)
         elif data["game_id"] and self.game_copy_rect.collidepoint(event.pos):
             self._copy("game_id", data["game_id"], current_ticks)
+        elif (
+            self.submit_rect.collidepoint(event.pos)
+            and data["submission_status"] in ("not_submitted", "failed")
+            and self.submission_controller is not None
+            and not self.submission_controller.submitting
+        ):
+            self.submission_controller.request_for_game(data["game_id"])
         elif self.close_rect.collidepoint(event.pos):
             self.close()
         return True
@@ -160,8 +179,29 @@ class GameDataPanel:
         self._draw_text(screen, font, "Játékverzió:", x, self.rect.top + 302)
         self._draw_text(screen, font, data["game_version"], x + 190, self.rect.top + 302)
 
-        self._draw_text(screen, font, "10 éves Challenge", x, self.rect.top + 348)
-        self._draw_text(screen, font, f"Állapot: {data['challenge_status']}", x, self.rect.top + 380)
+        challenge_y = min(self.rect.top + 330, self.rect.bottom - 220)
+        self._draw_text(screen, font, "10 éves Challenge", x, challenge_y)
+        self._draw_text(screen, font, f"Állapot: {data['challenge_status']}", x,
+                        challenge_y + 32)
         result = "—" if data["farm_value"] is None else format_money(data["farm_value"])
-        self._draw_text(screen, font, f"Farmérték: {result}", x, self.rect.top + 410)
+        self._draw_text(screen, font, f"Farmérték: {result}", x,
+                        challenge_y + 62)
+        status_labels = {
+            "not_submitted": "Nincs beküldve",
+            "failed": "Nincs beküldve (újrapróbálható)",
+            "submitted": "Beküldve",
+        }
+        submission = status_labels.get(data["submission_status"], "—")
+        self._draw_text(screen, font, f"Ranglista: {submission}", x,
+                        challenge_y + 92)
+        if data["submission_status"] in ("not_submitted", "failed"):
+            submitting = (
+                self.submission_controller is not None
+                and self.submission_controller.submitting
+            )
+            self._draw_button(
+                screen, font, self.submit_rect,
+                "Beküldés..." if submitting else "Beküldés a ranglistára",
+                not submitting,
+            )
         self._draw_button(screen, font, self.close_rect, "Bezárás")

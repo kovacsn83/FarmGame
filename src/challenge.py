@@ -11,6 +11,7 @@ from game_identity import is_valid_game_id, restore_or_generate_game_id
 from game_version import get_game_version
 from money_format import format_money
 from player_profile import get_player_id, get_player_name
+from time_system import TIME_PAUSED
 
 
 TEN_YEAR_CHALLENGE = "ten_year"
@@ -128,16 +129,12 @@ class ChallengeManager:
             ),
         )
         self.status = ChallengeStatus.COMPLETED
-        if self.result_store is not None:
+        stored = (
             self.result_store.save_snapshot(self.result)
-        message = (
-            "10 éves Challenge teljesítve! Gazdaság értéke: "
-            f"{format_money(farm_value)}"
+            if self.result_store is not None else True
         )
-        if self.notification_manager is not None:
-            self.notification_manager.enqueue(
-                message, event_id=(TEN_YEAR_CHALLENGE, "completed"),
-            )
+        if stored and getattr(game_state, "game_time", None) is not None:
+            game_state.game_time.set_time_speed(TIME_PAUSED)
         log(
             f"10-year challenge completed. Farm Value: {format_money(farm_value)}",
             "Challenge",

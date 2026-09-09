@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- A 10 éves Challenge teljesítésekor a stabil helyi eredmény mentése után a játék automatikusan Pause állapotba kerül, és új completion popup nyílik közvetlen, háttérszálas ranglista-beküldéssel vagy Később lehetőséggel. A Játékadatok popup megjeleníti a tartós, `game_id + challenge_years` alapú beküldési állapotot, és innen is támogatja a későbbi vagy offline hiba utáni újrapróbálást; a 201 és 409 válasz egyaránt beküldött állapotot eredményez.
+
 - Elkészült a FarmGame kliensoldali Online API rétege: támogatja az állapotellenőrzést, a 10 éves Top 10 ranglista lekérését és a helyi Challenge-eredmények beküldését. A strukturált timeout-, kapcsolat-, validációs-, szerver-, hibás válasz- és duplikációkezelés mellett az offline játék, mentés és helyi eredménytárolás változatlan maradt.
 
 - A FarmGame Challenge API éles Railway környezetbe került a `https://farmgame-production.up.railway.app` címen, külön PostgreSQL szolgáltatással és induláskor futó Alembic-migrációval. A health, Swagger, eredménybeküldés, duplikációvédelem, ranglista és újraindítás utáni adatmegmaradás production környezetben is ellenőrizve lett.

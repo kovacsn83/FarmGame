@@ -13,7 +13,7 @@ if str(SRC) not in sys.path:
 
 import save_system
 from challenge import ChallengeManager, ChallengeStatus
-from challenge_results import ChallengeResultStore
+from challenge_results import ChallengeResultStore, SubmissionStatus
 from game_identity import generate_game_id
 from game_version import GAME_VERSION
 from simulation import SimulationBot
@@ -62,6 +62,9 @@ class ChallengeResultStoreTests(unittest.TestCase):
         self.assertEqual(record.farm_value, snapshot.farm_value)
         self.assertEqual(record.challenge_years, 10)
         self.assertIn("T", record.completed_at)
+        self.assertEqual(
+            record.submission_status, SubmissionStatus.NOT_SUBMITTED.value,
+        )
         self.assertEqual(self.path.parent, Path(self.temporary_directory.name) / "challenge")
 
     def test_later_value_changes_do_not_modify_the_result(self):
@@ -128,11 +131,41 @@ class ChallengeResultStoreTests(unittest.TestCase):
         state = self.make_state(808)
         self.complete(state)
         document = json.loads(self.path.read_text(encoding="utf-8"))
-        self.assertEqual(document["format_version"], 1)
+        self.assertEqual(document["format_version"], 2)
         self.assertEqual(set(document["results"][0]), {
             "player_id", "player_name", "game_id", "game_version",
             "farm_value", "challenge_years", "completed_at",
+            "submission_status", "submitted_at", "server_result_id",
         })
+
+    def test_submission_status_is_persistent_and_shared_by_game_id(self):
+        state = self.make_state(809)
+        self.complete(state)
+        self.assertTrue(self.store.update_submission(
+            state.game_id, 10, SubmissionStatus.SUBMITTED,
+            submitted_at="2026-09-09T12:30:00+00:00",
+            server_result_id=42,
+        ))
+        record = self.store.find(state.game_id)
+        self.assertEqual(record.submission_status, "submitted")
+        self.assertEqual(record.server_result_id, 42)
+
+        second_store = ChallengeResultStore(self.path)
+        self.assertEqual(
+            second_store.find(state.game_id).submission_status, "submitted",
+        )
+
+    def test_legacy_v1_document_migrates_submission_defaults(self):
+        state = self.make_state(810)
+        self.complete(state)
+        document = json.loads(self.path.read_text(encoding="utf-8"))
+        document["format_version"] = 1
+        for key in ("submission_status", "submitted_at", "server_result_id"):
+            document["results"][0].pop(key)
+        self.path.write_text(json.dumps(document), encoding="utf-8")
+        record = self.store.find(state.game_id)
+        self.assertEqual(record.submission_status, "not_submitted")
+        self.assertIsNone(record.submitted_at)
 
 
 if __name__ == "__main__":

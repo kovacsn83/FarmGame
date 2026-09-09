@@ -103,6 +103,15 @@ errors, and duplicate submissions are returned as structured `ApiResult`
 values. No network call runs automatically at startup or Challenge completion,
 so gameplay, saves, profiles, and local Challenge results remain offline-first.
 
+At the Year 10 completion boundary the finished local result is persisted first,
+game time pauses, and a dedicated completion dialog offers an optional online
+submission. HTTP work runs on a daemon worker thread while all Pygame and local
+state updates remain on the main thread. Submission metadata is stored in the
+user-data Challenge result file by `game_id + challenge_years`, so choosing
+Later, going offline, restarting the game, or opening another save slot cannot
+lose or duplicate submission state. The Game Data panel provides the same
+shared submission action for results that have not yet been uploaded.
+
 ## Screenshots
 
 Screenshots can be added to [`docs/screenshots`](docs/screenshots). Suggested

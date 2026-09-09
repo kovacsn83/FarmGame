@@ -74,21 +74,20 @@ class TenYearChallengeTests(unittest.TestCase):
 
     def test_snapshot_is_immutable_and_later_years_do_not_retrigger(self):
         state, manager, notifications = challenge_state(702)
-        original_speed = state.game_time.current_time_speed
         result = manager.handle_week_transition(WEEK_10_52, WEEK_11_1, state)
         state.economy.money += 1_000_000
         self.assertIsNone(manager.handle_week_transition(
             WEEK_11_1 + 51, WEEK_11_1 + 52, state))
         self.assertIs(manager.result, result)
-        self.assertEqual(len(notifications.active_notifications), 1)
-        self.assertEqual(state.game_time.current_time_speed, original_speed)
+        self.assertEqual(len(notifications.active_notifications), 0)
+        self.assertEqual(state.game_time.current_time_speed, TIME_PAUSED)
 
-    def test_notification_uses_existing_money_formatting(self):
+    def test_completion_uses_dedicated_popup_instead_of_notification(self):
         state, manager, notifications = challenge_state(703)
         state.economy.money = 482_350
         manager.handle_week_transition(WEEK_10_52, WEEK_11_1, state)
-        self.assertIn("10 éves Challenge teljesítve!", notifications.current_message)
-        self.assertIn("$482 350", notifications.current_message)
+        self.assertIsNone(notifications.current_message)
+        self.assertEqual(manager.result.farm_value, 482350)
 
     def test_time_update_reports_boundary_at_both_speeds_and_large_delta(self):
         for speed, real_delta in (

@@ -27,6 +27,8 @@ from buildings import (
 )
 from challenge import ChallengeManager
 from challenge_results import ChallengeResultStore
+from challenge_submission import ChallengeSubmissionController
+from challenge_ui import ChallengeCompletionPanel
 from constants import (
     COLOR_GRASS, GRASS, TILE_SIZE,
     TOOL_ANIMAL_HUSBANDRY, TOOL_BUILD, TOOL_BULLDOZER, TOOL_HARVEST,
@@ -158,6 +160,7 @@ def main():
     city_panel = restaurant_panel = None
     financial_summary_panel = economy_hud_rect = None
     game_menu = save_slots_menu = quest_manager = quest_panel = road_drag = None
+    challenge_submission = challenge_completion_panel = None
 
     def initialize_game_session(start_quest):
         """Egyetlen helyen hozza létre az új vagy betöltendő farm teljes állapotát."""
@@ -174,6 +177,7 @@ def main():
         nonlocal calendar_panel, bank_panel, city_panel, restaurant_panel
         nonlocal financial_summary_panel, economy_hud_rect
         nonlocal game_menu, save_slots_menu, quest_manager, quest_panel, road_drag
+        nonlocal challenge_submission, challenge_completion_panel
 
         world = create_world()
         fields, buildings, animals = [], [], []
@@ -209,8 +213,15 @@ def main():
             )
         )
         bank_system = BankSystem(economy, notification_manager)
+        challenge_result_store = ChallengeResultStore()
+        challenge_submission = ChallengeSubmissionController(
+            challenge_result_store,
+        )
+        challenge_completion_panel = ChallengeCompletionPanel(
+            challenge_submission,
+        )
         challenge_manager = ChallengeManager(
-            player_profile, notification_manager, ChallengeResultStore(),
+            player_profile, notification_manager, challenge_result_store,
         )
         vehicles = VehicleManager(storage_block_manager)
         quest_manager = QuestManager(economy)
@@ -660,6 +671,10 @@ def main():
                 game_data_panel.handle_event(event)
                 continue
 
+            if challenge_completion_panel.visible:
+                challenge_completion_panel.handle_event(event)
+                continue
+
             if bank_panel.visible:
                 if bank_panel.market_active:
                     handle_info_panel_event(event)
@@ -831,7 +846,9 @@ def main():
                     load_slots_menu.open()
                 elif menu_action == "game_data":
                     game_menu.close()
-                    game_data_panel.open(player_profile, game_state)
+                    game_data_panel.open(
+                        player_profile, game_state, challenge_submission,
+                    )
                 elif menu_action == "new_game":
                     screen = pygame.display.set_mode(
                         (WINDOW_WIDTH, WINDOW_HEIGHT), pygame.RESIZABLE,
@@ -993,12 +1010,14 @@ def main():
                     handle_gameplay_click(click_position)
     
         save_slots_menu.update()
+        challenge_submission.update()
         menu_system_active = (
             game_menu.visible
             or save_slots_menu.visible
             or load_slots_menu.visible
             or bank_panel.visible
             or game_data_panel.visible
+            or challenge_completion_panel.visible
         )
         if menu_system_active:
             game_time.synchronize()
@@ -1010,9 +1029,24 @@ def main():
     
             # Minden ténylegesen eltelt játékbeli héthez pontosan egy frissítés tartozik.
             for elapsed_week in game_time.update():
-                game_state.challenge_manager.handle_week_transition(
+                completed_result = game_state.challenge_manager.handle_week_transition(
                     elapsed_week - 1, elapsed_week, game_state,
                 )
+                if completed_result is not None:
+                    local_result = challenge_submission.get_record(
+                        completed_result.game_id,
+                    )
+                    if local_result is not None:
+                        game_time.set_time_speed(TIME_PAUSED)
+                        vehicles.synchronize_time()
+                        animal_movement.synchronize()
+                        challenge_completion_panel.open(local_result)
+                    else:
+                        logger.log(
+                            "Challenge completed, but no stable local result exists; "
+                            "completion popup was not opened.",
+                            "Challenge", level="ERROR",
+                        )
                 logger.log(
                     f"Új hét kezdődött: {format_game_time(elapsed_week)}",
                     "Time",
@@ -1160,6 +1194,7 @@ def main():
         save_slots_menu.draw(screen, font)
         load_slots_menu.draw(screen, font)
         game_data_panel.draw(screen, font)
+        challenge_completion_panel.draw(screen, font)
         pygame.display.flip()
 
     pygame.quit()

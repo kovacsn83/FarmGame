@@ -23,6 +23,20 @@ GAME_ID = "6ba7b810-9dad-41d1-80b4-00c04fd430c8"
 PROFILE = SimpleNamespace(player_id=PLAYER_ID, player_name="Árvíztűrő Norbi")
 
 
+class SubmissionControllerStub:
+    def __init__(self, record=None):
+        self.record = record
+        self.submitting = False
+        self.requests = []
+
+    def get_record(self, _game_id, _challenge_years=10):
+        return self.record
+
+    def request_for_game(self, game_id, challenge_years=10):
+        self.requests.append((game_id, challenge_years))
+        return True
+
+
 def game_state(status=ChallengeStatus.NOT_COMPLETED, farm_value=None):
     result = None
     if status is ChallengeStatus.COMPLETED:
@@ -72,14 +86,46 @@ class GameDataPanelTests(unittest.TestCase):
         self.assertEqual(self.panel.get_display_data()["game_id"], state.game_id)
 
     def test_completed_and_legacy_challenge_states_are_displayed(self):
-        self.panel.open(PROFILE, game_state(ChallengeStatus.COMPLETED, 482350.0))
+        controller = SubmissionControllerStub(SimpleNamespace(
+            submission_status="not_submitted",
+        ))
+        self.panel.open(
+            PROFILE, game_state(ChallengeStatus.COMPLETED, 482350.0), controller,
+        )
         data = self.panel.get_display_data()
         self.assertEqual(data["challenge_status"], "Teljesítve")
         self.assertEqual(data["farm_value"], 482350.0)
+        self.assertEqual(data["submission_status"], "not_submitted")
         self.panel.open(PROFILE, game_state(ChallengeStatus.LEGACY_INELIGIBLE))
         data = self.panel.get_display_data()
         self.assertIn("korábbi mentés", data["challenge_status"])
         self.assertIsNone(data["farm_value"])
+
+    def test_completed_result_can_be_submitted_from_game_data(self):
+        controller = SubmissionControllerStub(SimpleNamespace(
+            submission_status="failed",
+        ))
+        self.panel.open(
+            PROFILE, game_state(ChallengeStatus.COMPLETED, 482350.0), controller,
+        )
+        self.panel.handle_event(pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN, button=1,
+            pos=self.panel.submit_rect.center,
+        ))
+        self.assertEqual(controller.requests, [(GAME_ID, 10)])
+
+    def test_submitted_result_has_no_submission_action(self):
+        controller = SubmissionControllerStub(SimpleNamespace(
+            submission_status="submitted",
+        ))
+        self.panel.open(
+            PROFILE, game_state(ChallengeStatus.COMPLETED, 482350.0), controller,
+        )
+        self.panel.handle_event(pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN, button=1,
+            pos=self.panel.submit_rect.center,
+        ))
+        self.assertEqual(controller.requests, [])
 
     def test_copy_buttons_copy_full_identifiers_and_show_feedback(self):
         self.panel.open(PROFILE, game_state())
