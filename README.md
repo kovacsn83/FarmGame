@@ -203,6 +203,7 @@ FarmGame/
 ├── src/                    Game source code
 │   ├── main.py             Initialization, input, and main loop
 │   ├── game_state.py       Central state and upgrade synchronisation
+│   ├── game_version.py     Manually managed release version
 │   ├── fields.py           Field state, growth, and harvest rules
 │   ├── crops.py            Crop definitions
 │   ├── orchards.py         Fruit-tree lifecycle and harvest rules
@@ -243,18 +244,20 @@ python -m tools.run_simulation --years 5 --seed 12345
 
 Simulation reports are stored in `reports/` and excluded from version control.
 
-## Application and user data
+## FarmGame versioning
 
-Bundled application resources such as images and configuration defaults remain
-read-only files inside the installed game. Writable user data has a separate,
-central location: `%LOCALAPPDATA%\FarmGame` on Windows, with `saves`, `logs`,
-and `screenshots` subdirectories. If `LOCALAPPDATA` is unavailable, FarmGame
-falls back to `.farmgame` in the current user's home directory.
+The single release-version source is `src/game_version.py`. FarmGame uses
+manually managed `MAJOR.MINOR.PATCH` versions and currently identifies itself
+as **Alpha v0.1.0**. `MAJOR` denotes broad compatibility or full-release
+milestones, `MINOR` a substantial feature milestone, and `PATCH` a corrective
+release for an already distributed build.
 
-The user-data paths for future `player.json` and `settings.json` files are
-reserved but those files are not created yet. During this first migration
-stage, the active SaveSystem deliberately continues to use the repository's
-existing `saves/` directory; no existing save is copied, moved, or deleted.
+Git commits do not increase the game version. Version changes are deliberate
+release decisions made only after a development package has been completed and
+tested. New slot saves record the game version as informational metadata while
+the independent numeric save-schema version continues to control data
+compatibility. This source can later also supply EXE builds, archive names,
+GitHub Releases, update checks, and leaderboard submissions.
 
 ## Contributing
 

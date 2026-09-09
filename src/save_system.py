@@ -25,6 +25,7 @@ from constants import (
 from crops import CROPS, get_crop_growth_weeks, get_crop_harvest_stages
 from game_rules import FIELD_TYPES, UPGRADES
 from game_logger import log
+from game_version import get_game_version
 from inventory import get_inventory_item_ids
 from financial_history import is_valid_transaction
 from orchards import is_valid_tree_record, synchronize_orchard_seasons
@@ -878,11 +879,13 @@ def _validate_slot_document(document, expected_slot_id):
         return None
     save_name = metadata.get("save_name")
     saved_at = metadata.get("saved_at")
+    game_version = metadata.get("game_version")
     if (not isinstance(save_name, str) or not save_name.strip()
             or len(save_name) > MAX_SAVE_NAME_LENGTH
             or metadata.get("slot_id") != expected_slot_id
             or metadata.get("save_version") not in ({SAVE_VERSION} | LEGACY_SAVE_VERSIONS)
             or not isinstance(saved_at, str) or not saved_at
+            or (game_version is not None and not isinstance(game_version, str))
             or not isinstance(metadata.get("game_day"), int)
             or isinstance(metadata.get("game_day"), bool)):
         return None
@@ -1013,6 +1016,7 @@ def get_slot_metadata(slot_id):
         "saved_at": metadata["saved_at"],
         "game_day": metadata["game_day"],
         "save_version": metadata["save_version"],
+        "game_version": metadata.get("game_version"),
     }
 
 
@@ -1044,6 +1048,7 @@ def save_game_to_slot(game_state, slot_id, save_name, saved_at=None):
             "save_name": normalized_name,
             "slot_id": slot_id,
             "save_version": SAVE_VERSION,
+            "game_version": get_game_version(),
             "saved_at": saved_at or datetime.now().strftime("%Y-%m-%d %H:%M"),
             "game_day": game_state.game_time.day,
         },

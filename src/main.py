@@ -46,6 +46,7 @@ from game_rules import (
 )
 from game_menu import GameMenu
 from game_logger import get_logger
+from game_version import get_full_version_display
 from notification_system import NotificationManager
 from player_profile import (
     PlayerProfileError, PlayerProfileValidationError,
@@ -184,6 +185,7 @@ def main():
         grass_tiles = load_grass_tiles(TILE_SIZE)
         game_time = GameTime(current_time_speed=TIME_SLOW)
         logger.reset()
+        logger.log(get_full_version_display(), "Game")
         logger.set_timestamp_provider(
             lambda: format_game_time(game_time.elapsed_weeks),
         )

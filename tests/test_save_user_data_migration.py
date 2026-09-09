@@ -12,6 +12,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 import save_system
+from game_version import GAME_VERSION
 from simulation import SimulationBot
 
 
@@ -28,6 +29,10 @@ class SaveUserDataMigrationTests(unittest.TestCase):
                 self.assertTrue(path.is_file())
                 first_schema = json.loads(path.read_text(encoding="utf-8"))[
                     "game_state"]["save_version"]
+                first_metadata = json.loads(path.read_text(encoding="utf-8"))[
+                    "metadata"]
+                self.assertEqual(first_metadata["game_version"], GAME_VERSION)
+                self.assertEqual(first_metadata["save_version"], first_schema)
                 original.state.economy.money = 456
                 self.assertTrue(save_system.save_game_to_slot(
                     original.state, 2, "Felülírt", "2026-09-09 09:01"))
@@ -40,6 +45,28 @@ class SaveUserDataMigrationTests(unittest.TestCase):
                 self.assertEqual(
                     json.loads(path.read_text(encoding="utf-8"))[
                         "game_state"]["save_version"], first_schema)
+
+    def test_legacy_and_different_game_versions_remain_loadable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            saves = Path(directory) / "saves"
+            with patch.object(save_system, "get_saves_dir", return_value=saves):
+                original = SimulationBot(205)
+                self.assertTrue(save_system.save_game_to_slot(
+                    original.state, 1, "Legacy", "2026-09-09 10:00"))
+                path = saves / "save_slot_1.json"
+                document = json.loads(path.read_text(encoding="utf-8"))
+                document["metadata"].pop("game_version")
+                path.write_text(json.dumps(document), encoding="utf-8")
+                self.assertIsNone(save_system.get_slot_metadata(1)["game_version"])
+                self.assertTrue(save_system.load_game_from_slot(
+                    SimulationBot(206).state, 1))
+
+                document["metadata"]["game_version"] = "9.9.9"
+                path.write_text(json.dumps(document), encoding="utf-8")
+                self.assertEqual(
+                    save_system.get_slot_metadata(1)["game_version"], "9.9.9")
+                self.assertTrue(save_system.load_game_from_slot(
+                    SimulationBot(207).state, 1))
 
     def test_legacy_slots_copy_once_without_deletion_or_overwrite(self):
         with tempfile.TemporaryDirectory() as directory:

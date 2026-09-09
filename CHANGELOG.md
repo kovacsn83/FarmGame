@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Elkészült a központi, manuálisan kezelt FarmGame verziórendszer. Az első verzió `Alpha v0.1.0`, amely diszkréten megjelenik a főmenüben és az új mentések `game_version` metadata mezőjében; a régi, verziómező nélküli mentések továbbra is betölthetők, a save-sémaverzió változatlanul külön fogalom.
+
 - Elkészült a helyi játékosprofil-rendszer: első indításkor megadható a játékosnév, amelyhez automatikus, tartós UUID-alapú `player_id` készül. A profil Windows alatt a `%LOCALAPPDATA%/FarmGame/player.json` fájlban, atomikus mentéssel tárolódik; a sérült profil helyreállítása külön, diagnosztizálható folyamat.
 
 - A FarmGame mentései mostantól a központi felhasználói adatkönyvtárban, Windows alatt a `%LOCALAPPDATA%\FarmGame\saves` helyen tárolódnak. A korábbi projektbeli mentések ütközésmentesen és törlés nélkül átmásolódnak; az új mentés az elsődleges, a JSON save formátum és sémaverzió változatlan.

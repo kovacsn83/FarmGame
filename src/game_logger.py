@@ -10,7 +10,7 @@ LOG_CATEGORIES = frozenset({
     "Quest", "Save", "Load", "Time", "Building", "Watering", "Supply",
     "Market", "Bank", "Road", "Automation", "Orchard", "Processing",
     "Restaurant", "Storage", "Spraying", "GarageFleet", "UserData",
-    "PlayerProfile",
+    "PlayerProfile", "Game",
 })
 
 

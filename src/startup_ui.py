@@ -4,6 +4,7 @@ import pygame
 
 from asset_loader import load_splash_image
 from constants import COLOR_TEXT
+from game_version import get_version_display
 from screen_layout import get_screen_center, get_screen_size
 from player_profile import MAX_PLAYER_NAME_LENGTH
 from save_slots_ui import TextInput
@@ -84,6 +85,7 @@ class MainMenu:
         self.pending_action = None
         self.rect = pygame.Rect(0, 0, MAIN_MENU_WIDTH, 300)
         self.button_rects = {}
+        self.version_display = get_version_display()
         self.update_layout()
 
     def update_layout(self):
@@ -149,6 +151,13 @@ class MainMenu:
             pygame.draw.rect(screen, color, rect)
             pygame.draw.rect(screen, INFO_PANEL_BORDER, rect, 1)
             self._draw_text(screen, font, item["label"], rect.center)
+        version_surface = font.render(self.version_display, True, (205, 218, 200))
+        screen.blit(
+            version_surface,
+            version_surface.get_rect(
+                bottomright=(screen.get_width() - 12, screen.get_height() - 10),
+            ),
+        )
 
 
 class PlayerNamePrompt:
