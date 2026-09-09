@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Elkészült a helyi játékosprofil-rendszer: első indításkor megadható a játékosnév, amelyhez automatikus, tartós UUID-alapú `player_id` készül. A profil Windows alatt a `%LOCALAPPDATA%/FarmGame/player.json` fájlban, atomikus mentéssel tárolódik; a sérült profil helyreállítása külön, diagnosztizálható folyamat.
+
 - A FarmGame mentései mostantól a központi felhasználói adatkönyvtárban, Windows alatt a `%LOCALAPPDATA%\FarmGame\saves` helyen tárolódnak. A korábbi projektbeli mentések ütközésmentesen és törlés nélkül átmásolódnak; az új mentés az elsődleges, a JSON save formátum és sémaverzió változatlan.
 
 - Elkészült a központi felhasználói adatkönyvtár-rendszer: Windows alatt a FarmGame későbbi írható adatai a `%LOCALAPPDATA%\FarmGame` könyvtárba kerülhetnek, biztonságos felhasználói fallback mellett. Induláskor létrejön a `saves`, `logs` és `screenshots` könyvtár; a jelenlegi mentések tényleges átköltöztetése még nem része ennek a változtatásnak.

@@ -145,9 +145,13 @@ defaults—remain part of the installed game under `assets/` and `src/`.
 Writable user data has a separate, executable-location-independent root. On
 Windows this is `%LOCALAPPDATA%\FarmGame`; if `LOCALAPPDATA` is unavailable,
 FarmGame uses `.farmgame` below the current user's home directory. At startup
-the game creates `saves/`, `logs/`, and `screenshots/` below that root. Paths for
-future `player.json` and `settings.json` files are reserved, but those files are
-not created yet.
+the game creates `saves/`, `logs/`, and `screenshots/` below that root. On first
+start it also asks for a player name and creates `%LOCALAPPDATA%\FarmGame\player.json`.
+This installation-wide local profile contains the chosen display name, creation
+time, profile schema version, and an automatically generated persistent UUID.
+The UUID contains no machine or Windows-account information and prepares later
+online features without adding any network connection today. The reserved
+`settings.json` file is not created yet.
 
 The SaveSystem reads and writes `%LOCALAPPDATA%\FarmGame\saves` on Windows.
 The repository-level `saves/` directory is now a legacy source: on startup its

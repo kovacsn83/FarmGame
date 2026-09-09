@@ -47,6 +47,10 @@ from game_rules import (
 from game_menu import GameMenu
 from game_logger import get_logger
 from notification_system import NotificationManager
+from player_profile import (
+    PlayerProfileError, PlayerProfileValidationError,
+    create_player_profile, load_player_profile,
+)
 from orchards import (
     draw_orchard_trees, find_tree_at, plant_tree, run_weekly_orchard_cycle,
 )
@@ -70,7 +74,7 @@ from save_system import (
     save_game_to_slot,
 )
 from screen_layout import set_camera, set_screen_size, world_to_screen
-from startup_ui import MainMenu, SplashScreen
+from startup_ui import MainMenu, PlayerNamePrompt, SplashScreen
 from storage_blocking import StorageBlockManager
 from time_system import (
     TIME_NORMAL, TIME_PAUSED, TIME_SLOW, GameTime,
@@ -105,6 +109,13 @@ def main():
     logger.log(f"Data directory: {user_data_directory}", "UserData")
     if not initialize_save_system():
         return
+    player_profile = None
+    profile_error = None
+    try:
+        player_profile = load_player_profile()
+    except PlayerProfileValidationError as error:
+        profile_error = error
+        logger.log(error, "PlayerProfile", level="WARNING")
     pygame.init()
     clock = pygame.time.Clock()
     font = pygame.font.SysFont(None, 24)
@@ -119,6 +130,12 @@ def main():
     app_state = AppStateManager()
     splash_screen = SplashScreen()
     main_menu = MainMenu()
+    player_name_prompt = (
+        None if player_profile is not None else PlayerNamePrompt(
+            recovery_required=profile_error is not None,
+            error_message=str(profile_error) if profile_error else None,
+        )
+    )
     load_slots_menu = LoadSlotsMenu()
 
     # A tényleges farmállapot kizárólag Új játék vagy Betöltés választásakor készül el.
@@ -547,6 +564,24 @@ def main():
                     set_screen_size(*screen.get_size())
                     continue
 
+                if player_name_prompt is not None:
+                    player_name_prompt.handle_event(event)
+                    submitted_name = player_name_prompt.take_submission()
+                    if submitted_name is not None:
+                        try:
+                            player_profile = create_player_profile(
+                                submitted_name,
+                                recover_corrupt=profile_error is not None,
+                            )
+                        except PlayerProfileError as error:
+                            player_name_prompt.validation_error = str(error)
+                            logger.log(error, "PlayerProfile", level="ERROR")
+                        else:
+                            player_name_prompt.close()
+                            player_name_prompt = None
+                            profile_error = None
+                    continue
+
                 if load_slots_menu.visible:
                     load_slots_menu.handle_event(event)
                     slot_id = load_slots_menu.take_load_request()
@@ -573,6 +608,9 @@ def main():
             if not running:
                 break
             main_menu.draw(screen, font)
+            if player_name_prompt is not None:
+                player_name_prompt.update()
+                player_name_prompt.draw(screen, font)
             load_slots_menu.draw(screen, font)
             pygame.display.flip()
             clock.tick(60)
