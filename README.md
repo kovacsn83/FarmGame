@@ -137,6 +137,23 @@ python src/main.py
 New games use a 1500 × 1000 resizable window and a scrollable 100 × 80 tile
 world. Local save files are stored under `saves/`, which is excluded from Git.
 
+## Application data and user data
+
+Read-only application resources—images, icons, fonts, and configuration
+defaults—remain part of the installed game under `assets/` and `src/`.
+
+Writable user data has a separate, executable-location-independent root. On
+Windows this is `%LOCALAPPDATA%\FarmGame`; if `LOCALAPPDATA` is unavailable,
+FarmGame uses `.farmgame` below the current user's home directory. At startup
+the game creates `saves/`, `logs/`, and `screenshots/` below that root. Paths for
+future `player.json` and `settings.json` files are reserved, but those files are
+not created yet.
+
+The current SaveSystem still reads and writes the repository-level `saves/`
+directory. Moving existing saves into the user-data directory will be handled
+by a later, dedicated migration; this change does not copy, move, or delete
+save files.
+
 ## Controls
 
 | Action | Control |
@@ -220,6 +237,19 @@ python -m tools.run_simulation --years 5 --seed 12345
 ```
 
 Simulation reports are stored in `reports/` and excluded from version control.
+
+## Application and user data
+
+Bundled application resources such as images and configuration defaults remain
+read-only files inside the installed game. Writable user data has a separate,
+central location: `%LOCALAPPDATA%\FarmGame` on Windows, with `saves`, `logs`,
+and `screenshots` subdirectories. If `LOCALAPPDATA` is unavailable, FarmGame
+falls back to `.farmgame` in the current user's home directory.
+
+The user-data paths for future `player.json` and `settings.json` files are
+reserved but those files are not created yet. During this first migration
+stage, the active SaveSystem deliberately continues to use the repository's
+existing `saves/` directory; no existing save is copied, moved, or deleted.
 
 ## Contributing
 

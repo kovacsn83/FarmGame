@@ -1,5 +1,9 @@
 # CHANGELOG
 
+- Elkészült a központi felhasználói adatkönyvtár-rendszer: Windows alatt a FarmGame későbbi írható adatai a `%LOCALAPPDATA%\FarmGame` könyvtárba kerülhetnek, biztonságos felhasználói fallback mellett. Induláskor létrejön a `saves`, `logs` és `screenshots` könyvtár; a jelenlegi mentések tényleges átköltöztetése még nem része ennek a változtatásnak.
+
+- Elkészült a központi felhasználói adatkönyvtár-rendszer: Windows alatt a későbbi írható adatok a `%LOCALAPPDATA%/FarmGame` könyvtárba kerülhetnek, biztonságos felhasználói fallbackkel. A `saves`, `logs` és `screenshots` mappák induláskor létrejönnek; a jelenlegi mentések tényleges átköltöztetése még nem része ennek a változtatásnak.
+
 - Új Farmház III. fejlesztés: Raktár III. ($5 000), a Raktár II. után. Minden meglévő és később épített normál Raktár kapacitása 1500-ra nő, fenntartási alapja $5 000 lesz, a teljes kapacitás automatikusan frissül (két Raktárnál 3000). A 2 db-os limit és a bontási készletvédelem változatlan.
 
 - A Garázs, Raktár és Feldolgozó üzem fenntartási alapja mostantól szintfüggő: Garázs I–III. $500 / $3 000 / $6 000, Raktár I–II. $500 / $2 000, Feldolgozó üzem I–II. $3 000 / $6 000. Az éves 10%-os, hetente levont fenntartás épületenként érvényes; a Gazdaság értékének számítása nem változott.

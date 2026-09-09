@@ -86,6 +86,7 @@ from ui import (
     create_time_speed_icons, create_toolbar_icons, draw_ui,
     draw_notification_bar, draw_tooltip, get_money_hud_rect,
 )
+from user_data import UserDataInitializationError, initialize_user_data
 from world import (
     create_world, draw_animal_pen_fences, draw_grid, draw_orchard_fences,
     draw_preview, draw_world,
@@ -94,6 +95,13 @@ from world import (
 
 
 def main():
+    logger = get_logger()
+    try:
+        user_data_directory = initialize_user_data()
+    except UserDataInitializationError as error:
+        logger.log(error, "UserData", level="ERROR")
+        return
+    logger.log(f"Data directory: {user_data_directory}", "UserData")
     pygame.init()
     clock = pygame.time.Clock()
     font = pygame.font.SysFont(None, 24)
@@ -109,7 +117,6 @@ def main():
     splash_screen = SplashScreen()
     main_menu = MainMenu()
     load_slots_menu = LoadSlotsMenu()
-    logger = get_logger()
 
     # A tényleges farmállapot kizárólag Új játék vagy Betöltés választásakor készül el.
     world = fields = buildings = animals = None
