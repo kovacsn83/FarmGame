@@ -4,6 +4,11 @@ A FarmGame baráti Alpha ranglistájának különálló FastAPI backendje. A sze
 PostgreSQLben tárolja a 10 éves Challenge eredményeit; a Pygame kliens ebben a
 fejlesztési lépésben még nem kapcsolódik hozzá automatikusan.
 
+Production API: <https://farmgame-production.up.railway.app>
+
+- Állapot: <https://farmgame-production.up.railway.app/health>
+- Swagger dokumentáció: <https://farmgame-production.up.railway.app/docs>
+
 ## Technológia
 
 - FastAPI és Uvicorn
@@ -98,12 +103,13 @@ válasz nem tartalmaz `player_id` vagy `game_id` értéket.
 3. Adj hozzá Railway PostgreSQL szolgáltatást.
 4. A backend szolgáltatás kapja meg a PostgreSQL által biztosított
    `DATABASE_URL` változót.
-5. A verziózott `railway.json` előbb lefuttatja az Alembic-migrációt, majd a
-   Railway `PORT` értékén elindítja az Uvicornt.
+5. A verziózott `railway.json` előbb lefuttatja az Alembic-migrációt, majd
+   elindítja az Uvicornt. A jelenlegi Railway szolgáltatásnál a start command
+   explicit `8000`-es portot használ, amely megegyezik a public domain target
+   portjával.
 6. A deployment után ellenőrizd a `/health` és `/docs` útvonalakat.
 
-Ne állíts be fix portot, és semmilyen connection stringet vagy jelszót ne adj
-hozzá a repositoryhoz.
+Semmilyen connection stringet vagy jelszót ne adj hozzá a repositoryhoz.
 
 ## Tesztek
 

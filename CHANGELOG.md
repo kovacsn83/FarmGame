@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- A FarmGame Challenge API éles Railway környezetbe került a `https://farmgame-production.up.railway.app` címen, külön PostgreSQL szolgáltatással és induláskor futó Alembic-migrációval. A health, Swagger, eredménybeküldés, duplikációvédelem, ranglista és újraindítás utáni adatmegmaradás production környezetben is ellenőrizve lett.
+
 - Elkészült az online Challenge-ranglista első, Railway-kompatibilis FastAPI backendje PostgreSQL tárolással, verziózott 10 éves eredménybeküldő és Top 10 endpointtal. Az adatbázis `challenge_type + challenge_years + game_id` UNIQUE constrainttel védi a futamokat a duplikált beküldéstől; a FarmGame kliens még nem kapcsolódik automatikusan az API-hoz.
 
 - A teljesített 10 éves Challenge-ekből mostantól tartós helyi eredményrekord készül a központi felhasználói adatkönyvtárban. A rekord a hiteles Farm Value snapshotot, a `player_id`, `game_id` és játékverzió adatokat őrzi; a `game_id + challenge_years` kulcs megakadályozza a mentés/betöltés miatti duplikációt.
