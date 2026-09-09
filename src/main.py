@@ -25,6 +25,7 @@ from buildings import (
     BUILD_OPTIONS, can_place_building, find_building_data, place_building,
     print_building_info, remove_building,
 )
+from challenge import ChallengeManager
 from constants import (
     COLOR_GRASS, GRASS, TILE_SIZE,
     TOOL_ANIMAL_HUSBANDRY, TOOL_BUILD, TOOL_BULLDOZER, TOOL_HARVEST,
@@ -204,6 +205,9 @@ def main():
             )
         )
         bank_system = BankSystem(economy, notification_manager)
+        challenge_manager = ChallengeManager(
+            player_profile, notification_manager,
+        )
         vehicles = VehicleManager(storage_block_manager)
         quest_manager = QuestManager(economy)
         restaurant_system = RestaurantSystem()
@@ -212,6 +216,7 @@ def main():
             tractor=vehicles, vehicles=vehicles, animals=animals,
             bank_system=bank_system, quest_manager=quest_manager,
             restaurant_system=restaurant_system,
+            challenge_manager=challenge_manager,
         )
         info_panel = InfoPanel()
         crop_selection_panel = CropSelectionPanel()
@@ -983,6 +988,9 @@ def main():
     
             # Minden ténylegesen eltelt játékbeli héthez pontosan egy frissítés tartozik.
             for elapsed_week in game_time.update():
+                game_state.challenge_manager.handle_week_transition(
+                    elapsed_week - 1, elapsed_week, game_state,
+                )
                 logger.log(
                     f"Új hét kezdődött: {format_game_time(elapsed_week)}",
                     "Time",

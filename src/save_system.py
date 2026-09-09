@@ -11,6 +11,7 @@ from animal_troughs import (
     FOOD_STOCK_KEY, WATER_STOCK_KEY, synchronize_pen_group_stocks,
 )
 from bank import is_valid_loan_record
+from challenge import is_valid_challenge_save_record
 from buildings import (
     BUILDING_TYPES, FARMHOUSE_BUILDING_OFFSET, FARMHOUSE_BUILDING_SIZE,
     FARMHOUSE_LEGACY_LEVEL, FARMHOUSE_LEVELS, GARAGE_PARKING_SLOTS,
@@ -371,6 +372,11 @@ def _create_save_data(game_state):
             restaurant_system.to_save_record()
             if restaurant_system is not None else {}
         ),
+        "ten_year_challenge": (
+            game_state.challenge_manager.to_save_record()
+            if getattr(game_state, "challenge_manager", None) is not None
+            else None
+        ),
     }
 
 
@@ -403,6 +409,8 @@ def _is_valid_save_data(data):
         return False
     restaurant_auto_sell = data.get("restaurant_auto_sell", {})
     if not is_valid_restaurant_save_record(restaurant_auto_sell):
+        return False
+    if not is_valid_challenge_save_record(data.get("ten_year_challenge")):
         return False
     if not _validate_tiles(data):
         return False
@@ -1088,6 +1096,12 @@ def _apply_game_data(game_state, data):
     # A mező opcionális: a korábbi mentések biztonságosan a hét elejéről
     # folytatódnak, az új mentések pedig pontosan a mentett részprogresszről.
     game_state.game_time.restore_week_progress(data.get("week_progress", 0.0))
+    challenge_manager = getattr(game_state, "challenge_manager", None)
+    if challenge_manager is not None:
+        challenge_manager.load_save_record(
+            data.get("ten_year_challenge"),
+            game_state.game_time.elapsed_weeks,
+        )
     synchronize_orchard_seasons(
         game_state.buildings, game_state.game_time.elapsed_weeks, legacy=True,
     )

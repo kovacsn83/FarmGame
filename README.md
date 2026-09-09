@@ -79,6 +79,8 @@ practical and backed by an extensive automated regression test suite.
   and completion notifications.
 - A 22-step tutorial Quest chain covering construction, animals, field work,
   vehicles, and spraying. Each completed Quest awards $100.
+- A local ten-year Challenge records one immutable Farm Value snapshot after
+  Year 10, then lets the same farm continue without a time limit.
 - White notifications for important events and storage-capacity blocks.
 - Versioned JSON saves, eight named slots, validation, and compatibility
   migrations.

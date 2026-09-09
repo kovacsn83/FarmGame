@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- Elkészült a 10 éves Challenge helyi alaplogikája: a 10. év 52. hetéről a 11. év 1. hetére történő átmenetkor egyszeri, változatlan Farm Value snapshot készül, miközben a játék korlátlanul folytatható. Az eredmény a mentéssel együtt tárolódik; online ranglista még nem készült.
+
 - Elkészült a központi, manuálisan kezelt FarmGame verziórendszer. Az első verzió `Alpha v0.1.0`, amely diszkréten megjelenik a főmenüben és az új mentések `game_version` metadata mezőjében; a régi, verziómező nélküli mentések továbbra is betölthetők, a save-sémaverzió változatlanul külön fogalom.
 
 - Elkészült a helyi játékosprofil-rendszer: első indításkor megadható a játékosnév, amelyhez automatikus, tartós UUID-alapú `player_id` készül. A profil Windows alatt a `%LOCALAPPDATA%/FarmGame/player.json` fájlban, atomikus mentéssel tárolódik; a sérült profil helyreállítása külön, diagnosztizálható folyamat.
