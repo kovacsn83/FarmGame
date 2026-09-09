@@ -88,6 +88,21 @@ practical and backed by an extensive automated regression test suite.
   migrations.
 - A developer console and deterministic multi-year simulation tool.
 
+### Online Challenge API layer
+
+The client-side `src/online_api.py` module provides isolated calls for the
+public Challenge service: a health check, the ten-year Top 10 leaderboard, and
+submission of an existing local Challenge result. The production base URL is
+`https://farmgame-production.up.railway.app`; development builds can override
+it with the `FARMGAME_API_BASE_URL` environment variable.
+
+Every request uses a 3-second connection timeout and a 5-second read timeout,
+HTTPS certificate validation, and a `FarmGame/<game version>` User-Agent.
+Connection failures, timeouts, invalid responses, validation errors, server
+errors, and duplicate submissions are returned as structured `ApiResult`
+values. No network call runs automatically at startup or Challenge completion,
+so gameplay, saves, profiles, and local Challenge results remain offline-first.
+
 ## Screenshots
 
 Screenshots can be added to [`docs/screenshots`](docs/screenshots). Suggested
@@ -102,6 +117,7 @@ sales, orchards and animals, and the graphical Garage view.
 
 - Python 3.10 or newer
 - Pygame CE 2.5.7
+- Requests 2.32.5
 
 ## Installation
 
