@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## Windows build támogatás
+
+- Elkészült a reprodukálható, hordozható PyInstaller `onedir` kliensbuild és a
+  terjeszthető Windows ZIP csomag előállítása.
+- A csomagolt játék ugyanazt a központi verziószámot és
+  `%LOCALAPPDATA%\FarmGame` felhasználói adatkönyvtárat használja, mint a
+  fejlesztői változat.
+- A konzol nélküli kiadás nem kezelt hibái a felhasználói `logs/crash.log`
+  fájlban diagnosztizálhatók.
+
 ## 0.1.1 – 2026-09-09
 
 - Elkészült a 10 éves Challenge teljes lezárási folyamata: változatlan Farm Value snapshot, tartós helyi eredmény, automatikus Pause és dedikált completion popup.

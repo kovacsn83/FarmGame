@@ -1,3 +1,6 @@
+import traceback
+from datetime import datetime
+
 import pygame
 
 from app_state import AppState, AppStateManager
@@ -100,7 +103,9 @@ from ui import (
     create_time_speed_icons, create_toolbar_icons, draw_ui,
     draw_notification_bar, draw_tooltip, get_money_hud_rect,
 )
-from user_data import UserDataInitializationError, initialize_user_data
+from user_data import (
+    UserDataInitializationError, get_logs_dir, initialize_user_data,
+)
 from world import (
     create_world, draw_animal_pen_fences, draw_grid, draw_orchard_fences,
     draw_preview, draw_world,
@@ -1223,5 +1228,24 @@ def main():
     pygame.quit()
 
 
+def run_with_crash_logging():
+    """Noconsole buildben is megőrzi a nem kezelt hibák diagnosztikáját."""
+    try:
+        main()
+    except Exception:
+        try:
+            log_directory = get_logs_dir()
+            log_directory.mkdir(parents=True, exist_ok=True)
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            with (log_directory / "crash.log").open(
+                "a", encoding="utf-8", newline="\n",
+            ) as crash_log:
+                crash_log.write(f"\n[{timestamp}] Unhandled error\n")
+                traceback.print_exc(file=crash_log)
+        except OSError:
+            pass
+        raise
+
+
 if __name__ == "__main__":
-    main()
+    run_with_crash_logging()

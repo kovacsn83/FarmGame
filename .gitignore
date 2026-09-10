@@ -27,6 +27,7 @@ ENV/
 build/
 dist/
 *.egg-info/
+FarmGame-*-Windows.zip
 
 # Naplók és ideiglenes fájlok
 *.log

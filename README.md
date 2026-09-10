@@ -164,11 +164,43 @@ python -m pip install -r requirements.txt
 
 ## Running the game
 
-Run from the repository root so asset paths resolve correctly:
+Run the Python development version from the repository root:
 
 ```bash
 python src/main.py
 ```
+
+Asset paths are resolved relative to the source installation, so the runtime
+does not depend on the process working directory.
+
+## Windows release build
+
+The portable Windows distribution uses PyInstaller in `onedir` mode. This
+keeps Pygame assets and runtime libraries easy to inspect, starts faster than a
+one-file bundle, and generally causes fewer antivirus false positives.
+
+Install the separate build dependencies, then run the build script:
+
+```powershell
+python -m pip install -r requirements-build.txt
+.\scripts\build_windows.bat
+```
+
+The script cleans only the repository's generated `build/` and `dist/`
+directories, creates the no-console executable, verifies representative
+runtime assets and forbidden private files, and produces:
+
+```text
+dist/FarmGame/FarmGame.exe
+dist/FarmGame-0.1.1-Windows.zip
+```
+
+The archive name and Windows metadata use the same `src/game_version.py`
+version as the game UI. The client assets are bundled; `server/`, tests, saves,
+profiles, local Challenge results, databases, and environment files are
+excluded. UPX compression is disabled. Because this first executable is not
+digitally signed, Windows SmartScreen may display a warning, and some antivirus
+products may occasionally report a false positive.
 
 New games use a 1500 × 1000 resizable window and a scrollable 100 × 80 tile
 world.
