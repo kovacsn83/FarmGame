@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.1.2 – 2026-09-11
+
+- A 0.1.2 kiadás lezárja a farmi Piac épület kivezetését: a piaci szolgáltatás
+  a Városból érhető el, a fizikai áruátvételt pedig a Raktárak biztosítják.
+- A régi mentések Piac épületei automatikusan eltávolításra kerülnek, miközben
+  a mentések, a járműfuvarok és a pénzügyi elszámolások kompatibilisek maradnak.
+- Az Épületek popup tematikus párokba rendezve, áttekinthetőbb sorrendben
+  jeleníti meg a továbbra is megépíthető gazdasági épületeket és területeket.
+
 - Az Épületek popup kártyái tematikus párokba rendezve jelennek meg: Farmház–Garázs,
   Raktár–Tó, 4×4-es veteményes–Karám, valamint Gyümölcsös–Feldolgozó üzem.
 - A farmon építhető Piac megszűnt; a Piac szolgáltatás a Város menüből érhető el,

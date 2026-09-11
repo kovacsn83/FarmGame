@@ -192,7 +192,7 @@ runtime assets and forbidden private files, and produces:
 
 ```text
 dist/FarmGame/FarmGame.exe
-dist/FarmGame-0.1.1-Windows.zip
+dist/FarmGame-0.1.2-Windows.zip
 ```
 
 The archive name and Windows metadata use the same `src/game_version.py`
@@ -318,7 +318,7 @@ Simulation reports are stored in `reports/` and excluded from version control.
 
 The single release-version source is `src/game_version.py`. FarmGame uses
 manually managed `MAJOR.MINOR.PATCH` versions and currently identifies itself
-as **Alpha v0.1.1**. `MAJOR` denotes broad compatibility or full-release
+as **Alpha v0.1.2**. `MAJOR` denotes broad compatibility or full-release
 milestones, `MINOR` a substantial feature milestone, and `PATCH` a corrective
 release for an already distributed build.
 

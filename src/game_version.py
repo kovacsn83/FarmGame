@@ -1,7 +1,7 @@
 """A FarmGame kézzel kezelt kiadási verziójának egyetlen igazságforrása."""
 
 
-GAME_VERSION = "0.1.1"
+GAME_VERSION = "0.1.2"
 RELEASE_STAGE = "Alpha"
 
 
