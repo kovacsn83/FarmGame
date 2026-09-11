@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Az Épületek popup kártyái tematikus párokba rendezve jelennek meg: Farmház–Garázs,
+  Raktár–Tó, 4×4-es veteményes–Karám, valamint Gyümölcsös–Feldolgozó üzem.
 - A farmon építhető Piac megszűnt; a Piac szolgáltatás a Város menüből érhető el,
   a régi mentésekből pedig betöltéskor automatikusan eltávolításra kerül az
   egykori Piac épület és felszabadul a területe.

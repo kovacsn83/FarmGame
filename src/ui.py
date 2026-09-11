@@ -263,6 +263,15 @@ CITY_TOOLBAR_SERVICES = (
      "tool": TOOL_CITY_RESTAURANT},
 )
 
+# Tematikus, soronként balról jobbra olvasható épületkatalógus-sorrend.
+# Az itt még nem szereplő jövőbeli opciók automatikusan a lista végére kerülnek.
+BUILDING_SELECTION_ORDER = (
+    "farmhouse", "garage",
+    "warehouse", "pond",
+    "field_4x4", "animal_pen",
+    "orchard", "processing_plant",
+)
+
 PRIMARY_TOOL_GROUPS = [
     [
         {"name": "Info", "icon_color": (255, 255, 255),
@@ -3247,10 +3256,18 @@ class BuildingSelectionPanel(SelectionPanel):
         return super()._handle_content_click(position)
 
     def _available_options(self):
+        ordered_ids = (
+            *BUILDING_SELECTION_ORDER,
+            *(option_id for option_id in BUILD_OPTIONS
+              if option_id not in BUILDING_SELECTION_ORDER),
+        )
         return {
-            option_id: option
-            for option_id, option in BUILD_OPTIONS.items()
-            if is_build_option_unlocked(option, self.purchased_upgrades)
+            option_id: BUILD_OPTIONS[option_id]
+            for option_id in ordered_ids
+            if option_id in BUILD_OPTIONS
+            and is_build_option_unlocked(
+                BUILD_OPTIONS[option_id], self.purchased_upgrades,
+            )
         }
 
     def _update_layout(self):
