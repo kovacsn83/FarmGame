@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## Unreleased
+
+- A játék mentetlen állapot esetén kilépési figyelmeztetést jelenít meg
+  „Mentés és kilépés”, „Kilépés mentés nélkül” és „Mégse” lehetőségekkel.
+- A mentésbe kerülő játékmeneti változásokat központi állapotlenyomat követi;
+  sikeres mentés vagy betöltés után az állapot ismét tiszta.
+
 ## Challenge popup finomhangolás
 
 - A 10 éves Challenge teljesítési ablakából közvetlenül megnyitható az online

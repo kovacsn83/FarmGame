@@ -1,3 +1,4 @@
+import hashlib
 import json
 import math
 import os
@@ -385,6 +386,17 @@ def _create_save_data(game_state):
             else None
         ),
     }
+
+
+def create_save_state_signature(game_state):
+    """Deterministic fingerprint of exactly the state persisted by a save."""
+    serialized = json.dumps(
+        _create_save_data(game_state),
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(serialized).hexdigest()
 
 
 def _is_valid_save_data(data):

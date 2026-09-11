@@ -75,6 +75,15 @@ class GameMenuEventTests(unittest.TestCase):
         self.assertEqual(self.menu.take_action(), "game_data")
         self.assertIsNone(self.menu.confirmation)
 
+    def test_exit_action_is_forwarded_to_the_central_exit_flow(self):
+        event = pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN,
+            {"button": 1, "pos": self.menu.item_rects["exit_game"].center},
+        )
+        self.assertTrue(self.menu.handle_event(event))
+        self.assertEqual(self.menu.take_action(), "exit_game")
+        self.assertIsNone(self.menu.confirmation)
+
 
 if __name__ == "__main__":
     unittest.main()

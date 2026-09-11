@@ -14,6 +14,7 @@ if str(SRC) not in sys.path:
 
 from app_state import AppState, AppStateManager, SPLASH_DURATION_MS
 from asset_loader import load_splash_image
+from exit_ui import ExitConfirmationPanel
 from screen_layout import set_screen_size
 from startup_ui import MainMenu, SplashScreen
 import main as main_module
@@ -128,6 +129,10 @@ class StartupFlowTests(unittest.TestCase):
             {"button": 1, "pos": menu.button_rects["new_game"].center},
         )
         quit_event = pygame.event.Event(pygame.QUIT)
+        discard_event = pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN,
+            {"button": 1, "pos": ExitConfirmationPanel().discard_rect.center},
+        )
         real_create_world = main_module.create_world
         with (
             patch.object(main_module, "AppStateManager", return_value=manager),
@@ -139,7 +144,7 @@ class StartupFlowTests(unittest.TestCase):
             ) as create_world,
             patch.object(
                 pygame.event, "get",
-                side_effect=[[new_game_event], [quit_event]],
+                side_effect=[[new_game_event], [quit_event], [discard_event]],
             ),
         ):
             main_module.main()

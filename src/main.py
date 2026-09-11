@@ -42,6 +42,7 @@ from constants import (
 )
 from developer_console import DeveloperConsole
 from economy import Economy
+from exit_ui import ExitConfirmationPanel
 from financial_history import EXPENSE_CONSTRUCTION
 from fields import (
     can_place_field, find_field_data, grow_crops,
@@ -82,8 +83,8 @@ from progress_tooltips import find_timed_object_tooltip
 from road_building import RoadDragState, build_road_segment
 from save_slots_ui import LoadSlotsMenu, SaveSlotsMenu
 from save_system import (
-    initialize_save_system, load_game, load_game_from_slot, save_game,
-    save_game_to_slot,
+    get_slot_metadata, initialize_save_system, load_game, load_game_from_slot,
+    save_game, save_game_to_slot,
 )
 from screen_layout import set_camera, set_screen_size, world_to_screen
 from startup_ui import MainMenu, PlayerNamePrompt, SplashScreen
@@ -106,6 +107,7 @@ from ui import (
 from user_data import (
     UserDataInitializationError, get_logs_dir, initialize_user_data,
 )
+from unsaved_changes import UnsavedChangesTracker
 from world import (
     create_world, draw_animal_pen_fences, draw_grid, draw_orchard_fences,
     draw_preview, draw_world,
@@ -154,6 +156,9 @@ def main():
     game_data_panel = GameDataPanel()
     leaderboard_controller = ChallengeLeaderboardController()
     leaderboard_panel = ChallengeLeaderboardPanel(leaderboard_controller)
+    exit_confirmation_panel = ExitConfirmationPanel()
+    unsaved_changes = UnsavedChangesTracker()
+    pending_exit_after_save = False
 
     # A tényleges farmállapot kizárólag Új játék vagy Betöltés választásakor készül el.
     world = fields = buildings = animals = None
@@ -187,6 +192,7 @@ def main():
         nonlocal financial_summary_panel, economy_hud_rect
         nonlocal game_menu, save_slots_menu, quest_manager, quest_panel, road_drag
         nonlocal challenge_submission, challenge_completion_panel
+        nonlocal pending_exit_after_save
 
         world = create_world()
         fields, buildings, animals = [], [], []
@@ -243,6 +249,8 @@ def main():
             challenge_manager=challenge_manager,
             game_id=generate_game_id() if start_quest else None,
         )
+        unsaved_changes.start_new_game()
+        pending_exit_after_save = False
         info_panel = InfoPanel()
         crop_selection_panel = CropSelectionPanel()
         building_selection_panel = BuildingSelectionPanel()
@@ -282,7 +290,7 @@ def main():
             logger.log("New game created.", "Game")
             logger.log("Új játék inicializálva.", "System")
 
-    def finish_loaded_session():
+    def finish_loaded_session(slot_id=None, save_name=None):
         """A sikeres betöltés után egységesen előkészíti a játékmenetet."""
         bank_panel.close()
         notification_manager.reset(pygame.time.get_ticks())
@@ -300,6 +308,7 @@ def main():
             current_week=game_time.week,
             current_elapsed_week=game_time.elapsed_weeks,
         )
+        unsaved_changes.mark_loaded(game_state, slot_id, save_name)
         app_state.start_playing()
 
     def resume_after_bank():
@@ -322,6 +331,44 @@ def main():
         bank_panel.open(
             previous_time_speed, emergency_mode=emergency_mode,
         )
+
+    def request_exit():
+        """Minden aktív játékmenetből indított kilépés közös belépési pontja."""
+        nonlocal running
+        if exit_confirmation_panel.visible or pending_exit_after_save:
+            return False
+        if game_state is None or not unsaved_changes.has_unsaved_changes(game_state):
+            running = False
+            return True
+        previous_speed = game_time.current_time_speed
+        game_time.set_time_speed(TIME_PAUSED)
+        vehicles.synchronize_time()
+        animal_movement.synchronize()
+        camera.cancel_drag()
+        road_drag.cancel()
+        game_menu.close()
+        exit_confirmation_panel.open(previous_speed)
+        return False
+
+    def cancel_pending_exit():
+        nonlocal pending_exit_after_save
+        pending_exit_after_save = False
+        exit_confirmation_panel.close()
+        if game_time is not None and exit_confirmation_panel.previous_time_speed is not None:
+            game_time.set_time_speed(exit_confirmation_panel.previous_time_speed)
+            vehicles.synchronize_time()
+            animal_movement.synchronize()
+
+    def save_for_exit(slot_id, save_name):
+        """Az eredeti idősebességet menti, miközben a popup modálisan szüneteltet."""
+        previous_speed = exit_confirmation_panel.previous_time_speed
+        game_time.set_time_speed(previous_speed)
+        success = save_game_to_slot(game_state, slot_id, save_name)
+        if not success:
+            game_time.set_time_speed(TIME_PAUSED)
+            vehicles.synchronize_time()
+            animal_movement.synchronize()
+        return success
 
     def handle_info_panel_event(event):
         """Egy helyen kezeli az információs panelek minden műveletét."""
@@ -635,7 +682,10 @@ def main():
                         loaded = load_game_from_slot(game_state, slot_id)
                         load_slots_menu.complete_load(loaded)
                         if loaded:
-                            finish_loaded_session()
+                            metadata = get_slot_metadata(slot_id)
+                            finish_loaded_session(
+                                slot_id, metadata.get("save_name"),
+                            )
                     if load_slots_menu.take_navigation() == "game_menu":
                         load_slots_menu.close()
                     continue
@@ -668,14 +718,9 @@ def main():
 
         for event in events:
             if event.type == pygame.QUIT:
-                running = False
+                request_exit()
                 continue
 
-            if developer_console.handle_global_shortcut(event):
-                camera.cancel_drag()
-                road_drag.cancel()
-                continue
-    
             if event.type == pygame.VIDEORESIZE:
                 road_drag.cancel()
                 screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
@@ -683,6 +728,39 @@ def main():
                 buttons = create_buttons()
                 menu_button = create_menu_button()
                 calendar_button = create_calendar_button(menu_button)
+                continue
+
+            if exit_confirmation_panel.visible:
+                exit_confirmation_panel.handle_event(event)
+                exit_action = exit_confirmation_panel.take_action()
+                if exit_action == "cancel":
+                    cancel_pending_exit()
+                elif exit_action == "discard":
+                    running = False
+                elif exit_action == "save_and_exit":
+                    if unsaved_changes.current_slot_id is None:
+                        pending_exit_after_save = True
+                        exit_confirmation_panel.close()
+                        save_slots_menu.open()
+                    elif save_for_exit(
+                        unsaved_changes.current_slot_id,
+                        unsaved_changes.current_save_name,
+                    ):
+                        unsaved_changes.mark_saved(
+                            game_state,
+                            unsaved_changes.current_slot_id,
+                            unsaved_changes.current_save_name,
+                        )
+                        running = False
+                    else:
+                        exit_confirmation_panel.set_feedback(
+                            "A játék mentése nem sikerült.",
+                        )
+                continue
+
+            if developer_console.handle_global_shortcut(event):
+                camera.cancel_drag()
+                road_drag.cancel()
                 continue
 
             if game_data_panel.visible:
@@ -743,11 +821,20 @@ def main():
                 save_request = save_slots_menu.take_save_request()
                 if save_request is not None:
                     slot_id, save_name = save_request
-                    save_slots_menu.complete_save(save_game_to_slot(
-                        game_state, slot_id, save_name,
-                    ))
+                    if pending_exit_after_save:
+                        success = save_for_exit(slot_id, save_name)
+                    else:
+                        success = save_game_to_slot(game_state, slot_id, save_name)
+                    save_slots_menu.complete_save(success)
+                    if success:
+                        unsaved_changes.mark_saved(game_state, slot_id, save_name)
+                        if pending_exit_after_save:
+                            running = False
                 if save_slots_menu.take_navigation() == "game_menu":
-                    game_menu.open()
+                    if pending_exit_after_save:
+                        cancel_pending_exit()
+                    else:
+                        game_menu.open()
                 continue
     
             if load_slots_menu.visible:
@@ -757,7 +844,10 @@ def main():
                     loaded = load_game_from_slot(game_state, slot_id)
                     if loaded:
                         road_drag.cancel()
-                        finish_loaded_session()
+                        metadata = get_slot_metadata(slot_id)
+                        finish_loaded_session(
+                            slot_id, metadata.get("save_name"),
+                        )
                     load_slots_menu.complete_load(loaded)
                 if load_slots_menu.take_navigation() == "game_menu":
                     game_menu.open()
@@ -883,7 +973,7 @@ def main():
                     set_screen_size(*screen.get_size())
                     initialize_game_session(start_quest=True)
                 elif menu_action == "exit_game":
-                    running = False
+                    request_exit()
                 continue
     
             if building_selection_panel.handle_event(event):
@@ -936,7 +1026,12 @@ def main():
     
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_F5:
-                    save_game(game_state)
+                    if save_game(game_state):
+                        unsaved_changes.mark_saved(
+                            game_state,
+                            unsaved_changes.current_slot_id,
+                            unsaved_changes.current_save_name,
+                        )
                 elif event.key == pygame.K_F9:
                     if load_game(game_state):
                         road_drag.cancel()
@@ -1047,6 +1142,7 @@ def main():
             or game_data_panel.visible
             or challenge_completion_panel.visible
             or leaderboard_panel.visible
+            or exit_confirmation_panel.visible
         )
         if menu_system_active:
             game_time.synchronize()
@@ -1225,6 +1321,7 @@ def main():
         game_data_panel.draw(screen, font)
         leaderboard_panel.draw(screen, font)
         challenge_completion_panel.draw(screen, font)
+        exit_confirmation_panel.draw(screen, font)
         pygame.display.flip()
 
     pygame.quit()
