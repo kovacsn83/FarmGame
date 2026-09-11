@@ -22,8 +22,10 @@ class ChallengeCompletionPanel:
         self.visible = False
         self.record = None
         self.rect = pygame.Rect(0, 0, PANEL_WIDTH, PANEL_HEIGHT)
-        self.submit_rect = pygame.Rect(0, 0, 260, BUTTON_HEIGHT)
-        self.close_rect = pygame.Rect(0, 0, 150, BUTTON_HEIGHT)
+        self.submit_rect = pygame.Rect(0, 0, 230, BUTTON_HEIGHT)
+        self.leaderboard_rect = pygame.Rect(0, 0, 155, BUTTON_HEIGHT)
+        self.close_rect = pygame.Rect(0, 0, 115, BUTTON_HEIGHT)
+        self._leaderboard_requested = False
         self._update_layout()
 
     def _update_layout(self):
@@ -34,21 +36,44 @@ class ChallengeCompletionPanel:
         )
         self.rect.center = get_screen_center()
         buttons_y = self.rect.bottom - 66
-        gap = 18
-        total = self.submit_rect.width + gap + self.close_rect.width
+        gap = 12
+        available_width = self.rect.width - 40 - gap * 2
+        desired_widths = (230, 155, 115)
+        desired_total = sum(desired_widths)
+        widths = tuple(
+            max(70, available_width * width // desired_total)
+            for width in desired_widths
+        )
+        width_difference = available_width - sum(widths)
+        widths = (widths[0] + width_difference, widths[1], widths[2])
+        self.submit_rect.size = (widths[0], BUTTON_HEIGHT)
+        self.leaderboard_rect.size = (widths[1], BUTTON_HEIGHT)
+        self.close_rect.size = (widths[2], BUTTON_HEIGHT)
+        total = sum(widths) + gap * 2
         self.submit_rect.topleft = (self.rect.centerx - total // 2, buttons_y)
-        self.close_rect.topleft = (self.submit_rect.right + gap, buttons_y)
+        self.leaderboard_rect.topleft = (
+            self.submit_rect.right + gap, buttons_y,
+        )
+        self.close_rect.topleft = (
+            self.leaderboard_rect.right + gap, buttons_y,
+        )
 
     def open(self, record):
         if record is None:
             return False
         self.record = record
         self.visible = True
+        self._leaderboard_requested = False
         self._update_layout()
         return True
 
     def close(self):
         self.visible = False
+
+    def take_leaderboard_request(self):
+        requested = self._leaderboard_requested
+        self._leaderboard_requested = False
+        return requested
 
     def handle_event(self, event):
         if not self.visible:
@@ -68,6 +93,9 @@ class ChallengeCompletionPanel:
         if not self.rect.collidepoint(event.pos):
             return True
         if self.close_rect.collidepoint(event.pos):
+            self.close()
+        elif self.leaderboard_rect.collidepoint(event.pos):
+            self._leaderboard_requested = True
             self.close()
         elif self.submit_rect.collidepoint(event.pos) and self.can_submit:
             self.submission_controller.request(self.record)
@@ -126,11 +154,14 @@ class ChallengeCompletionPanel:
         if feedback.message:
             self._text(screen, font, feedback.message, x, self.rect.top + 232)
         submitted = record.submission_status == "submitted"
-        label = "Beküldve ✓" if submitted else (
+        label = "Beküldve" if submitted else (
             "Beküldés..." if self.submission_controller.submitting
             else "Beküldés a ranglistára"
         )
         self._button(screen, font, self.submit_rect, label, self.can_submit)
+        self._button(
+            screen, font, self.leaderboard_rect, "Top 10 ranglista",
+        )
         self._button(
             screen, font, self.close_rect,
             "Bezárás" if submitted else "Később",

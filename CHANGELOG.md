@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## Challenge popup finomhangolás
+
+- A 10 éves Challenge teljesítési ablakából közvetlenül megnyitható az online
+  Top 10 ranglista.
+- A beküldött állapot feliratából eltűnt a rendszerbetűtípus által hibásan
+  megjelenített karakter.
+
 ## Windows build támogatás
 
 - Elkészült a reprodukálható, hordozható PyInstaller `onedir` kliensbuild és a

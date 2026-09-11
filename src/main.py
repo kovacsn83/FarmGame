@@ -698,6 +698,8 @@ def main():
 
             if challenge_completion_panel.visible:
                 challenge_completion_panel.handle_event(event)
+                if challenge_completion_panel.take_leaderboard_request():
+                    leaderboard_panel.open()
                 continue
 
             if bank_panel.visible:
