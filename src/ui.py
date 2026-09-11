@@ -217,7 +217,6 @@ UPGRADE_COMPLETED_FILL = (211, 229, 208)
 UPGRADE_ARROW_COLOR = (75, 100, 75)
 
 POPUP_TITLES = {
-    "city": "Város",
     "restaurant": "Étterem",
     "warehouse": "Raktár",
     "market": "Piac",
@@ -238,6 +237,31 @@ CITY_TOOL_GROUPS = [
          "tool": TOOL_CITY},
     ],
 ]
+
+# A városi szolgáltatások toolbar-actionök, nem játékvilágbeli tool módok.
+TOOL_CITY_BANK = "city_bank"
+TOOL_CITY_MARKET = "city_market"
+TOOL_CITY_RESTAURANT = "city_restaurant"
+CITY_TOOLBAR_SERVICES = (
+    {"id": "bank", "name": "Bank", "icon_color": (110, 120, 105),
+     "icon_path": toolbar_icon_path("bank_24.png"),
+     "icon_paths": {20: toolbar_icon_path("bank_20.png", 20),
+                    24: toolbar_icon_path("bank_24.png", 24),
+                    64: toolbar_icon_path("bank_64.png", 64)},
+     "tool": TOOL_CITY_BANK},
+    {"id": "market", "name": "Piac", "icon_color": (175, 95, 65),
+     "icon_path": toolbar_icon_path("market_24.png"),
+     "icon_paths": {20: toolbar_icon_path("market_20.png", 20),
+                    24: toolbar_icon_path("market_24.png", 24),
+                    64: toolbar_icon_path("market_64.png", 64)},
+     "tool": TOOL_CITY_MARKET},
+    {"id": "restaurant", "name": "Étterem", "icon_color": (185, 125, 70),
+     "icon_path": toolbar_icon_path("restaurant_24.png"),
+     "icon_paths": {20: toolbar_icon_path("restaurant_20.png", 20),
+                    24: toolbar_icon_path("restaurant_24.png", 24),
+                    64: toolbar_icon_path("restaurant_64.png", 64)},
+     "tool": TOOL_CITY_RESTAURANT},
+)
 
 PRIMARY_TOOL_GROUPS = [
     [
@@ -295,8 +319,26 @@ UTILITY_TOOL_GROUPS = [
     ],
 ]
 
-# Kompatibilis, lapos bejárási sorrend a közös ikon-, rajzoló- és tooltip-rendszerhez.
-TOOL_GROUPS = CITY_TOOL_GROUPS + PRIMARY_TOOL_GROUPS + UTILITY_TOOL_GROUPS
+def get_city_tool_groups(expanded=False):
+    """A Város aktuálisan látható, később bővíthető toolbar-csoportja."""
+    city_group = list(CITY_TOOL_GROUPS[0])
+    if expanded:
+        city_group.extend(CITY_TOOLBAR_SERVICES)
+    return [city_group]
+
+
+def get_visible_toolbar_tools(city_toolbar_expanded=False):
+    """A pillanatnyilag kirajzolandó toolbar-definíciókat adja."""
+    groups = (
+        get_city_tool_groups(city_toolbar_expanded)
+        + PRIMARY_TOOL_GROUPS
+        + UTILITY_TOOL_GROUPS
+    )
+    return [tool for group in groups for tool in group]
+
+
+# A teljes katalógust az ikonbetöltő kapja; a layout csak a látható elemeket.
+TOOL_GROUPS = get_city_tool_groups(True) + PRIMARY_TOOL_GROUPS + UTILITY_TOOL_GROUPS
 
 # Az ikonbetöltés és kirajzolás továbbra is egyetlen lapos definíciólistát kap.
 TOOLS = [tool for group in TOOL_GROUPS for tool in group]
@@ -313,19 +355,23 @@ def responsive_panel_width(desired_width, minimum_width=280):
     return min(desired_width, max(minimum_width, screen_width - 20))
 
 
-def _toolbar_groups_width(groups):
+def _toolbar_groups_width(
+        groups, button_gap=BUTTON_GAP,
+        group_spacing=TOOLBAR_GROUP_SPACING):
     """Egy konfigurált Toolbar-csoport teljes vízszintes helyigénye."""
     button_count = sum(len(group) for group in groups)
     inner_gap_count = sum(max(0, len(group) - 1) for group in groups)
     group_gap_count = max(0, len(groups) - 1)
     return (
         button_count * BUTTON_SIZE
-        + inner_gap_count * BUTTON_GAP
-        + group_gap_count * TOOLBAR_GROUP_SPACING
+        + inner_gap_count * button_gap
+        + group_gap_count * group_spacing
     )
 
 
-def _position_toolbar_groups(buttons, groups, start_x, button_y):
+def _position_toolbar_groups(
+        buttons, groups, start_x, button_y, button_gap=BUTTON_GAP,
+        group_spacing=TOOLBAR_GROUP_SPACING):
     """A megadott eszközcsoportokat a közös térközszabályokkal helyezi el."""
     button_x = start_x
     for group_index, group in enumerate(groups):
@@ -338,39 +384,78 @@ def _position_toolbar_groups(buttons, groups, start_x, button_y):
             )
             button_x += BUTTON_SIZE
             if tool_index < len(group) - 1:
-                button_x += BUTTON_GAP
+                button_x += button_gap
         if group_index < len(groups) - 1:
-            button_x += TOOLBAR_GROUP_SPACING
+            button_x += group_spacing
 
 
-def create_buttons():
+def create_buttons(city_toolbar_expanded=False):
     screen_width, _ = get_screen_size()
-    city_width = _toolbar_groups_width(CITY_TOOL_GROUPS)
-    primary_width = _toolbar_groups_width(PRIMARY_TOOL_GROUPS)
+    city_groups = get_city_tool_groups(city_toolbar_expanded)
+    city_width = _toolbar_groups_width(city_groups)
     utility_width = _toolbar_groups_width(UTILITY_TOOL_GROUPS)
+    primary_button_gap = BUTTON_GAP
+    primary_group_spacing = TOOLBAR_GROUP_SPACING
+    if city_toolbar_expanded:
+        primary_button_count = sum(len(group) for group in PRIMARY_TOOL_GROUPS)
+        primary_inner_gaps = sum(
+            max(0, len(group) - 1) for group in PRIMARY_TOOL_GROUPS
+        )
+        primary_group_gaps = max(0, len(PRIMARY_TOOL_GROUPS) - 1)
+        fixed_width = (
+            TOOLBAR_CITY_LEFT_MARGIN + city_width
+            + primary_button_count * BUTTON_SIZE + utility_width
+            + TOOLBAR_UTILITY_RIGHT_MARGIN
+        )
+        # Legalább egy normál gombköz maradjon a három fő blokk között.
+        spacing_budget = max(0, screen_width - fixed_width - 2 * BUTTON_GAP)
+        preferred_spacing = (
+            primary_inner_gaps * BUTTON_GAP
+            + primary_group_gaps * TOOLBAR_GROUP_SPACING
+        )
+        if preferred_spacing and spacing_budget < preferred_spacing:
+            spacing_scale = spacing_budget / preferred_spacing
+            primary_button_gap = max(1, int(BUTTON_GAP * spacing_scale))
+            primary_group_spacing = max(
+                1, int(TOOLBAR_GROUP_SPACING * spacing_scale),
+            )
+    primary_width = _toolbar_groups_width(
+        PRIMARY_TOOL_GROUPS, primary_button_gap, primary_group_spacing,
+    )
     primary_start_x = (screen_width - primary_width) // 2
     utility_start_x = (
         screen_width - TOOLBAR_UTILITY_RIGHT_MARGIN - utility_width
     )
     city_start_x = TOOLBAR_CITY_LEFT_MARGIN
 
-    # Keskeny ablaknál is megmarad a két csoport jól látható elkülönítése.
-    primary_start_x = min(
-        primary_start_x,
-        utility_start_x - TOOLBAR_UTILITY_MIN_GAP - primary_width,
+    # Keskeny ablaknál a két külső tematikus térköz arányosan csökken,
+    # mielőtt bármelyik látható gomb ráfedhetne egy másikra.
+    free_gap = max(
+        0,
+        utility_start_x - (city_start_x + city_width) - primary_width,
     )
+    requested_gap = TOOLBAR_CITY_MIN_GAP + TOOLBAR_UTILITY_MIN_GAP
+    if free_gap >= requested_gap:
+        city_gap = TOOLBAR_CITY_MIN_GAP
+        utility_gap = TOOLBAR_UTILITY_MIN_GAP
+    else:
+        city_gap = free_gap // 2
+        utility_gap = free_gap - city_gap
+    minimum_primary_x = city_start_x + city_width + city_gap
+    maximum_primary_x = utility_start_x - utility_gap - primary_width
     primary_start_x = max(
-        city_start_x + city_width + TOOLBAR_CITY_MIN_GAP,
-        primary_start_x,
+        minimum_primary_x,
+        min(primary_start_x, maximum_primary_x),
     )
     toolbar_top = get_toolbar_top()
     button_y = toolbar_top + (BOTTOM_BAR_HEIGHT - BUTTON_SIZE) // 2
     buttons = {}
     _position_toolbar_groups(
-        buttons, CITY_TOOL_GROUPS, city_start_x, button_y,
+        buttons, city_groups, city_start_x, button_y,
     )
     _position_toolbar_groups(
         buttons, PRIMARY_TOOL_GROUPS, primary_start_x, button_y,
+        primary_button_gap, primary_group_spacing,
     )
     _position_toolbar_groups(
         buttons, UTILITY_TOOL_GROUPS, utility_start_x, button_y,
@@ -837,102 +922,6 @@ class PopupWindow:
     def draw_text(screen, font, text, x, y):
         rendered_text = font.render(text, True, COLOR_TEXT)
         screen.blit(rendered_text, (x, y))
-
-
-class CityPanel(PopupWindow):
-    """A későbbi városi szolgáltatások bővíthető nyitófelülete."""
-
-    WIDTH = 520
-    HEIGHT = 360
-    PADDING = 24
-    BUTTON_WIDTH = 300
-    BUTTON_HEIGHT = 48
-    BUTTON_GAP = 16
-    SERVICES = (
-        {"id": "bank", "label": "Bank", "enabled": True},
-        {"id": "market", "label": "Piac", "enabled": True},
-        {"id": "restaurant", "label": "Étterem", "enabled": True},
-    )
-
-    def __init__(self):
-        super().__init__(self.WIDTH, self.HEIGHT)
-        self.services = self.SERVICES
-        self.button_rects = {}
-        self.pending_action = None
-        self.status_message = None
-
-    def open(self):
-        self.rect.width = responsive_panel_width(self.WIDTH, 320)
-        self.rect.height = self.HEIGHT
-        self.rect.center = get_screen_center()
-        self.button_rects = {}
-        self.pending_action = None
-        self.status_message = None
-        super().open()
-
-    def _handle_content_click(self, position):
-        for service in self.services:
-            rect = self.button_rects.get(service["id"])
-            if rect is None or not rect.collidepoint(position):
-                continue
-            if service["enabled"]:
-                self.pending_action = service["id"]
-            else:
-                self.status_message = "Hamarosan elérhető."
-            return True
-        return True
-
-    def take_action(self):
-        action = self.pending_action
-        self.pending_action = None
-        return action
-
-    def show_message(self, message):
-        self.status_message = message
-
-    @staticmethod
-    def _draw_service_button(screen, font, rect, label, enabled):
-        hovered = rect.collidepoint(pygame.mouse.get_pos())
-        fill_color = (
-            CROP_CARD_HOVER if hovered and enabled
-            else CROP_CARD_BACKGROUND
-        )
-        pygame.draw.rect(screen, fill_color, rect)
-        pygame.draw.rect(screen, INFO_PANEL_BORDER, rect, 1)
-        text_color = COLOR_TEXT if enabled else (105, 105, 100)
-        rendered = font.render(label, True, text_color)
-        screen.blit(rendered, rendered.get_rect(center=rect.center))
-
-    def draw(self, screen, font):
-        if not self.visible:
-            return
-        self.draw_frame(screen)
-        title = font.render(POPUP_TITLES["city"], True, COLOR_TEXT)
-        screen.blit(title, (self.rect.left + self.PADDING,
-                            self.rect.top + self.PADDING))
-        pygame.draw.line(
-            screen, INFO_PANEL_SEPARATOR,
-            (self.rect.left + self.PADDING, self.rect.top + 62),
-            (self.rect.right - self.PADDING, self.rect.top + 62),
-        )
-        button_width = min(self.BUTTON_WIDTH, self.rect.width - 2 * self.PADDING)
-        button_x = self.rect.centerx - button_width // 2
-        button_y = self.rect.top + 84
-        self.button_rects = {}
-        for service in self.services:
-            rect = pygame.Rect(
-                button_x, button_y, button_width, self.BUTTON_HEIGHT,
-            )
-            self.button_rects[service["id"]] = rect
-            self._draw_service_button(
-                screen, font, rect, service["label"], service["enabled"],
-            )
-            button_y += self.BUTTON_HEIGHT + self.BUTTON_GAP
-        if self.status_message:
-            message = font.render(self.status_message, True, COLOR_TEXT)
-            screen.blit(message, message.get_rect(
-                center=(self.rect.centerx, self.rect.bottom - 28),
-            ))
 
 
 class RestaurantPanel(PopupWindow):
@@ -3359,6 +3348,7 @@ def draw_ui(
     time_speed=TIME_NORMAL, toolbar_icons=None, time_speed_icons=None,
     menu_button=None, menu_icon=None, menu_open=False,
     calendar_button=None, calendar_icon=None, calendar_open=False,
+    city_toolbar_expanded=False,
 ):
     screen_width, screen_height = get_screen_size()
     # A felső sáv kizárólag a játékállapotot mutatja.
@@ -3390,14 +3380,16 @@ def draw_ui(
     hovered_tooltip = None
     toolbar_icons = toolbar_icons or {}
 
-    for tool_data in TOOLS:
+    for tool_data in get_visible_toolbar_tools(city_toolbar_expanded):
         tool = tool_data["tool"]
         button = buttons[tool]
         draw_button(
             screen,
             button,
             tool_data["icon_color"],
-            selected_tool == tool,
+            selected_tool == tool or (
+                tool == TOOL_CITY and city_toolbar_expanded
+            ),
             toolbar_icons.get(tool),
         )
         if button.collidepoint(mouse_position):

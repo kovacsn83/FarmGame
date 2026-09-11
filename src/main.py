@@ -96,9 +96,10 @@ from time_system import (
 from vehicle_manager import VehicleManager
 from ui import (
     AnimalHusbandryPanel, BankPanel, BuildingSelectionPanel, CalendarPanel,
-    CityPanel, RestaurantPanel,
+    RestaurantPanel,
     CropSelectionPanel, InfoPanel, OrchardSelectionPanel, QuestPanel, clicked_tool,
     FinancialSummaryPanel,
+    TOOL_CITY_BANK, TOOL_CITY_MARKET, TOOL_CITY_RESTAURANT,
     create_buttons, create_calendar_button, create_calendar_icon,
     create_menu_button, create_menu_icon, create_quest_icon,
     create_time_speed_icons, create_toolbar_icons, draw_ui,
@@ -171,7 +172,8 @@ def main():
     economy = bank_system = vehicles = game_state = None
     info_panel = crop_selection_panel = building_selection_panel = None
     animal_husbandry_panel = orchard_selection_panel = calendar_panel = bank_panel = None
-    city_panel = restaurant_panel = None
+    restaurant_panel = None
+    city_toolbar_expanded = False
     financial_summary_panel = economy_hud_rect = None
     game_menu = save_slots_menu = quest_manager = quest_panel = road_drag = None
     challenge_submission = challenge_completion_panel = None
@@ -182,13 +184,14 @@ def main():
         nonlocal storage_block_manager
         nonlocal selected_tool, selected_crop, selected_building, selected_animal
         nonlocal selected_tree
+        nonlocal city_toolbar_expanded
         nonlocal buttons, toolbar_icons, time_speed_icons
         nonlocal menu_button, menu_icon, calendar_button, calendar_icon
         nonlocal grass_tiles, game_time, developer_console, notification_manager
         nonlocal economy, bank_system, vehicles, game_state
         nonlocal info_panel, crop_selection_panel, building_selection_panel
         nonlocal animal_husbandry_panel, orchard_selection_panel
-        nonlocal calendar_panel, bank_panel, city_panel, restaurant_panel
+        nonlocal calendar_panel, bank_panel, restaurant_panel
         nonlocal financial_summary_panel, economy_hud_rect
         nonlocal game_menu, save_slots_menu, quest_manager, quest_panel, road_drag
         nonlocal challenge_submission, challenge_completion_panel
@@ -198,6 +201,7 @@ def main():
         fields, buildings, animals = [], [], []
         animal_movement = AnimalMovementSystem()
         selected_tool = TOOL_INSPECT
+        city_toolbar_expanded = False
         selected_crop = selected_building = selected_animal = selected_tree = None
         buttons = create_buttons()
         toolbar_icons = create_toolbar_icons()
@@ -257,7 +261,6 @@ def main():
         animal_husbandry_panel = AnimalHusbandryPanel()
         orchard_selection_panel = OrchardSelectionPanel()
         calendar_panel = CalendarPanel()
-        city_panel = CityPanel()
         restaurant_panel = RestaurantPanel()
         bank_panel = BankPanel()
         financial_summary_panel = FinancialSummaryPanel()
@@ -326,7 +329,6 @@ def main():
         camera.cancel_drag()
         road_drag.cancel()
         financial_summary_panel.close()
-        city_panel.close()
         restaurant_panel.close()
         bank_panel.open(
             previous_time_speed, emergency_mode=emergency_mode,
@@ -725,7 +727,7 @@ def main():
                 road_drag.cancel()
                 screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
                 set_screen_size(*screen.get_size())
-                buttons = create_buttons()
+                buttons = create_buttons(city_toolbar_expanded)
                 menu_button = create_menu_button()
                 calendar_button = create_calendar_button(menu_button)
                 continue
@@ -859,31 +861,6 @@ def main():
             if restaurant_panel.handle_event(event):
                 continue
 
-            city_handled = city_panel.handle_event(event)
-            city_action = city_panel.take_action()
-            if city_action == "bank":
-                city_panel.close()
-                open_bank_panel()
-                continue
-            if city_action == "market":
-                market = next(
-                    (item for item in buildings if item["type"] == "market"),
-                    None,
-                )
-                if market is not None and info_panel.open_for_building(market):
-                    city_panel.close()
-                else:
-                    city_panel.show_message(
-                        "A Piac használatához előbb építs egy Piacot.",
-                    )
-                continue
-            if city_action == "restaurant":
-                city_panel.close()
-                restaurant_panel.open(game_state.restaurant_system)
-                continue
-            if city_handled:
-                continue
-
             financial_handled = financial_summary_panel.handle_event(event)
             if financial_summary_panel.take_bank_request():
                 open_bank_panel()
@@ -905,7 +882,6 @@ def main():
                 animal_husbandry_panel.close()
                 orchard_selection_panel.close()
                 calendar_panel.close()
-                city_panel.close()
                 restaurant_panel.close()
                 financial_summary_panel.open()
                 continue
@@ -947,7 +923,6 @@ def main():
                     animal_husbandry_panel.close()
                     orchard_selection_panel.close()
                     calendar_panel.close()
-                    city_panel.close()
                     restaurant_panel.close()
                     financial_summary_panel.close()
                 continue
@@ -1077,15 +1052,26 @@ def main():
                             orchard_selection_panel.open()
                         elif tool == TOOL_CITY:
                             camera.cancel_drag()
-                            info_panel.close()
-                            crop_selection_panel.close()
-                            building_selection_panel.close()
-                            animal_husbandry_panel.close()
-                            orchard_selection_panel.close()
-                            calendar_panel.close()
-                            financial_summary_panel.close()
-                            restaurant_panel.close()
-                            city_panel.open()
+                            city_toolbar_expanded = not city_toolbar_expanded
+                            buttons = create_buttons(city_toolbar_expanded)
+                        elif tool == TOOL_CITY_BANK:
+                            open_bank_panel()
+                        elif tool == TOOL_CITY_MARKET:
+                            market = next(
+                                (item for item in buildings
+                                 if item["type"] == "market"),
+                                None,
+                            )
+                            if market is not None:
+                                info_panel.open_for_building(market)
+                            else:
+                                message = (
+                                    "A Piac használatához előbb építs egy Piacot."
+                                )
+                                if message not in notification_manager.active_messages:
+                                    notification_manager.enqueue(message)
+                        elif tool == TOOL_CITY_RESTAURANT:
+                            restaurant_panel.open(game_state.restaurant_system)
                         else:
                             selected_tool = tool
                         continue
@@ -1273,6 +1259,7 @@ def main():
             game_time.current_time_speed, toolbar_icons,
             time_speed_icons, menu_button, menu_icon, menu_system_active,
             calendar_button, calendar_icon, calendar_panel.visible,
+            city_toolbar_expanded,
         )
         if selected_tool == TOOL_INSPECT and not camera.dragging_camera:
             trough_tooltip = get_trough_tooltip(
@@ -1310,7 +1297,6 @@ def main():
         animal_husbandry_panel.draw(screen, font)
         orchard_selection_panel.draw(screen, font)
         calendar_panel.draw(screen, font, game_time.elapsed_weeks)
-        city_panel.draw(screen, font)
         restaurant_panel.draw(
             screen, font, buildings, game_time.elapsed_weeks,
         )

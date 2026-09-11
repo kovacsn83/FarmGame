@@ -25,7 +25,7 @@ from notification_system import NotificationManager
 from screen_layout import set_screen_size
 from save_system import load_game, save_game
 from simulation import SimulationBot
-from ui import CityPanel, RestaurantPanel
+from ui import CITY_TOOLBAR_SERVICES, RestaurantPanel
 
 
 def _plant(canned_tomato=0, cheese=0, apple_juice=0, mayonnaise=0):
@@ -296,11 +296,12 @@ class RestaurantPanelTests(unittest.TestCase):
     def tearDownClass(cls):
         pygame.quit()
 
-    def test_city_restaurant_is_enabled(self):
+    def test_city_restaurant_action_is_available(self):
         service = next(
-            item for item in CityPanel.SERVICES if item["id"] == "restaurant"
+            item for item in CITY_TOOLBAR_SERVICES
+            if item["id"] == "restaurant"
         )
-        self.assertTrue(service["enabled"])
+        self.assertEqual("city_restaurant", service["tool"])
 
     def test_left_click_toggles_but_other_inputs_do_not(self):
         system = RestaurantSystem()

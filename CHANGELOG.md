@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- A korábbi Város popup helyét lenyitható toolbar-almenü vette át; a Bank,
+  Piac és Étterem közvetlenül a Város gomb mellől érhető el.
 - A Farmház fejlesztései alapvetően a szükséges Farmház-szintnél válnak
   elérhetővé; a 8×8-as veteményeshez a 6×6-os, a Garázs III.-hoz a Garázs II.,
   a Raktár III.-hoz pedig a Raktár II. fejlesztés is szükséges.
