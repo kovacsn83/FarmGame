@@ -141,7 +141,7 @@ class FarmhouseUpgradeUiTests(unittest.TestCase):
 
     def test_locked_and_completed_nodes_ignore_left_click(self):
         self._draw_at((-1, -1))
-        locked = self.panel.upgrade_card_rects["automated_animal_watering"]
+        locked = self.panel.upgrade_card_rects["automated_field_watering"]
         locked_click = pygame.event.Event(
             pygame.MOUSEBUTTONDOWN,
             {"button": 1, "pos": (locked.left + 8, locked.bottom - 8)},
@@ -206,12 +206,31 @@ class FarmhouseUpgradeUiTests(unittest.TestCase):
             self.panel.upgrade_card_rects["farmhouse_level_3"].left,
         )
 
+    def test_level_purchase_immediately_unlocks_its_entire_column(self):
+        columns = get_upgrade_tree_columns()
+        self._draw_at((-1, -1))
+        self.assertTrue(all(
+            upgrade_id not in self.panel.upgrade_clickable_ids
+            for upgrade_id in columns[1] + columns[2]
+        ))
+
+        self.panel.building["farmhouse_level"] = 2
+        self._draw_at((-1, -1))
+        self.assertTrue(all(
+            upgrade_id in self.panel.upgrade_clickable_ids
+            for upgrade_id in columns[1]
+        ))
+
+        self.panel.building["farmhouse_level"] = 3
+        self._draw_at((-1, -1))
+        self.assertTrue(all(
+            upgrade_id in self.panel.upgrade_clickable_ids
+            for upgrade_id in columns[2]
+        ))
+
     def test_warehouse_third_level_only_left_click_selects(self):
         upgrade_id = "warehouse_level_3"
         self.panel.building["farmhouse_level"] = 3
-        self._draw_at((-1, -1))
-        self.assertNotIn(upgrade_id, self.panel.upgrade_clickable_ids)
-        self.state.purchased_upgrades.add("warehouse_level_2")
         self._draw_at((-1, -1))
         self.assertIn(upgrade_id, self.panel.upgrade_clickable_ids)
         card = self.panel.upgrade_card_rects[upgrade_id]
@@ -229,14 +248,14 @@ class FarmhouseUpgradeUiTests(unittest.TestCase):
 
     def test_locked_node_is_visible_but_not_clickable(self):
         self._draw_at((-1, -1))
-        upgrade_id = "automated_animal_watering"
+        upgrade_id = "automated_field_watering"
         self.assertIn(upgrade_id, self.panel.upgrade_card_rects)
         self.assertNotIn(upgrade_id, self.panel.upgrade_clickable_ids)
         card = self.panel.upgrade_card_rects[upgrade_id]
         self.panel._handle_content_click((card.left + 8, card.bottom - 8))
         self.assertIsNone(self.panel.take_upgrade_selection())
 
-        self.state.purchased_upgrades.add("unlock_field_6x6")
+        self.panel.building["farmhouse_level"] = 2
         self._draw_at((-1, -1))
         self.assertIn(upgrade_id, self.panel.upgrade_clickable_ids)
 
@@ -255,9 +274,6 @@ class FarmhouseUpgradeUiTests(unittest.TestCase):
     def test_processing_upgrade_tooltip_and_purchase_input(self):
         upgrade_id = "processing_plant_level_2"
         self.panel.building["farmhouse_level"] = 3
-        self._draw_at((-1, -1))
-        self.assertNotIn(upgrade_id, self.panel.upgrade_clickable_ids)
-        self.state.purchased_upgrades.add("automated_field_harvesting")
         self._draw_at((-1, -1))
         self.assertIn(upgrade_id, self.panel.upgrade_clickable_ids)
         card = self.panel.upgrade_card_rects[upgrade_id]

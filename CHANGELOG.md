@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- A Farmház fejlesztéseinek feloldása mostantól kizárólag a szükséges
+  Farmház-szinttől függ; az azonos szinthez tartozó fejlesztések tetszőleges
+  sorrendben vásárolhatók meg.
 - A játék mentetlen állapot esetén kilépési figyelmeztetést jelenít meg
   „Mentés és kilépés”, „Kilépés mentés nélkül” és „Mégse” lehetőségekkel.
 - A mentésbe kerülő játékmeneti változásokat központi állapotlenyomat követi;

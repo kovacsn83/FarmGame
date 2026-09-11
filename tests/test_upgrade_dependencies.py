@@ -30,38 +30,49 @@ class UpgradeDependencyTests(unittest.TestCase):
 
     def test_tree_metadata_is_complete_and_extensible(self):
         self.assertEqual(len(get_upgrade_tree_columns()), 3)
-        for upgrade in UPGRADES.values():
+        for upgrade_id, upgrade in UPGRADES.items():
             self.assertIn("tree_column", upgrade)
             self.assertIn("tree_order", upgrade)
+            if upgrade.get("target_level") is None:
+                self.assertEqual(
+                    upgrade["required_farmhouse_level"],
+                    upgrade["tree_column"],
+                    upgrade_id,
+                )
+                self.assertIsNone(upgrade.get("requires"), upgrade_id)
 
-    def test_farmhouse_one_branch_must_be_bought_in_order(self):
+    def test_farmhouse_one_upgrades_are_independent(self):
         state, economy = self.make_state()
         starting_money = economy.money
-        self.assertFalse(economy.purchase_upgrade(
-            state, "automated_animal_watering",
-        ))
-        self.assertEqual(starting_money, economy.money)
-        self.assertTrue(economy.purchase_upgrade(state, "unlock_field_6x6"))
-        self.assertEqual(
-            starting_money - UPGRADES["unlock_field_6x6"]["price"],
-            economy.money,
+        upgrade_ids = (
+            "automated_animal_feeding", "automated_animal_watering",
+            "unlock_field_6x6",
         )
-        self.assertTrue(economy.purchase_upgrade(
-            state, "automated_animal_watering",
-        ))
-        self.assertTrue(economy.purchase_upgrade(
-            state, "automated_animal_feeding",
-        ))
+        for upgrade_id in upgrade_ids:
+            self.assertEqual(
+                get_upgrade_status(upgrade_id, state.purchased_upgrades, 1),
+                "Fejleszthető",
+            )
+            self.assertTrue(economy.purchase_upgrade(state, upgrade_id))
+        self.assertEqual(
+            economy.money,
+            starting_money - sum(UPGRADES[item]["price"] for item in upgrade_ids),
+        )
 
-    def test_farmhouse_two_branch_requires_level_and_predecessors(self):
+    def test_farmhouse_two_upgrades_only_require_level(self):
         state, economy = self.make_state()
         self.assertFalse(economy.purchase_upgrade(state, "unlock_field_8x8"))
         self.assertTrue(economy.purchase_upgrade(state, "farmhouse_level_2"))
         for upgrade_id in (
-                "unlock_field_8x8",
-                "automated_field_watering",
-                "automated_field_fertilizing",
-                "automated_field_spraying"):
+                "automated_field_spraying", "garage_level_2",
+                "warehouse_level_2", "automated_field_fertilizing",
+                "automated_field_watering", "unlock_field_8x8"):
+            self.assertEqual(
+                get_upgrade_status(
+                    upgrade_id, state.purchased_upgrades, farmhouse_level=2,
+                ),
+                "Fejleszthető",
+            )
             self.assertTrue(economy.purchase_upgrade(state, upgrade_id))
 
     def test_farmhouse_three_requires_level_two(self):
@@ -102,15 +113,34 @@ class UpgradeDependencyTests(unittest.TestCase):
             self.assertTrue(load_game(state, path))
         self.assertIn("automated_field_spraying", state.purchased_upgrades)
 
-    def test_processing_upgrade_requires_level_and_harvesting(self):
+    def test_farmhouse_three_upgrades_only_require_level(self):
+        upgrade_ids = (
+            "warehouse_level_3", "garage_level_3",
+            "processing_plant_level_2", "automated_field_harvesting",
+        )
+        state, economy = self.make_state(2)
+        for upgrade_id in upgrade_ids:
+            self.assertTrue(get_upgrade_status(
+                upgrade_id, set(), farmhouse_level=2,
+            ).startswith("Zárolt: Farmház III."))
+            self.assertFalse(economy.purchase_upgrade(state, upgrade_id))
+        state.buildings[0]["farmhouse_level"] = 3
+        for upgrade_id in upgrade_ids:
+            self.assertEqual(
+                get_upgrade_status(upgrade_id, state.purchased_upgrades, 3),
+                "Fejleszthető",
+            )
+            self.assertTrue(economy.purchase_upgrade(state, upgrade_id))
+
+    def test_processing_upgrade_requires_level_but_not_harvesting(self):
         upgrade_id = "processing_plant_level_2"
-        for level, purchased in ((1, ()), (2, ("automated_field_harvesting",)), (3, ())):
+        for level, purchased in ((1, ()), (2, ("automated_field_harvesting",))):
             with self.subTest(level=level, purchased=purchased):
                 state, economy = self.make_state(level, purchased)
                 self.assertTrue(get_upgrade_status(upgrade_id, purchased, level).startswith("Zárolt"))
                 self.assertFalse(economy.purchase_upgrade(state, upgrade_id))
                 self.assertEqual(economy.money, 200000)
-        state, economy = self.make_state(3, ("automated_field_harvesting",))
+        state, economy = self.make_state(3)
         self.assertEqual(get_upgrade_status(upgrade_id, state.purchased_upgrades, 3), "Fejleszthető")
         economy.money = 5999
         self.assertFalse(economy.purchase_upgrade(state, upgrade_id))

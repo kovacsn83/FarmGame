@@ -31,19 +31,17 @@ class WarehouseLevelThreeTests(unittest.TestCase):
 
     def upgrade(self):
         self.house["farmhouse_level"] = 3
-        self.state.purchased_upgrades.add("warehouse_level_2")
         self.state.synchronize_processing_upgrades()
         self.assertTrue(self.state.economy.purchase_upgrade(self.state, "warehouse_level_3"))
 
     def test_prerequisites_cost_and_financial_value(self):
         economy = self.state.economy
-        for house_level, level_two in ((1, False), (2, True), (3, False)):
+        for house_level, level_two in ((1, False), (2, True)):
             self.house["farmhouse_level"] = house_level
             self.state.purchased_upgrades = {"warehouse_level_2"} if level_two else set()
             self.assertFalse(economy.purchase_upgrade(self.state, "warehouse_level_3"))
             self.assertEqual(economy.money, 20000)
         self.house["farmhouse_level"] = 3
-        self.state.purchased_upgrades.add("warehouse_level_2")
         self.state.synchronize_processing_upgrades()
         value_before = economy.calculate_net_farm_value(self.state)
         upgrades_before = economy.get_farm_value_breakdown(self.state)["upgrades"]
@@ -58,7 +56,7 @@ class WarehouseLevelThreeTests(unittest.TestCase):
         self.assertEqual((entry["category"], entry["amount"]), (EXPENSE_UPGRADE, 5000))
         self.assertFalse(economy.purchase_upgrade(self.state, "warehouse_level_3"))
         self.assertEqual(economy.money, 15000)
-        self.assertEqual(UPGRADES["warehouse_level_3"]["requires"], "warehouse_level_2")
+        self.assertIsNone(UPGRADES["warehouse_level_3"]["requires"])
 
     def test_capacity_inventory_new_building_limit_and_maintenance(self):
         self.assertEqual(get_warehouse_capacity(), 500)

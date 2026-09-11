@@ -130,7 +130,7 @@ UPGRADES = {
         "price": 20000.00,
         "unlocks": "automated_animal_feeding",
         "state_key": "automated_animal_feeding",
-        "requires": "automated_animal_watering",
+        "requires": None,
         "required_farmhouse_level": 1,
         "tree_column": 1,
         "tree_order": 3,
@@ -141,7 +141,7 @@ UPGRADES = {
         "price": 20000.00,
         "unlocks": "automated_animal_watering",
         "state_key": "automated_animal_watering",
-        "requires": "unlock_field_6x6",
+        "requires": None,
         "required_farmhouse_level": 1,
         "tree_column": 1,
         "tree_order": 2,
@@ -155,7 +155,7 @@ UPGRADES = {
         "price": 20000.00,
         "unlocks": "automated_field_watering",
         "state_key": "automated_field_watering",
-        "requires": "unlock_field_8x8",
+        "requires": None,
         "required_farmhouse_level": 2,
         "tree_column": 2,
         "tree_order": 2,
@@ -169,7 +169,7 @@ UPGRADES = {
         "price": 20000.00,
         "unlocks": "automated_field_fertilizing",
         "state_key": "automated_field_fertilizing",
-        "requires": "automated_field_watering",
+        "requires": None,
         "required_farmhouse_level": 2,
         "tree_column": 2,
         "tree_order": 3,
@@ -183,7 +183,7 @@ UPGRADES = {
         "price": 20000.00,
         "unlocks": "automated_field_spraying",
         "state_key": "automated_field_spraying",
-        "requires": "automated_field_fertilizing",
+        "requires": None,
         "required_farmhouse_level": 2,
         "tree_column": 2,
         "tree_order": 4,
@@ -230,7 +230,7 @@ UPGRADES = {
         "price": 5000.00,
         "unlocks": None,
         "state_key": "warehouse_level_3",
-        "requires": "warehouse_level_2",
+        "requires": None,
         "required_farmhouse_level": 3,
         "tree_column": 3,
         "tree_order": 4,
@@ -241,7 +241,7 @@ UPGRADES = {
         "price": 6000.00,
         "unlocks": None,
         "state_key": "garage_level_3",
-        "requires": "garage_level_2",
+        "requires": None,
         "required_farmhouse_level": 3,
         "tree_column": 3,
         "tree_order": 3,
@@ -253,7 +253,7 @@ UPGRADES = {
         # Globális kapacitásfejlesztés; a feldolgozás szintkonfigurációja kezeli.
         "unlocks": None,
         "state_key": "processing_plant_level_2",
-        "requires": "automated_field_harvesting",
+        "requires": None,
         "required_farmhouse_level": 3,
         "tree_column": 3,
         "tree_order": 2,
@@ -277,18 +277,25 @@ def get_upgrade_status(upgrade_id, purchased_upgrades, farmhouse_level=None):
         required_level = upgrade.get("required_level")
         if required_level is not None and (
                 farmhouse_level is None or farmhouse_level < required_level):
-            return f"Zárolt: Farmház {required_level}. szükséges"
+            return _farmhouse_level_requirement(required_level)
         return "Fejleszthető"
     if upgrade_id in purchased_upgrades:
         return "Kifejlesztve"
     required_level = upgrade.get("required_farmhouse_level")
     if required_level is not None and (
             farmhouse_level is None or farmhouse_level < required_level):
-        return f"Zárolt: Farmház {required_level}. szükséges"
+        return _farmhouse_level_requirement(required_level)
     required = upgrade.get("requires")
     if required and required not in purchased_upgrades:
         return f"Zárolt: előbb {UPGRADES[required]['name']}"
     return "Fejleszthető"
+
+
+def _farmhouse_level_requirement(level):
+    """Egységes, felhasználói Farmház-szint feltételt formáz."""
+    roman_levels = {1: "I", 2: "II", 3: "III"}
+    display_level = roman_levels.get(level, str(level))
+    return f"Zárolt: Farmház {display_level}. szükséges"
 
 
 def get_upgrade_tree_columns():

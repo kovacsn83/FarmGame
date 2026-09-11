@@ -8,7 +8,7 @@ from constants import (
     ROAD, ROAD_BUILD_COST, STARTING_MONEY, TRACTOR_PURCHASE_PRICE,
 )
 from crops import CROPS
-from game_rules import FIELD_TYPES, UPGRADES
+from game_rules import FIELD_TYPES, UPGRADES, get_upgrade_status
 from game_logger import log
 from inventory import get_inventory_item_data, get_inventory_item_name
 from maintenance import calculate_weekly_maintenance
@@ -415,22 +415,24 @@ class Economy:
         if upgrade_id in game_state.purchased_upgrades:
             log("Ezt a fejlesztést már megvásároltad.", "Economy")
             return False
+        farmhouse = next(
+            building for building in game_state.buildings
+            if building["type"] == "farmhouse"
+        )
+        status = get_upgrade_status(
+            upgrade_id,
+            game_state.purchased_upgrades,
+            farmhouse.get("farmhouse_level", 1),
+        )
+        if status == "Kifejlesztve":
+            log("Ezt a fejlesztést már megvásároltad.", "Economy")
+            return False
+        if status.startswith("Zárolt:"):
+            requirement = status.removeprefix("Zárolt:").strip().rstrip(".")
+            log(f"Ehhez a fejlesztéshez {requirement}.", "Economy")
+            return False
         target_level = upgrade.get("target_level")
         if target_level is not None:
-            farmhouse = next(
-                building for building in game_state.buildings
-                if building["type"] == "farmhouse"
-            )
-            if farmhouse.get("farmhouse_level", 1) >= target_level:
-                log("Ezt a fejlesztést már megvásároltad.", "Economy")
-                return False
-            required_level = upgrade.get("required_level")
-            if (
-                required_level is not None
-                and farmhouse.get("farmhouse_level", 1) < required_level
-            ):
-                log("A fejlesztés előfeltétele még nem teljesült.", "Economy")
-                return False
             if not self.spend(upgrade["price"]):
                 log("Nincs elegendő pénz.", "Economy")
                 return False
@@ -439,19 +441,6 @@ class Economy:
             self.record_expense(EXPENSE_UPGRADE, upgrade["price"], upgrade_id)
             log(f"Fejlesztés megvásárolva: {upgrade['name']}", "Economy")
             return True
-        required = upgrade.get("requires")
-        required_level = upgrade.get("required_farmhouse_level")
-        if required_level is not None:
-            farmhouse = next(
-                building for building in game_state.buildings
-                if building["type"] == "farmhouse"
-            )
-            if farmhouse.get("farmhouse_level", 1) < required_level:
-                log("A szükséges Farmház-szint még nincs kifejlesztve.", "Economy")
-                return False
-        if required and required not in game_state.purchased_upgrades:
-            log("A fejlesztés előfeltétele még nem teljesült.", "Economy")
-            return False
         if not self.spend(upgrade["price"]):
             log("Nincs elegendő pénz.", "Economy")
             return False

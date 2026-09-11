@@ -2856,18 +2856,8 @@ class InfoPanel(PopupWindow):
                 (end[0] - 8, end[1] - 6),
                 (end[0] - 8, end[1] + 6),
             ))
-        for header_rect, nodes in zip(header_rects, branch_rects):
-            previous_rect = header_rect
-            for node_rect in nodes:
-                start = (previous_rect.centerx, previous_rect.bottom + 3)
-                end = (node_rect.centerx, node_rect.top - 3)
-                pygame.draw.line(screen, UPGRADE_ARROW_COLOR, start, end, 3)
-                pygame.draw.polygon(screen, UPGRADE_ARROW_COLOR, (
-                    end,
-                    (end[0] - 6, end[1] - 8),
-                    (end[0] + 6, end[1] - 8),
-                ))
-                previous_rect = node_rect
+        # Az oszlopfejléc rendeli a node-okat a Farmház-szinthez. A korábbi,
+        # node-ról node-ra mutató nyilak tévesen láncolt előfeltételt sugalltak.
 
         def draw_node(upgrade_id, card_rect):
             nonlocal hovered_info
