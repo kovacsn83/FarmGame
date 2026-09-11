@@ -43,16 +43,12 @@ class SupplyTaskIntegrationTests(unittest.TestCase):
             "type": "pond", "row": 2, "col": 24,
             "width": 6, "height": 6,
         }
-        self.market = {
-            "type": "market", "row": 10, "col": 2,
-            "width": 4, "height": 3,
-        }
         self.pen = {
             "type": "animal_pen", "row": 15, "col": 12,
             "width": 4, "height": 4,
         }
         self.buildings = [
-            self.garage, self.warehouse, self.pond, self.market, self.pen,
+            self.garage, self.warehouse, self.pond, self.pen,
         ]
         self.animals = [
             {"type": "cattle", "pen_row": 15, "pen_col": 12,

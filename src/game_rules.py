@@ -322,7 +322,6 @@ BUILDING_LIMITS = {
     "warehouse": 2,
     "garage": 3,
     "farmhouse": 1,
-    "market": 1,
     "processing_plant": 2,
 }
 
@@ -330,7 +329,6 @@ BUILDING_LIMIT_MESSAGES = {
     "warehouse": f"Legfeljebb {BUILDING_LIMITS['warehouse']} Raktár építhető.",
     "garage": f"Legfeljebb {BUILDING_LIMITS['garage']} Garázs építhető.",
     "farmhouse": "Már van farmházad.",
-    "market": "Már van piacod.",
     "processing_plant": (
         f"Legfeljebb {BUILDING_LIMITS['processing_plant']} Feldolgozó üzem építhető."
     ),

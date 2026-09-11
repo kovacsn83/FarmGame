@@ -29,10 +29,6 @@ class FeedSupplyTransactionTests(unittest.TestCase):
             "width": 5, "height": 4, "capacity": 500,
             "inventory": {"alfalfa": 0, "corn": 0},
         }
-        self.market = {
-            "type": "market", "row": 1, "col": 10,
-            "width": 4, "height": 3,
-        }
 
     def test_requirement_uses_only_missing_eight_week_amount(self):
         self.pen[FOOD_STOCK_KEY] = 3
@@ -46,7 +42,7 @@ class FeedSupplyTransactionTests(unittest.TestCase):
         economy = Economy(starting_money=200)
         get_logger().reset()
         result = prepare_feed_supply(
-            [self.warehouse, self.market], economy,
+            [self.warehouse], economy,
             [self.pen], self.cattle,
         )
         self.assertTrue(result.success)
@@ -72,7 +68,7 @@ class FeedSupplyTransactionTests(unittest.TestCase):
         pigs = [{"type": "pig", "pen_row": 10, "pen_col": 10}]
         economy = Economy(starting_money=200)
         result = prepare_feed_supply(
-            [self.warehouse, self.market], economy,
+            [self.warehouse], economy,
             [self.pen], pigs,
         )
         self.assertTrue(result.success)
@@ -94,21 +90,23 @@ class FeedSupplyTransactionTests(unittest.TestCase):
         self.assertEqual(self.warehouse["inventory"]["alfalfa"], 0)
         self.assertEqual(economy.money, 20.0)
 
-    def test_missing_market_keeps_inventory_and_money_unchanged(self):
+    def test_missing_market_buys_shortage_via_warehouse_pickup(self):
         self.warehouse["inventory"]["alfalfa"] = 3
-        economy = Economy(starting_money=100)
+        economy = Economy(starting_money=200)
         result = prepare_feed_supply(
             [self.warehouse], economy, [self.pen], self.cattle,
         )
-        self.assertFalse(result.success)
-        self.assertEqual(self.warehouse["inventory"]["alfalfa"], 3)
-        self.assertEqual(economy.money, 100.0)
+        self.assertTrue(result.success)
+        self.assertEqual(result.warehouse_amount, 3)
+        self.assertEqual(result.purchased_amount, 13)
+        self.assertEqual(self.warehouse["inventory"]["alfalfa"], 0)
+        self.assertEqual(economy.money, 70.0)
 
     def test_insufficient_money_is_transactional(self):
         self.warehouse["inventory"]["alfalfa"] = 3
         economy = Economy(starting_money=10)
         result = prepare_feed_supply(
-            [self.warehouse, self.market], economy,
+            [self.warehouse], economy,
             [self.pen], self.cattle,
         )
         self.assertFalse(result.success)

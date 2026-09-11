@@ -51,9 +51,6 @@ class PlumTreeTests(unittest.TestCase):
         self.warehouse = place_building(
             self.world, self.buildings, 20, 20, "warehouse",
         )
-        self.market = place_building(
-            self.world, self.buildings, 20, 30, "market",
-        )
         self.economy = Economy(5000)
 
     def _plant_plum(self, row=10, col=10):
@@ -279,11 +276,7 @@ class PlumTreeTests(unittest.TestCase):
             "width": 5, "height": 4, "capacity": 500,
             "inventory": {"plum": 20},
         }
-        market = {
-            "type": "market", "row": 2, "col": 10,
-            "width": 4, "height": 3,
-        }
-        bot.buildings = [warehouse, market]
+        bot.buildings = [warehouse]
         bot.game_time.elapsed_weeks = 12
         money_before = bot.economy.money
 

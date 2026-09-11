@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- A farmon építhető Piac megszűnt; a Piac szolgáltatás a Város menüből érhető el,
+  a régi mentésekből pedig betöltéskor automatikusan eltávolításra kerül az
+  egykori Piac épület és felszabadul a területe.
+- A Városon keresztüli tényleges értékesítéshez már nem szükséges farmi Piac
+  épület; a vásárolt takarmány és feldolgozóüzemi alapanyag fizikai átvételi
+  pontja mostantól egy Raktár.
 - A Quest feladatsor 25 lépésre bővült: a farmi Piac megépítése helyett a
   városi Piac megnyitását tanítja, a végén pedig külön csirkekarám,
   Gyümölcsös és Cseresznyefa feladatok következnek.

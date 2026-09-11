@@ -2026,7 +2026,7 @@ class InfoPanel(PopupWindow):
         self.garage_scroll = 0
         """Megnyitja a panelt, ha az épülettípushoz már tartozik nézet."""
         if building["type"] not in (
-                "warehouse", "market", "farmhouse", "garage", "pond",
+                "warehouse", "farmhouse", "garage", "pond",
                 "processing_plant"):
             return False
         self._open_for_type(building["type"], building)

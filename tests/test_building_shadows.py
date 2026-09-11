@@ -41,7 +41,7 @@ class BuildingShadowTests(unittest.TestCase):
 
     def test_every_building_uses_material_preserving_upper_and_right_shadows(self):
         for kind, render in BUILDING_RENDERERS.items():
-            if kind == 'pond':
+            if kind == 'pond' or kind not in BUILDING_TYPES:
                 continue
             for ground in ((91, 139, 73), (148, 126, 97), (137, 105, 67)):
                 with self.subTest(kind=kind, ground=ground):

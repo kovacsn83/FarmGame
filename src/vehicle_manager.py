@@ -1287,7 +1287,7 @@ class VehicleManager:
     def start_processing_market_supply(
             self, world, buildings, plant, item_id, amount, economy,
             current_ticks=None):
-        """Piacról vásárol, majd Traktor + Pótkocsi fuvart indít az üzemhez."""
+        """Piacról vásárol, majd a Raktártól fizikai fuvart indít az üzemhez."""
         initialize_processing_plant(plant)
         amount = max(0, int(amount))
         if amount <= 0 or plant not in buildings:
@@ -1303,14 +1303,11 @@ class VehicleManager:
             implement for implement in self.implements
             if implement.vehicle_type == VehicleType.TRAILER
         ]
-        markets = [
-            building for building in buildings
-            if building.get("type") == "market"
-        ]
-        if not self.tractors or not trailers or not markets:
+        warehouses = get_warehouses(buildings)
+        if not self.tractors or not trailers or not warehouses:
             return 0
         assignment = self._find_supply_assignment(
-            world, buildings, [plant], self.tractors, trailers, markets,
+            world, buildings, [plant], self.tractors, trailers, warehouses,
             use_parking_start=True,
         )
         if assignment is None:
@@ -1355,10 +1352,23 @@ class VehicleManager:
         )
         log(f"Szállítási költség: ${quote.delivery_cost:.0f}.", "Processing")
         log(
-            f"{quote.quantity} db alapanyag szállítása elindult a Piacról.",
+            f"{quote.quantity} db piaci alapanyag átvétele elindult a Raktártól.",
             "Processing",
         )
         return quote.quantity
+
+    @staticmethod
+    def _task_source_building_type(task):
+        """A feladat pénzügyi eredetét fizikai átvételi pontra képezi le.
+
+        A régi mentések ``market`` forrású feldolgozóüzemi fuvarjai is a
+        Raktárhoz térnek vissza; a logikai forrás megőrzése külön kezeli a
+        saját készletből és a vásárlásból származó rakományokat.
+        """
+        if (task.task_type == TASK_PROCESSING_SUPPLY
+                and task.source_type == "market"):
+            return "warehouse"
+        return task.source_type
 
     @staticmethod
     def _find_supply_assignment(
@@ -1554,17 +1564,18 @@ class VehicleManager:
             )
         if task.task_type in (
                 TASK_SUPPLY_FEED, TASK_SUPPLY_WATER, TASK_PROCESSING_SUPPLY):
+            source_building_type = self._task_source_building_type(task)
             if task.task_type == TASK_PROCESSING_SUPPLY:
                 return (
                     task.field in buildings
                     and task.field.get("type") == "processing_plant"
-                    and any(b.get("type") == task.source_type for b in buildings)
+                    and any(b.get("type") == source_building_type for b in buildings)
                     and any(i.vehicle_type == VehicleType.TRAILER for i in self.implements)
                     and bool(self.tractors)
                     and task.resource_amount > 0
                 )
             return (
-                any(b.get("type") == task.source_type for b in buildings)
+                any(b.get("type") == source_building_type for b in buildings)
                 and any(
                     i.vehicle_type == task.required_implement_type
                     for i in self.implements
@@ -1643,8 +1654,9 @@ class VehicleManager:
                 return False
             self._apply_watering_assignment(task, assignment)
             return True
+        source_building_type = self._task_source_building_type(task)
         sources = [
-            b for b in buildings if b.get("type") == task.source_type
+            b for b in buildings if b.get("type") == source_building_type
         ]
         assignment = self._find_supply_assignment(
             world, buildings, task.target_group, [vehicle], implements, sources,
@@ -1835,8 +1847,9 @@ class VehicleManager:
             return None
 
         if reload_source:
+            source_building_type = self._task_source_building_type(task)
             sources = [
-                b for b in buildings if b.get("type") == task.source_type
+                b for b in buildings if b.get("type") == source_building_type
             ]
             candidates = []
             for source in sources:
@@ -2019,7 +2032,8 @@ class VehicleManager:
                     return "A Tó várakozó locsolási feladat közben nem bontható."
                 if (task.task_type == TASK_PROCESSING_SUPPLY
                         and (building is task.field
-                             or building.get("type") == task.source_type)):
+                             or building.get("type")
+                             == self._task_source_building_type(task))):
                     return "Az épület alapanyag-szállítás közben nem bontható."
         return None
 

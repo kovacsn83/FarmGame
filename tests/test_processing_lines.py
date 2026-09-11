@@ -145,7 +145,7 @@ class ProcessingLineTests(unittest.TestCase):
         world = [[ROAD] * 40 for _ in range(40)]
         buildings = []
         garage = place_building(world, buildings, 2, 2, "garage")
-        place_building(world, buildings, 2, 10, "market")
+        place_building(world, buildings, 2, 10, "warehouse")
         plant = place_building(world, buildings, 15, 18, "processing_plant")
         apply_processing_upgrades(buildings, {PROCESSING_UPGRADE_ID})
         select_processing_recipe(plant, "cheese", 1)

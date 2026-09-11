@@ -204,6 +204,7 @@ def _migrate_save_schema(data):
         return False
     version = data.get("save_version")
     if version == SAVE_VERSION:
+        _migrate_removed_market_buildings(data)
         data.setdefault("vehicle_runtime", None)
         data.setdefault("financial_history", [])
         data.setdefault("restaurant_auto_sell", {})
@@ -211,12 +212,42 @@ def _migrate_save_schema(data):
     if version in LEGACY_SAVE_VERSIONS:
         _migrate_farmhouse_footprints(data)
         _migrate_farmhouse_levels(data)
+        _migrate_removed_market_buildings(data)
         data["save_version"] = SAVE_VERSION
         data.setdefault("vehicle_runtime", None)
         data.setdefault("financial_history", [])
         data.setdefault("restaurant_auto_sell", {})
         return True
     return False
+
+
+def _migrate_removed_market_buildings(data):
+    """A megszűnt farmi Piacokat eltávolítja, helyüket füves területté teszi."""
+    buildings = data.get("buildings")
+    world = data.get("world")
+    if not isinstance(buildings, list) or not isinstance(world, list):
+        return
+    markets = [
+        building for building in buildings
+        if isinstance(building, dict) and building.get("type") == "market"
+    ]
+    for market in markets:
+        row = market.get("row")
+        col = market.get("col")
+        width = market.get("width")
+        height = market.get("height")
+        if all(
+            isinstance(value, int) and not isinstance(value, bool)
+            for value in (row, col, width, height)
+        ):
+            for tile_row in range(row, row + max(0, height)):
+                if not 0 <= tile_row < len(world):
+                    continue
+                for tile_col in range(col, col + max(0, width)):
+                    if (0 <= tile_col < len(world[tile_row])
+                            and world[tile_row][tile_col] == BUILDING):
+                        world[tile_row][tile_col] = GRASS
+        buildings.remove(market)
 
 
 def _migrate_farmhouse_footprints(data):
@@ -1023,7 +1054,44 @@ def initialize_save_system():
         return False
     log(f"Save directory: {directory}", "Save")
     migrate_legacy_saves()
+    migrate_removed_market_buildings_in_slots()
     return True
+
+
+def migrate_removed_market_buildings_in_slots():
+    """A helyi slotokból egyszer, atomikusan eltávolítja a megszűnt Piacokat."""
+    migrated = 0
+    for slot_id in range(1, SAVE_SLOT_COUNT + 1):
+        path = get_slot_path(slot_id)
+        document = _read_json(path)
+        if not isinstance(document, dict):
+            continue
+        game_data = document.get("game_state")
+        buildings = game_data.get("buildings") if isinstance(game_data, dict) else None
+        if not isinstance(buildings, list) or not any(
+                isinstance(building, dict) and building.get("type") == "market"
+                for building in buildings):
+            continue
+        validated = _validate_slot_document(document, slot_id)
+        if validated is None:
+            log(
+                f"A(z) {slot_id}. mentési hely Piac-migrációja kihagyva: "
+                "a mentés nem érvényes.",
+                "Save", level="WARNING",
+            )
+            continue
+        metadata, migrated_game_data = validated
+        if _atomic_write_json(path, {
+                "metadata": metadata,
+                "game_state": migrated_game_data,
+        }):
+            migrated += 1
+    if migrated:
+        log(
+            f"{migrated} mentésből eltávolítva a megszűnt Piac épület.",
+            "Save",
+        )
+    return migrated
 
 
 def get_slot_metadata(slot_id):

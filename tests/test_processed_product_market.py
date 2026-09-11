@@ -53,8 +53,7 @@ class ProcessedProductMarketTests(unittest.TestCase):
         self.assertIn("canned_tomato", get_marketable_item_ids())
 
         plant = _processing_plant(5)
-        market = {"type": "market"}
-        quote = Economy().get_sale_quote([plant, market], "canned_tomato")
+        quote = Economy().get_sale_quote([plant], "canned_tomato")
         self.assertEqual(5, quote["amount"])
         self.assertEqual(32.00, quote["unit_price"])
         self.assertEqual(160.00, quote["total_value"])
@@ -62,8 +61,7 @@ class ProcessedProductMarketTests(unittest.TestCase):
     def test_sale_aggregates_plants_and_records_processed_product_income(self):
         first = _processing_plant(20)
         second = _processing_plant(30)
-        market = {"type": "market"}
-        buildings = [first, second, market]
+        buildings = [first, second]
         economy = Economy(starting_money=0)
         get_logger().reset()
 
@@ -97,7 +95,7 @@ class ProcessedProductMarketTests(unittest.TestCase):
 
         plant = _processing_plant(cheese=10)
         economy = Economy(starting_money=0)
-        buildings = [plant, {"type": "market"}]
+        buildings = [plant]
         self.assertTrue(economy.sell_item(buildings, "cheese"))
         self.assertEqual(160.00, economy.money)
         self.assertEqual(0, plant["processing_inventory"]["cheese"])
@@ -132,14 +130,13 @@ class ProcessedProductMarketTests(unittest.TestCase):
         screen = pygame.display.set_mode((1000, 800))
         font = pygame.font.Font(None, 20)
         plant = _processing_plant(20)
-        market = {"type": "market"}
         economy = Economy(starting_money=0)
         state = GameState(
-            [], [], [plant, market], economy, GameTime(start_ticks=0),
+            [], [], [plant], economy, GameTime(start_ticks=0),
         )
 
         market_panel = InfoPanel()
-        self.assertTrue(market_panel.open_for_building(market))
+        self.assertTrue(market_panel.open_market())
         market_panel.draw(screen, font, state)
         self.assertIn("canned_tomato", market_panel.market_card_rects)
 

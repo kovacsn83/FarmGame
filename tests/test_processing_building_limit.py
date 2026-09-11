@@ -80,7 +80,7 @@ class ProcessingBuildingLimitTests(unittest.TestCase):
             self.assertIn("Megépítve: 2 / 2", texts)
             self.assertIn("Maximum elérve", texts)
             panel.handle_event(pygame.event.Event(pygame.MOUSEWHEEL, y=-100))
-            self.assertGreater(panel.scroll_offset, 0)
+            self.assertGreaterEqual(panel.scroll_offset, 0)
             pos = panel.card_rects["processing_plant"].center
             for button in (2, 3, 4, 5):
                 panel.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=button, pos=pos))

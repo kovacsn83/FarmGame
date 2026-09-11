@@ -3,7 +3,7 @@ from constants import (
     FARMHOUSE_BUILD_COST, FARMHOUSE_LEVEL_2_MAINTENANCE_BASE,
     FARMHOUSE_LEVEL_2_UPGRADE_PRICE, FARMHOUSE_LEVEL_3_MAINTENANCE_BASE,
     FARMHOUSE_LEVEL_3_UPGRADE_PRICE, GARAGE_BUILD_COST, GRASS,
-    MARKET_BUILD_COST, ORCHARD_BUILD_COST, ROAD, TILE_SIZE, POND_BUILD_COST,
+    ORCHARD_BUILD_COST, ROAD, TILE_SIZE, POND_BUILD_COST,
     PROCESSING_PLANT_BUILD_COST, WAREHOUSE_BUILD_COST,
 )
 from crops import CROPS
@@ -113,13 +113,6 @@ BUILDING_TYPES = {
         "height": 4,
         "color": (125, 115, 105),
         "build_cost": WAREHOUSE_BUILD_COST,
-    },
-    "market": {
-        "name": "Piac",
-        "width": 4,
-        "height": 3,
-        "color": (160, 90, 170),
-        "build_cost": MARKET_BUILD_COST,
     },
     "garage": {
         "name": "Garázs",
@@ -656,13 +649,6 @@ def print_building_info(building):
     print(f"Méret: {building['width']}x{building['height']}")
     print(f"Építési ár: {format_money(building_type['build_cost'])}")
     print(f"Éves költség: {format_annual_maintenance_rate()}")
-    if building["type"] == "market":
-        for item_id in get_marketable_item_ids():
-            item_data = get_inventory_item_data(item_id)
-            print(
-                f"{get_inventory_item_name(item_id)} eladási ára: "
-                f"{format_money(item_data['price'])}/db"
-            )
     description = building_type.get("description")
     if description:
         print(f"Funkció: {description}")

@@ -35,11 +35,7 @@ class ChickenLifecycleTests(unittest.TestCase):
             "width": 5, "height": 4, "capacity": 500,
             "inventory": {},
         }
-        self.market = {
-            "type": "market", "row": 2, "col": 10,
-            "width": 4, "height": 3,
-        }
-        self.buildings = [self.pen, self.warehouse, self.market]
+        self.buildings = [self.pen, self.warehouse]
         self.chicken = {
             "type": "chicken", "row": 10, "col": 10,
             "pen_row": 10, "pen_col": 10,

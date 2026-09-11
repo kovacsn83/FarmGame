@@ -75,13 +75,6 @@ def prepare_feed_supply(buildings, economy, group, animals):
     )
 
     if purchased_amount:
-        if not any(b.get("type") == "market" for b in buildings):
-            message = (
-                "Nincs elegendő takarmány a Raktárban, és nincs Piac az "
-                "automatikus vásárláshoz."
-            )
-            log(message, "Supply")
-            return FeedSupplyTransaction(False, error_message=message)
         if not economy.can_afford(purchase_cost):
             message = (
                 "Nincs elegendő takarmány a Raktárban, és nincs elég pénz "

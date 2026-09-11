@@ -280,9 +280,12 @@ class ProcessingProductionTests(unittest.TestCase):
     def test_market_purchase_waits_for_physical_tractor_delivery(self):
         world = [[ROAD for _ in range(40)] for _ in range(40)]
         garage = {"type": "garage", "row": 2, "col": 2, "width": 4, "height": 4}
-        market = {"type": "market", "row": 2, "col": 10, "width": 4, "height": 3}
+        warehouse = {
+            "type": "warehouse", "row": 2, "col": 10,
+            "width": 5, "height": 4, "capacity": 500, "inventory": {},
+        }
         plant = self._plant()
-        buildings = [garage, market, plant]
+        buildings = [garage, warehouse, plant]
         manager = VehicleManager()
         tractor = manager._create_managed_asset(VehicleType.TRACTOR, garage, 0)
         manager._create_managed_asset(VehicleType.TRAILER, garage, 1)
@@ -298,6 +301,7 @@ class ProcessingProductionTests(unittest.TestCase):
         self.assertEqual(0, plant["processing_inventory"]["tomato"])
         self.assertEqual(5, get_processing_in_transit(plant, "tomato"))
         self.assertEqual("market", tractor.current_task.source_type)
+        self.assertIs(warehouse, tractor.current_task.source_building)
         self.assertEqual(905, economy.money)
 
         for tick in range(100, 30000, 100):

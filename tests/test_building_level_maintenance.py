@@ -81,5 +81,5 @@ class BuildingLevelMaintenanceTests(unittest.TestCase):
         for level, expected in ((1, 1000), (2, 5000), (3, 15000)):
             self.assertEqual(get_building_maintenance_base({
                 "type": "farmhouse", "farmhouse_level": level}), expected)
-        for kind, expected in (("market", 500), ("animal_pen", 400), ("pond", 500), ("orchard", 200)):
+        for kind, expected in (("animal_pen", 400), ("pond", 500), ("orchard", 200)):
             self.assertEqual(get_building_maintenance_base({"type": kind}), expected)

@@ -39,8 +39,7 @@ class MarketPanelLayoutTests(unittest.TestCase):
                 if item_id != "canned_tomato"
             },
         }
-        market = {"type": "market", "row": 8, "col": 1}
-        buildings = [warehouse, market]
+        buildings = [warehouse]
         if "canned_tomato" in item_ids:
             plant = initialize_processing_plant({
                 "type": "processing_plant", "row": 12, "col": 1,
@@ -50,14 +49,14 @@ class MarketPanelLayoutTests(unittest.TestCase):
             buildings.append(plant)
         return GameState(
             [], [], buildings, Economy(), GameTime(start_ticks=0),
-        ), market
+        )
 
     def _draw(self, width, height, item_ids):
         screen = pygame.display.set_mode((width, height))
         set_screen_size(width, height)
-        state, market = self._state(item_ids)
+        state = self._state(item_ids)
         panel = InfoPanel()
-        self.assertTrue(panel.open_for_building(market))
+        self.assertTrue(panel.open_market())
         panel.draw(screen, pygame.font.Font(None, 20), state)
         return panel, state, screen
 
@@ -90,11 +89,7 @@ class MarketPanelLayoutTests(unittest.TestCase):
         screen = pygame.display.set_mode((1000, 800))
         set_screen_size(1000, 800)
         item_id = get_marketable_item_ids()[0]
-        state, _market = self._state([item_id])
-        state.buildings = [
-            building for building in state.buildings
-            if building["type"] != "market"
-        ]
+        state = self._state([item_id])
         panel = InfoPanel()
 
         self.assertTrue(panel.open_market())
@@ -122,7 +117,7 @@ class MarketPanelLayoutTests(unittest.TestCase):
         self.assertGreater(panel.market_scroll_offset, 0)
         self.assertIsNone(panel.take_sale_selection())
 
-        panel.draw(screen, font, self._state(items)[0])
+        panel.draw(screen, font, self._state(items))
         for hitbox in panel.market_card_rects.values():
             self.assertTrue(panel.market_list_rect.contains(hitbox))
         self.assertLess(len(panel.market_card_rects), len(items))

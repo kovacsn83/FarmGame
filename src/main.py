@@ -74,7 +74,7 @@ from quest_system import (
     QUEST_EVENT_CATTLE_COUNT_CHANGED, QUEST_EVENT_FARMHOUSE_BUILT,
     QUEST_EVENT_CHERRY_TREE_COUNT_CHANGED, QUEST_EVENT_CITY_MARKET_OPENED,
     QUEST_EVENT_FIELD_COUNT_CHANGED, QUEST_EVENT_FIELD_DEMOLISHED,
-    QUEST_EVENT_GARAGE_BUILT, QUEST_EVENT_MARKET_BUILT,
+    QUEST_EVENT_GARAGE_BUILT,
     QUEST_EVENT_MILK_SOLD, QUEST_EVENT_ROAD_BUILT,
     QUEST_EVENT_ORCHARD_COUNT_CHANGED, QUEST_EVENT_POND_BUILT,
     QUEST_EVENT_SEPARATE_CHICKEN_PEN_READY,
@@ -560,8 +560,6 @@ def main():
                     )
                     quest_manager.record_event(QUEST_EVENT_ANIMAL_PEN_BUILT)
                     synchronize_new_quest_progress()
-                elif selected_building == "market":
-                    quest_manager.record_event(QUEST_EVENT_MARKET_BUILT)
                 elif selected_building == "garage":
                     quest_manager.record_event(QUEST_EVENT_GARAGE_BUILT)
                     vehicles.on_garage_built(
@@ -816,17 +814,8 @@ def main():
                 bank_decision = bank_panel.take_decision()
                 selected_loan_tier = bank_panel.take_selected_loan_tier()
                 if bank_decision == "market":
-                    market = next(
-                        (item for item in buildings if item["type"] == "market"),
-                        None,
-                    )
-                    if market is not None and info_panel.open_for_building(market):
-                        bank_panel.begin_market()
-                    else:
-                        logger.log(
-                            "A Piac megnyitásához legalább egy Piac szükséges.",
-                            "Bank",
-                        )
+                    info_panel.open_market()
+                    bank_panel.begin_market()
                 elif bank_decision == "accept":
                     if bank_panel.emergency_mode:
                         bank_system.accept_offer(selected_loan_tier)

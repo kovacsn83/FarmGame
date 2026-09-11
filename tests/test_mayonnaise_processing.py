@@ -114,11 +114,12 @@ class MayonnaiseProcessingTests(unittest.TestCase):
         world = [[ROAD for _ in range(40)] for _ in range(40)]
         garage = {"type": "garage", "row": 2, "col": 2,
                   "width": 4, "height": 4}
-        market = {"type": "market", "row": 2, "col": 10,
-                  "width": 4, "height": 3}
+        warehouse = {"type": "warehouse", "row": 2, "col": 10,
+                     "width": 5, "height": 4, "capacity": 500,
+                     "inventory": {}}
         plant = self._plant()
         self.assertTrue(select_processing_recipe(plant, "mayonnaise"))
-        buildings = [garage, market, plant]
+        buildings = [garage, warehouse, plant]
         manager = VehicleManager()
         tractor = manager._create_managed_asset(
             VehicleType.TRACTOR, garage, 0,
@@ -138,6 +139,8 @@ class MayonnaiseProcessingTests(unittest.TestCase):
         self.assertEqual(5, get_processing_in_transit(plant, "egg"))
         self.assertEqual("egg", tractor.current_task.cargo_type)
         self.assertEqual(5, tractor.current_task.resource_amount)
+        self.assertEqual("market", tractor.current_task.source_type)
+        self.assertIs(warehouse, tractor.current_task.source_building)
 
         game_time = GameTime(current_time_speed=TIME_SLOW, start_ticks=0)
         for tick in range(100, 30000, 100):
@@ -184,7 +187,7 @@ class MayonnaiseProcessingTests(unittest.TestCase):
         first, second = self._plant(), self._plant(24, 18)
         first["processing_inventory"]["mayonnaise"] = 2
         second["processing_inventory"]["mayonnaise"] = 3
-        buildings = [first, second, {"type": "market"}]
+        buildings = [first, second]
         economy = Economy(starting_money=0)
 
         self.assertEqual(

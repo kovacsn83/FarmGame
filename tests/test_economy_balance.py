@@ -53,12 +53,11 @@ class EconomyBalanceTests(unittest.TestCase):
         self.assertIsNone(economy.reserve_seed([], "wheat"))
         self.assertEqual(economy.money, 12)
 
-    def test_milk_sale_uses_eight_dollar_catalog_price(self):
+    def test_milk_sale_without_market_building_uses_catalog_price(self):
         self.assertEqual(get_inventory_item_data("milk")["price"], 8.00)
         world = [[GRASS for _ in range(20)] for _ in range(20)]
         buildings = []
         warehouse = place_building(world, buildings, 1, 1, "warehouse")
-        place_building(world, buildings, 8, 1, "market")
         warehouse["inventory"]["milk"] = 3
         economy = Economy(starting_money=0)
         self.assertTrue(economy.sell_item(buildings, "milk"))
@@ -69,7 +68,6 @@ class EconomyBalanceTests(unittest.TestCase):
         world = [[GRASS for _ in range(20)] for _ in range(20)]
         buildings = []
         warehouse = place_building(world, buildings, 1, 1, "warehouse")
-        place_building(world, buildings, 8, 1, "market")
         warehouse["inventory"]["milk"] = 346
         economy = Economy(starting_money=0)
         get_logger().reset()
@@ -96,7 +94,6 @@ class EconomyBalanceTests(unittest.TestCase):
         world = [[GRASS for _ in range(20)] for _ in range(20)]
         buildings = []
         warehouse = place_building(world, buildings, 1, 1, "warehouse")
-        place_building(world, buildings, 8, 1, "market")
         warehouse["inventory"]["milk"] = 5
         economy = Economy(starting_money=100)
 
@@ -116,7 +113,6 @@ class EconomyBalanceTests(unittest.TestCase):
         world = [[GRASS for _ in range(20)] for _ in range(20)]
         buildings = []
         warehouse = place_building(world, buildings, 1, 1, "warehouse")
-        place_building(world, buildings, 8, 1, "market")
         warehouse["inventory"]["apple"] = 20
         economy = Economy(starting_money=0)
         get_logger().reset()
@@ -140,7 +136,6 @@ class EconomyBalanceTests(unittest.TestCase):
         world = [[GRASS for _ in range(20)] for _ in range(20)]
         buildings = []
         warehouse = place_building(world, buildings, 1, 1, "warehouse")
-        place_building(world, buildings, 8, 1, "market")
         warehouse["inventory"]["pork"] = 10
         economy = Economy(starting_money=0)
         get_logger().reset()
@@ -164,7 +159,6 @@ class EconomyBalanceTests(unittest.TestCase):
         world = [[GRASS for _ in range(20)] for _ in range(20)]
         buildings = []
         warehouse = place_building(world, buildings, 1, 1, "warehouse")
-        place_building(world, buildings, 8, 1, "market")
         warehouse["inventory"]["beef"] = 10
         economy = Economy(starting_money=0)
 
@@ -181,7 +175,6 @@ class EconomyBalanceTests(unittest.TestCase):
         world = [[GRASS for _ in range(20)] for _ in range(20)]
         buildings = []
         warehouse = place_building(world, buildings, 1, 1, "warehouse")
-        place_building(world, buildings, 8, 1, "market")
         warehouse["inventory"]["manure"] = 15
         economy = Economy(starting_money=0)
         get_logger().reset()

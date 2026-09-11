@@ -521,10 +521,6 @@ class Economy:
         if item_data is None or not item_data.get("marketable", False):
             log(f"Ez a készletelem nem értékesíthető: {item_id}", "Inventory")
             return False
-        if not any(building["type"] == "market" for building in buildings):
-            log("Az eladáshoz legalább egy piac szükséges.", "Economy")
-            return False
-
         available_amount = get_marketable_item_amount(buildings, item_id)
         item_name = get_inventory_item_name(item_id)
         if available_amount <= 0:

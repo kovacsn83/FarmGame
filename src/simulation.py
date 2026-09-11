@@ -405,7 +405,7 @@ class SimulationBot:
 
         layout = (
             ("farmhouse", 12, 2), ("warehouse", 16, 11),
-            ("market", 17, 17), ("garage", 16, 22),
+            ("garage", 16, 22),
             ("pond", 14, 29), ("animal_pen", 21, 38),
             ("animal_pen", 21, 43), ("animal_pen", 21, 72),
         )

@@ -46,9 +46,6 @@ class CherryTreeTests(unittest.TestCase):
         self.warehouse = place_building(
             self.world, self.buildings, 20, 20, "warehouse",
         )
-        self.market = place_building(
-            self.world, self.buildings, 30, 30, "market",
-        )
         self.economy = Economy(2000)
 
     def test_catalog_selector_and_exact_planting_cost(self):

@@ -860,7 +860,6 @@ def draw_pond(screen, building):
 BUILDING_RENDERERS = {
     "farmhouse": draw_farmhouse,
     "warehouse": draw_warehouse,
-    "market": draw_market,
     "garage": draw_garage,
     "pond": draw_pond,
     "processing_plant": draw_processing_plant,
