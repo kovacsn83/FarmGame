@@ -86,6 +86,30 @@ class MarketPanelLayoutTests(unittest.TestCase):
         self.assertEqual(first.left, second.left)
         self.assertGreater(second.top, first.top)
 
+    def test_city_market_opens_and_lists_inventory_without_market_building(self):
+        screen = pygame.display.set_mode((1000, 800))
+        set_screen_size(1000, 800)
+        item_id = get_marketable_item_ids()[0]
+        state, _market = self._state([item_id])
+        state.buildings = [
+            building for building in state.buildings
+            if building["type"] != "market"
+        ]
+        panel = InfoPanel()
+
+        self.assertTrue(panel.open_market())
+        self.assertTrue(panel.visible)
+        self.assertEqual("market", panel.building_type)
+        self.assertIsNone(panel.building)
+
+        panel.draw(screen, pygame.font.Font(None, 20), state)
+        self.assertIn(item_id, panel.market_card_rects)
+        panel.handle_event(pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN,
+            {"pos": panel.market_card_rects[item_id].center, "button": 1},
+        ))
+        self.assertTrue(panel.sale_dialog.visible)
+
     def test_wheel_events_scroll_without_creating_a_sale_selection(self):
         items = get_marketable_item_ids()
         panel, _, screen = self._draw(1000, 500, items)

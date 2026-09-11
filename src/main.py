@@ -1057,19 +1057,7 @@ def main():
                         elif tool == TOOL_CITY_BANK:
                             open_bank_panel()
                         elif tool == TOOL_CITY_MARKET:
-                            market = next(
-                                (item for item in buildings
-                                 if item["type"] == "market"),
-                                None,
-                            )
-                            if market is not None:
-                                info_panel.open_for_building(market)
-                            else:
-                                message = (
-                                    "A Piac használatához előbb építs egy Piacot."
-                                )
-                                if message not in notification_manager.active_messages:
-                                    notification_manager.enqueue(message)
+                            info_panel.open_market()
                         elif tool == TOOL_CITY_RESTAURANT:
                             restaurant_panel.open(game_state.restaurant_system)
                         else:

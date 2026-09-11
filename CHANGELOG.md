@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- A Város almenüből elérhető Piac mostantól megépített Piac épület nélkül is
+  használható; az értékesítési és pénzügyi működés változatlan maradt.
 - A korábbi Város popup helyét lenyitható toolbar-almenü vette át; a Bank,
   Piac és Étterem közvetlenül a Város gomb mellől érhető el.
 - A Farmház fejlesztései alapvetően a szükséges Farmház-szintnél válnak

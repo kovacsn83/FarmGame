@@ -2029,7 +2029,18 @@ class InfoPanel(PopupWindow):
                 "warehouse", "market", "farmhouse", "garage", "pond",
                 "processing_plant"):
             return False
-        self.building_type = building["type"]
+        self._open_for_type(building["type"], building)
+        return True
+
+    def open_market(self):
+        """Megnyitja a városi Piacot megépített farmi Piac nélkül is."""
+        self._open_for_type("market", None)
+        return True
+
+    def _open_for_type(self, building_type, building):
+        """Közös panel-inicializálás épülethez kötött és városi nézetekhez."""
+        self.garage_scroll = 0
+        self.building_type = building_type
         self.building = building
         self.pending_sale_selection = None
         self.pending_upgrade_selection = None
@@ -2043,7 +2054,6 @@ class InfoPanel(PopupWindow):
         self.sale_dialog.close()
         self.upgrade_tree_scroll = 0
         self.open()
-        return True
 
     def handle_event(self, event):
         if self.sale_dialog.visible:
