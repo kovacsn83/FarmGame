@@ -42,6 +42,10 @@ QUEST_EVENT_FIELD_DEMOLISHED = "field_demolished"
 QUEST_EVENT_FIELD_WATERED = "field_watered"
 QUEST_EVENT_FIELD_FERTILIZED = "field_fertilized"
 QUEST_EVENT_FIELD_SPRAYED = "field_sprayed"
+QUEST_EVENT_CITY_MARKET_OPENED = "city_market_opened"
+QUEST_EVENT_SEPARATE_CHICKEN_PEN_READY = "separate_chicken_pen_ready"
+QUEST_EVENT_ORCHARD_COUNT_CHANGED = "orchard_count_changed"
+QUEST_EVENT_CHERRY_TREE_COUNT_CHANGED = "cherry_tree_count_changed"
 
 
 class QuestState(Enum):
@@ -145,12 +149,6 @@ class QuestManager:
                 1,
             ),
             Quest(
-                "build_market",
-                "Építsd meg a Piacot",
-                QUEST_EVENT_MARKET_BUILT,
-                1,
-            ),
-            Quest(
                 "start_time",
                 "Indítsd újra az időt az 1-es billentyűvel",
                 QUEST_EVENT_TIME_STARTED_BY_KEY,
@@ -165,6 +163,13 @@ class QuestManager:
                     QUEST_EVENT_FOOD_TROUGH_FILLED,
                     QUEST_EVENT_WATER_TROUGH_FILLED,
                 ),
+            ),
+            Quest(
+                "open_city_market",
+                "Kattints a Város gombra, és nyitsd meg a Piacot",
+                QUEST_EVENT_CITY_MARKET_OPENED,
+                1,
+                active_only=True,
             ),
             Quest(
                 "sell_milk",
@@ -224,6 +229,24 @@ class QuestManager:
                 QUEST_EVENT_ALFALFA_HARVESTED,
                 3,
                 unique_progress=True,
+            ),
+            Quest(
+                "build_separate_pen_and_buy_2_chickens",
+                "Építsd egy új különálló Karámot, és vegyél bele 2 csirkét",
+                QUEST_EVENT_SEPARATE_CHICKEN_PEN_READY,
+                1,
+            ),
+            Quest(
+                "build_orchard",
+                "Építs egy Gyümölcsöst",
+                QUEST_EVENT_ORCHARD_COUNT_CHANGED,
+                1,
+            ),
+            Quest(
+                "plant_cherry_tree",
+                "Ültess egy Cseresznyefát",
+                QUEST_EVENT_CHERRY_TREE_COUNT_CHANGED,
+                1,
             ),
         ]
         self.statistics = {}

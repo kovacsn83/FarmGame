@@ -72,13 +72,16 @@ from restaurant import RestaurantSystem
 from quest_system import (
     QUEST_EVENT_ANIMAL_PEN_BUILT, QUEST_EVENT_CALENDAR_OPENED,
     QUEST_EVENT_CATTLE_COUNT_CHANGED, QUEST_EVENT_FARMHOUSE_BUILT,
+    QUEST_EVENT_CHERRY_TREE_COUNT_CHANGED, QUEST_EVENT_CITY_MARKET_OPENED,
     QUEST_EVENT_FIELD_COUNT_CHANGED, QUEST_EVENT_FIELD_DEMOLISHED,
     QUEST_EVENT_GARAGE_BUILT, QUEST_EVENT_MARKET_BUILT,
     QUEST_EVENT_MILK_SOLD, QUEST_EVENT_ROAD_BUILT,
-    QUEST_EVENT_POND_BUILT,
+    QUEST_EVENT_ORCHARD_COUNT_CHANGED, QUEST_EVENT_POND_BUILT,
+    QUEST_EVENT_SEPARATE_CHICKEN_PEN_READY,
     QUEST_EVENT_TIME_PAUSED_BY_KEY, QUEST_EVENT_TIME_STARTED_BY_KEY,
     QUEST_EVENT_WAREHOUSE_BUILT, QuestManager,
 )
+from quest_progress import get_world_quest_progress
 from progress_tooltips import find_timed_object_tooltip
 from road_building import RoadDragState, build_road_segment
 from save_slots_ui import LoadSlotsMenu, SaveSlotsMenu
@@ -311,6 +314,7 @@ def main():
             current_week=game_time.week,
             current_elapsed_week=game_time.elapsed_weeks,
         )
+        synchronize_new_quest_progress()
         unsaved_changes.mark_loaded(game_state, slot_id, save_name)
         app_state.start_playing()
 
@@ -411,6 +415,14 @@ def main():
             )
         return handled
 
+    def synchronize_new_quest_progress():
+        """A világ jelenlegi állapotából frissíti az új, tartós Quest-feltételeket."""
+        for event_id, current_value in get_world_quest_progress(
+                buildings, animals).items():
+            quest_manager.record_event(
+                event_id, current_value=current_value,
+            )
+
     def road_drag_tile_at(position):
         """Csak valódi, UI-val nem takart játéktéri csempét ad vissza."""
         # A Developer Console csak vizuális overlay. A teljes, képernyőszéles
@@ -481,9 +493,11 @@ def main():
             else:
                 world[mouse_row][mouse_col] = GRASS
         elif selected_tool == TOOL_ORCHARD and selected_tree is not None:
-            plant_tree(
+            planted_tree = plant_tree(
                 buildings, economy, mouse_row, mouse_col, selected_tree,
             )
+            if planted_tree is not None and selected_tree == "cherry":
+                synchronize_new_quest_progress()
         elif selected_tool == TOOL_BUILD and selected_building is not None:
             cost = BUILD_OPTIONS[selected_building]["build_cost"]
             option = BUILD_OPTIONS[selected_building]
@@ -545,6 +559,7 @@ def main():
                         buildings, animals, cap_merged=True,
                     )
                     quest_manager.record_event(QUEST_EVENT_ANIMAL_PEN_BUILT)
+                    synchronize_new_quest_progress()
                 elif selected_building == "market":
                     quest_manager.record_event(QUEST_EVENT_MARKET_BUILT)
                 elif selected_building == "garage":
@@ -555,6 +570,8 @@ def main():
                     vehicles.compact_garage_assignments(world, buildings)
                 elif selected_building == "pond":
                     quest_manager.record_event(QUEST_EVENT_POND_BUILT)
+                elif selected_building == "orchard":
+                    synchronize_new_quest_progress()
         elif selected_tool == TOOL_PLANT:
             field = find_field_data(fields, mouse_row, mouse_col)
             if field and selected_crop is not None:
@@ -603,13 +620,16 @@ def main():
                 animals, buildings, economy, mouse_row, mouse_col,
                 selected_animal,
             )
-            if animal_purchased and selected_animal == "cattle":
-                quest_manager.record_event(
-                    QUEST_EVENT_CATTLE_COUNT_CHANGED,
-                    current_value=sum(
-                        animal.get("type") == "cattle" for animal in animals
-                    ),
-                )
+            if animal_purchased:
+                if selected_animal == "cattle":
+                    quest_manager.record_event(
+                        QUEST_EVENT_CATTLE_COUNT_CHANGED,
+                        current_value=sum(
+                            animal.get("type") == "cattle" for animal in animals
+                        ),
+                    )
+                elif selected_animal == "chicken":
+                    synchronize_new_quest_progress()
     
     running = True
     while running:
@@ -1058,6 +1078,9 @@ def main():
                             open_bank_panel()
                         elif tool == TOOL_CITY_MARKET:
                             info_panel.open_market()
+                            quest_manager.record_event(
+                                QUEST_EVENT_CITY_MARKET_OPENED,
+                            )
                         elif tool == TOOL_CITY_RESTAURANT:
                             restaurant_panel.open(game_state.restaurant_system)
                         else:

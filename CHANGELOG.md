@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- A Quest feladatsor 25 lépésre bővült: a farmi Piac megépítése helyett a
+  városi Piac megnyitását tanítja, a végén pedig külön csirkekarám,
+  Gyümölcsös és Cseresznyefa feladatok következnek.
 - A Város almenüből elérhető Piac mostantól megépített Piac épület nélkül is
   használható; az értékesítési és pénzügyi működés változatlan maradt.
 - A korábbi Város popup helyét lenyitható toolbar-almenü vette át; a Bank,

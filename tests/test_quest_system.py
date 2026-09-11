@@ -14,15 +14,18 @@ from quest_system import (
     QUEST_EVENT_ALFALFA_HARVESTED, QUEST_EVENT_ALFALFA_PLANTED,
     QUEST_EVENT_ANIMAL_PEN_BUILT, QUEST_EVENT_CALENDAR_OPENED,
     QUEST_EVENT_CATTLE_COUNT_CHANGED, QUEST_EVENT_COMBINE_PURCHASED,
+    QUEST_EVENT_CHERRY_TREE_COUNT_CHANGED, QUEST_EVENT_CITY_MARKET_OPENED,
     QUEST_EVENT_FARMHOUSE_BUILT, QUEST_EVENT_FIELD_COUNT_CHANGED,
     QUEST_EVENT_FIELD_FERTILIZED, QUEST_EVENT_FIELD_SPRAYED,
     QUEST_EVENT_FIELD_WATERED,
     QUEST_EVENT_FOOD_TROUGH_FILLED, QUEST_EVENT_GARAGE_BUILT,
-    QUEST_EVENT_MARKET_BUILT, QUEST_EVENT_MILK_SOLD,
+    QUEST_EVENT_MILK_SOLD,
+    QUEST_EVENT_ORCHARD_COUNT_CHANGED,
     QUEST_EVENT_POND_BUILT, QUEST_EVENT_ROAD_BUILT,
     QUEST_EVENT_TIME_PAUSED_BY_KEY, QUEST_EVENT_TIME_STARTED_BY_KEY,
     QUEST_EVENT_TRAILER_PURCHASED, QUEST_EVENT_WAREHOUSE_BUILT,
     QUEST_EVENT_WATER_TANK_PURCHASED, QUEST_EVENT_WATER_TROUGH_FILLED,
+    QUEST_EVENT_SEPARATE_CHICKEN_PEN_READY,
     QuestManager, QuestState,
 )
 from financial_history import INCOME_QUEST_REWARD
@@ -31,6 +34,7 @@ from constants import ROAD
 from economy import Economy
 from vehicle_manager import VehicleManager
 from vehicle_types import VehicleType
+from quest_progress import get_world_quest_progress
 
 
 EXPECTED_TITLES = [
@@ -44,9 +48,9 @@ EXPECTED_TITLES = [
     "Építs egy Karámot",
     "Vegyél 2 szarvasmarhát",
     "Építs egy Tavat",
-    "Építsd meg a Piacot",
     "Indítsd újra az időt az 1-es billentyűvel",
     "Adj ivóvizet és eledelt a Karám vályúiba",
+    "Kattints a Város gombra, és nyitsd meg a Piacot",
     "Add el a tejet a Piacon",
     "Legyen 3 Veteményesed",
     "Nyisd meg a Gazdálkodási naptárat",
@@ -56,6 +60,9 @@ EXPECTED_TITLES = [
     "Permetezz be 3 veteményest",
     "Vegyél 1 kombájnt",
     "Arass 3 lucernát",
+    "Építsd egy új különálló Karámot, és vegyél bele 2 csirkét",
+    "Építs egy Gyümölcsöst",
+    "Ültess egy Cseresznyefát",
 ]
 
 
@@ -63,6 +70,47 @@ class QuestSystemTests(unittest.TestCase):
     def test_quest_order_and_titles_are_exact(self):
         manager = QuestManager()
         self.assertEqual([quest.title for quest in manager.quests], EXPECTED_TITLES)
+
+    def test_new_world_conditions_are_reconstructed_from_existing_assets(self):
+        buildings = [
+            {"type": "animal_pen", "row": 0, "col": 0,
+             "width": 8, "height": 8},
+            {"type": "animal_pen", "row": 0, "col": 10,
+             "width": 8, "height": 8},
+            {"type": "orchard", "row": 10, "col": 0,
+             "width": 8, "height": 4,
+             "trees": [{"type": "cherry"}]},
+        ]
+        animals = [
+            {"type": "cattle", "pen_row": 0, "pen_col": 0},
+            {"type": "chicken", "pen_row": 0, "pen_col": 10},
+            {"type": "chicken", "pen_row": 0, "pen_col": 10},
+        ]
+
+        progress = get_world_quest_progress(buildings, animals)
+
+        self.assertEqual(
+            1, progress[QUEST_EVENT_SEPARATE_CHICKEN_PEN_READY],
+        )
+        self.assertEqual(1, progress[QUEST_EVENT_ORCHARD_COUNT_CHANGED])
+        self.assertEqual(
+            1, progress[QUEST_EVENT_CHERRY_TREE_COUNT_CHANGED],
+        )
+
+    def test_chickens_need_a_second_separate_pen_group(self):
+        one_pen = [{
+            "type": "animal_pen", "row": 0, "col": 0,
+            "width": 8, "height": 8,
+        }]
+        chickens = [
+            {"type": "chicken", "pen_row": 0, "pen_col": 0},
+            {"type": "chicken", "pen_row": 0, "pen_col": 0},
+        ]
+        self.assertEqual(
+            0,
+            get_world_quest_progress(one_pen, chickens)
+            [QUEST_EVENT_SEPARATE_CHICKEN_PEN_READY],
+        )
 
     def test_completion_grants_and_records_the_central_reward_once(self):
         economy = Economy(starting_money=1000)
@@ -177,7 +225,7 @@ class QuestSystemTests(unittest.TestCase):
         ))
         self.assertEqual(QuestState.ACTIVE, restored.current_quest.state)
 
-    def test_all_twenty_two_conditions_advance_in_order(self):
+    def test_all_twenty_five_conditions_advance_in_order(self):
         manager = QuestManager(appear_delay_ms=0)
         tick = 0
         manager.start_new_game(current_ticks=tick)
@@ -193,9 +241,9 @@ class QuestSystemTests(unittest.TestCase):
             (QUEST_EVENT_ANIMAL_PEN_BUILT, 1, None),
             (QUEST_EVENT_CATTLE_COUNT_CHANGED, 1, 2),
             (QUEST_EVENT_POND_BUILT, 1, None),
-            (QUEST_EVENT_MARKET_BUILT, 1, None),
             (QUEST_EVENT_TIME_STARTED_BY_KEY, 1, None),
             (None, 1, None),
+            (QUEST_EVENT_CITY_MARKET_OPENED, 1, None),
             (QUEST_EVENT_MILK_SOLD, 1, None),
             (QUEST_EVENT_FIELD_COUNT_CHANGED, 1, 3),
             (QUEST_EVENT_CALENDAR_OPENED, 1, None),
@@ -205,6 +253,9 @@ class QuestSystemTests(unittest.TestCase):
             (QUEST_EVENT_FIELD_SPRAYED, 3, None),
             (QUEST_EVENT_COMBINE_PURCHASED, 1, None),
             (QUEST_EVENT_ALFALFA_HARVESTED, 3, None),
+            (QUEST_EVENT_SEPARATE_CHICKEN_PEN_READY, 1, 1),
+            (QUEST_EVENT_ORCHARD_COUNT_CHANGED, 1, 1),
+            (QUEST_EVENT_CHERRY_TREE_COUNT_CHANGED, 1, 1),
         ]
 
         for index, (event_id, amount, current_value) in enumerate(events):
