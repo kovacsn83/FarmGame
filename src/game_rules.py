@@ -119,7 +119,7 @@ UPGRADES = {
         "price": 5000.00,
         "unlocks": "field_8x8",
         "state_key": "unlock_field_8x8",
-        "requires": None,
+        "requires": "unlock_field_6x6",
         "required_farmhouse_level": 2,
         "tree_column": 2,
         "tree_order": 1,
@@ -156,9 +156,9 @@ UPGRADES = {
         "unlocks": "automated_field_watering",
         "state_key": "automated_field_watering",
         "requires": None,
-        "required_farmhouse_level": 2,
-        "tree_column": 2,
-        "tree_order": 2,
+        "required_farmhouse_level": 1,
+        "tree_column": 1,
+        "tree_order": 4,
     },
     "automated_field_fertilizing": {
         "name": "Automatizált veteményes trágyázás",
@@ -172,7 +172,7 @@ UPGRADES = {
         "requires": None,
         "required_farmhouse_level": 2,
         "tree_column": 2,
-        "tree_order": 3,
+        "tree_order": 4,
     },
     "automated_field_spraying": {
         "name": "Automatizált veteményes permetezés",
@@ -186,7 +186,7 @@ UPGRADES = {
         "requires": None,
         "required_farmhouse_level": 2,
         "tree_column": 2,
-        "tree_order": 4,
+        "tree_order": 5,
     },
     "automated_field_harvesting": {
         "name": "Automatizált veteményes aratás",
@@ -200,7 +200,7 @@ UPGRADES = {
         "requires": None,
         "required_farmhouse_level": 3,
         "tree_column": 3,
-        "tree_order": 1,
+        "tree_order": 4,
     },
     "garage_level_2": {
         "name": "Garázs II.",
@@ -211,7 +211,7 @@ UPGRADES = {
         "requires": None,
         "required_farmhouse_level": 2,
         "tree_column": 2,
-        "tree_order": 5,
+        "tree_order": 2,
     },
     "warehouse_level_2": {
         "name": "Raktár II.",
@@ -222,7 +222,7 @@ UPGRADES = {
         "requires": None,
         "required_farmhouse_level": 2,
         "tree_column": 2,
-        "tree_order": 6,
+        "tree_order": 3,
     },
     "warehouse_level_3": {
         "name": "Raktár III.",
@@ -230,10 +230,10 @@ UPGRADES = {
         "price": 5000.00,
         "unlocks": None,
         "state_key": "warehouse_level_3",
-        "requires": None,
+        "requires": "warehouse_level_2",
         "required_farmhouse_level": 3,
         "tree_column": 3,
-        "tree_order": 4,
+        "tree_order": 3,
     },
     "garage_level_3": {
         "name": "Garázs III.",
@@ -241,10 +241,10 @@ UPGRADES = {
         "price": 6000.00,
         "unlocks": None,
         "state_key": "garage_level_3",
-        "requires": None,
+        "requires": "garage_level_2",
         "required_farmhouse_level": 3,
         "tree_column": 3,
-        "tree_order": 3,
+        "tree_order": 2,
     },
     "processing_plant_level_2": {
         "name": "Feldolgozó üzem II.",
@@ -256,7 +256,7 @@ UPGRADES = {
         "requires": None,
         "required_farmhouse_level": 3,
         "tree_column": 3,
-        "tree_order": 2,
+        "tree_order": 1,
     },
 }
 

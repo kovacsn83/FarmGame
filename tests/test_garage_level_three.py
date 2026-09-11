@@ -23,9 +23,11 @@ class GarageLevelThreeTests(fleet_tests.GarageFleetTests):
     def test_prerequisites_price_value_and_new_garage(self):
         state = self.state(2)
         self.assertFalse(self.economy.purchase_upgrade(state, "garage_level_3"))
+        self.assertTrue(self.economy.purchase_upgrade(state, "garage_level_2"))
+        self.assertFalse(self.economy.purchase_upgrade(state, "garage_level_3"))
         self.house["farmhouse_level"] = 3
         self.assertEqual(get_upgrade_status("garage_level_3", state.purchased_upgrades, 3), "Fejleszthető")
-        previous_positions = [get_garage_parking_position(self.garages[0], i) for i in range(4)]
+        previous_positions = [get_garage_parking_position(self.garages[0], i) for i in range(8)]
         money = self.economy.money
         value = self.economy.calculate_net_farm_value(state)
         self.assertTrue(self.economy.purchase_upgrade(state, "garage_level_3"))
@@ -37,7 +39,7 @@ class GarageLevelThreeTests(fleet_tests.GarageFleetTests):
         self.assertEqual(self.economy.calculate_net_farm_value(state), value)
         self.assertTrue(all(get_garage_capacity(g) == 12 for g in self.garages))
         self.assertEqual(self.manager.fleet_capacity(self.buildings)["capacity"], 36)
-        self.assertEqual(previous_positions, [get_garage_parking_position(self.garages[0], i) for i in range(4)])
+        self.assertEqual(previous_positions, [get_garage_parking_position(self.garages[0], i) for i in range(8)])
         self.assertEqual(len({get_garage_parking_position(self.garages[0], i) for i in range(12)}), 12)
         self.assertFalse(self.economy.purchase_upgrade(state, "garage_level_3"))
         remove_building(self.world, self.buildings, self.garages[-1])

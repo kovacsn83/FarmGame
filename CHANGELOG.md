@@ -2,9 +2,11 @@
 
 ## Unreleased
 
-- A Farmház fejlesztéseinek feloldása mostantól kizárólag a szükséges
-  Farmház-szinttől függ; az azonos szinthez tartozó fejlesztések tetszőleges
-  sorrendben vásárolhatók meg.
+- A Farmház fejlesztései alapvetően a szükséges Farmház-szintnél válnak
+  elérhetővé; a 8×8-as veteményeshez a 6×6-os, a Garázs III.-hoz a Garázs II.,
+  a Raktár III.-hoz pedig a Raktár II. fejlesztés is szükséges.
+- Az automatikus veteményes-locsolás a Farmház I. fejlesztései közé került,
+  a fejlesztési fa pedig csak a valódi előfeltételeket jelöli nyíllal.
 - A játék mentetlen állapot esetén kilépési figyelmeztetést jelenít meg
   „Mentés és kilépés”, „Kilépés mentés nélkül” és „Mégse” lehetőségekkel.
 - A mentésbe kerülő játékmeneti változásokat központi állapotlenyomat követi;

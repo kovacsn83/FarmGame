@@ -141,7 +141,7 @@ class FarmhouseUpgradeUiTests(unittest.TestCase):
 
     def test_locked_and_completed_nodes_ignore_left_click(self):
         self._draw_at((-1, -1))
-        locked = self.panel.upgrade_card_rects["automated_field_watering"]
+        locked = self.panel.upgrade_card_rects["unlock_field_8x8"]
         locked_click = pygame.event.Event(
             pygame.MOUSEBUTTONDOWN,
             {"button": 1, "pos": (locked.left + 8, locked.bottom - 8)},
@@ -179,20 +179,20 @@ class FarmhouseUpgradeUiTests(unittest.TestCase):
             "unlock_field_6x6",
             "automated_animal_watering",
             "automated_animal_feeding",
+            "automated_field_watering",
         ))
         self.assertEqual(columns[1], (
             "unlock_field_8x8",
-            "automated_field_watering",
-            "automated_field_fertilizing",
-            "automated_field_spraying",
             "garage_level_2",
             "warehouse_level_2",
+            "automated_field_fertilizing",
+            "automated_field_spraying",
         ))
         self.assertEqual(columns[2], (
-            "automated_field_harvesting",
             "processing_plant_level_2",
             "garage_level_3",
             "warehouse_level_3",
+            "automated_field_harvesting",
         ))
         for column in columns:
             tops = [self.panel.upgrade_card_rects[item].top for item in column]
@@ -206,7 +206,7 @@ class FarmhouseUpgradeUiTests(unittest.TestCase):
             self.panel.upgrade_card_rects["farmhouse_level_3"].left,
         )
 
-    def test_level_purchase_immediately_unlocks_its_entire_column(self):
+    def test_level_purchase_unlocks_column_except_real_dependencies(self):
         columns = get_upgrade_tree_columns()
         self._draw_at((-1, -1))
         self.assertTrue(all(
@@ -216,21 +216,24 @@ class FarmhouseUpgradeUiTests(unittest.TestCase):
 
         self.panel.building["farmhouse_level"] = 2
         self._draw_at((-1, -1))
-        self.assertTrue(all(
-            upgrade_id in self.panel.upgrade_clickable_ids
-            for upgrade_id in columns[1]
-        ))
+        self.assertNotIn("unlock_field_8x8", self.panel.upgrade_clickable_ids)
+        self.assertTrue(all(upgrade_id in self.panel.upgrade_clickable_ids for upgrade_id in (
+            "garage_level_2", "warehouse_level_2",
+            "automated_field_fertilizing", "automated_field_spraying",
+        )))
 
         self.panel.building["farmhouse_level"] = 3
         self._draw_at((-1, -1))
-        self.assertTrue(all(
-            upgrade_id in self.panel.upgrade_clickable_ids
-            for upgrade_id in columns[2]
-        ))
+        self.assertTrue(all(upgrade_id in self.panel.upgrade_clickable_ids for upgrade_id in (
+            "processing_plant_level_2", "automated_field_harvesting",
+        )))
+        self.assertNotIn("garage_level_3", self.panel.upgrade_clickable_ids)
+        self.assertNotIn("warehouse_level_3", self.panel.upgrade_clickable_ids)
 
     def test_warehouse_third_level_only_left_click_selects(self):
         upgrade_id = "warehouse_level_3"
         self.panel.building["farmhouse_level"] = 3
+        self.state.purchased_upgrades.add("warehouse_level_2")
         self._draw_at((-1, -1))
         self.assertIn(upgrade_id, self.panel.upgrade_clickable_ids)
         card = self.panel.upgrade_card_rects[upgrade_id]
@@ -248,7 +251,7 @@ class FarmhouseUpgradeUiTests(unittest.TestCase):
 
     def test_locked_node_is_visible_but_not_clickable(self):
         self._draw_at((-1, -1))
-        upgrade_id = "automated_field_watering"
+        upgrade_id = "unlock_field_8x8"
         self.assertIn(upgrade_id, self.panel.upgrade_card_rects)
         self.assertNotIn(upgrade_id, self.panel.upgrade_clickable_ids)
         card = self.panel.upgrade_card_rects[upgrade_id]
@@ -256,6 +259,7 @@ class FarmhouseUpgradeUiTests(unittest.TestCase):
         self.assertIsNone(self.panel.take_upgrade_selection())
 
         self.panel.building["farmhouse_level"] = 2
+        self.state.purchased_upgrades.add("unlock_field_6x6")
         self._draw_at((-1, -1))
         self.assertIn(upgrade_id, self.panel.upgrade_clickable_ids)
 
@@ -277,9 +281,9 @@ class FarmhouseUpgradeUiTests(unittest.TestCase):
         self._draw_at((-1, -1))
         self.assertIn(upgrade_id, self.panel.upgrade_clickable_ids)
         card = self.panel.upgrade_card_rects[upgrade_id]
-        parent = self.panel.upgrade_card_rects["automated_field_harvesting"]
-        self.assertEqual(card.centerx, parent.centerx)
-        self.assertGreater(card.top, parent.bottom)
+        harvesting = self.panel.upgrade_card_rects["automated_field_harvesting"]
+        self.assertEqual(card.centerx, harvesting.centerx)
+        self.assertLess(card.top, harvesting.top)
         info = self.panel.upgrade_info_rects[upgrade_id]
         with patch("pygame.mouse.get_pos", return_value=info.center), patch("ui.draw_tooltip") as tooltip:
             self.panel.draw(self.screen, self.font, self.state)
