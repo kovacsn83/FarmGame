@@ -5,6 +5,8 @@
 - Új haszonállatként bekerült a Kecske: heti 1 Lucernát fogyaszt, és
   1,5 éves kortól vágható.
 - Új raktározható és a városi Piacon értékesíthető termék a Kecskehús.
+- A Kecske saját, procedurális felülnézeti szürke grafikát és apró szarvakat
+  kapott.
 
 ## 0.1.2 – 2026-09-11
 

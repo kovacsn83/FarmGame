@@ -14,6 +14,11 @@ from animal_automation import (
     AUTOMATED_FEEDING_UPGRADE, AUTOMATED_WATERING_UPGRADE,
     run_weekly_animal_supply_automation,
 )
+from animal_renderer import (
+    ANIMAL_RENDERERS, CATTLE_DIRECTIONS, CATTLE_SPRITE_SIZE,
+    GOAT_BODY_COLOR, GOAT_HORN_COLOR, _get_goat_sprite,
+    clear_animal_render_cache,
+)
 from animal_troughs import FOOD_STOCK_KEY, WATER_STOCK_KEY
 from animals import (
     ANIMAL_TYPES, GOAT_MEAT_PER_CYCLE, GOAT_SLAUGHTER_AGE_WEEKS,
@@ -179,6 +184,34 @@ class GoatLifecycleTests(unittest.TestCase):
         production = goat["periodic_products"]["goat_meat"]
         self.assertEqual(production["interval_weeks"], 78)
         self.assertEqual(production["amount"], 10)
+
+    def test_procedural_goat_renderer_has_gray_body_horns_and_directions(self):
+        clear_animal_render_cache()
+        goat = self._goat()
+        self.assertIn("goat", ANIMAL_RENDERERS)
+        sprites = {
+            direction: _get_goat_sprite(
+                {**goat, "facing_direction": direction}, direction,
+            )
+            for direction in CATTLE_DIRECTIONS
+        }
+        self.assertTrue(all(
+            sprite.get_size() == (CATTLE_SPRITE_SIZE, CATTLE_SPRITE_SIZE)
+            for sprite in sprites.values()
+        ))
+        canonical = sprites["up"]
+        opaque_colors = {
+            pixel[:3]
+            for y in range(CATTLE_SPRITE_SIZE)
+            for x in range(CATTLE_SPRITE_SIZE)
+            if (pixel := canonical.get_at((x, y))).a
+        }
+        self.assertTrue(any(
+            all(abs(channel - reference) <= 3 for channel, reference in zip(color, GOAT_BODY_COLOR))
+            for color in opaque_colors
+        ))
+        self.assertIn(GOAT_HORN_COLOR, opaque_colors)
+        self.assertNotEqual(sprites["up"].get_view("1").raw, sprites["right"].get_view("1").raw)
 
 
 if __name__ == "__main__":

@@ -50,9 +50,9 @@ class AnimalMovementObstacleTests(unittest.TestCase):
             "facing_direction": "down",
         }
 
-    def test_both_species_reject_both_trough_tiles(self):
+    def test_all_species_reject_both_trough_tiles(self):
         forbidden = get_forbidden_movement_rects([self.pen])
-        for animal_type in ("cattle", "pig", "chicken"):
+        for animal_type in ("cattle", "pig", "chicken", "goat"):
             with self.subTest(animal_type=animal_type, trough="food"):
                 self.assertTrue(animal_position_is_forbidden(10, 10, forbidden))
                 self.assertIsNotNone(get_animal_placement_error(

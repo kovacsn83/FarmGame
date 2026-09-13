@@ -25,10 +25,17 @@ CHICKEN_BODY_COLOR = (239, 228, 190)
 CHICKEN_BODY_BORDER_COLOR = (151, 132, 91)
 CHICKEN_BEAK_COLOR = (226, 174, 48)
 CHICKEN_COMB_COLOR = (185, 58, 48)
+GOAT_BODY_COLOR = (150, 150, 145)
+GOAT_HEAD_COLOR = (142, 142, 138)
+GOAT_BODY_BORDER_COLOR = (83, 84, 81)
+GOAT_LEG_COLOR = (71, 72, 70)
+GOAT_HORN_COLOR = (91, 82, 70)
+GOAT_NOSE_COLOR = (57, 58, 56)
 
 _CATTLE_SPRITE_CACHE = {}
 _PIG_SPRITE_CACHE = {}
 _CHICKEN_SPRITE_CACHE = {}
+_GOAT_SPRITE_CACHE = {}
 
 
 def _stable_value(value, salt=0):
@@ -65,6 +72,15 @@ def get_pig_visual_variant(animal, fallback_index=0):
     return {
         "key": value,
         "body_shift": value % 9 - 4,
+    }
+
+
+def get_goat_visual_variant(animal, fallback_index=0):
+    """A szürke kecskéknek stabil, visszafogott egyedi árnyalatot ad."""
+    value = _get_animal_visual_value(animal, fallback_index)
+    return {
+        "key": value,
+        "body_shift": value % 7 - 3,
     }
 
 
@@ -239,10 +255,68 @@ def draw_chicken(screen, animal, fallback_index=0):
     screen.blit(sprite, sprite.get_rect(center=(round(center[0]), round(center[1]))))
 
 
+def _create_goat_sprite(variant, direction):
+    """Kis, szürke, szarvakkal felismerhető felülnézeti Kecskét rajzol."""
+    canonical = pygame.Surface(
+        (CATTLE_SPRITE_SIZE, CATTLE_SPRITE_SIZE), pygame.SRCALPHA,
+    )
+    body_color = _shift_color(GOAT_BODY_COLOR, variant["body_shift"])
+    head_color = _shift_color(GOAT_HEAD_COLOR, variant["body_shift"])
+
+    # Négy rövid láb és egy apró farok alkotja a külső sziluettet.
+    for x in (5, 13):
+        for y in (8, 15):
+            pygame.draw.rect(canonical, GOAT_LEG_COLOR, (x, y, 2, 3))
+    pygame.draw.polygon(canonical, GOAT_BODY_BORDER_COLOR, ((9, 17), (11, 17), (10, 20)))
+    pygame.draw.polygon(canonical, body_color, ((9, 17), (11, 17), (10, 19)))
+
+    # Keskenyebb, hosszúkás test különíti el a tömzsi Sertéstől.
+    pygame.draw.rect(
+        canonical, GOAT_BODY_BORDER_COLOR, (4, 5, 12, 14), border_radius=5,
+    )
+    pygame.draw.rect(canonical, body_color, (5, 6, 10, 12), border_radius=4)
+
+    # A fej mellett két fül, felette két rövid barnásszürke szarv látható.
+    pygame.draw.polygon(canonical, GOAT_BODY_BORDER_COLOR, ((6, 5), (3, 4), (6, 3)))
+    pygame.draw.polygon(canonical, GOAT_BODY_BORDER_COLOR, ((14, 5), (17, 4), (14, 3)))
+    pygame.draw.line(canonical, GOAT_HORN_COLOR, (7, 3), (6, 0), 2)
+    pygame.draw.line(canonical, GOAT_HORN_COLOR, (12, 3), (13, 0), 2)
+    pygame.draw.ellipse(canonical, GOAT_BODY_BORDER_COLOR, (5, 2, 10, 8))
+    pygame.draw.ellipse(canonical, head_color, (6, 3, 8, 6))
+    pygame.draw.rect(canonical, GOAT_NOSE_COLOR, (9, 2, 2, 2))
+    return pygame.transform.rotate(
+        canonical, CATTLE_ROTATION_ANGLES[direction],
+    )
+
+
+def _get_goat_sprite(animal, direction, fallback_index=0):
+    variant = get_goat_visual_variant(animal, fallback_index)
+    key = variant["key"], direction
+    sprite = _GOAT_SPRITE_CACHE.get(key)
+    if sprite is None:
+        sprite = _create_goat_sprite(variant, direction)
+        if len(_GOAT_SPRITE_CACHE) >= MAX_CATTLE_SPRITE_CACHE_SIZE:
+            _GOAT_SPRITE_CACHE.pop(next(iter(_GOAT_SPRITE_CACHE)))
+        _GOAT_SPRITE_CACHE[key] = sprite
+    return sprite
+
+
+def draw_goat(screen, animal, fallback_index=0):
+    direction = animal.get("facing_direction", "down")
+    if direction not in CATTLE_DIRECTIONS:
+        direction = "down"
+    world_x = animal["col"] * TILE_SIZE + TILE_SIZE // 2
+    world_y = animal["row"] * TILE_SIZE + TILE_SIZE // 2
+    center = world_to_screen(world_x, world_y)
+    sprite = _get_goat_sprite(animal, direction, fallback_index)
+    screen.blit(sprite, sprite.get_rect(center=(round(center[0]), round(center[1]))))
+
+
 ANIMAL_RENDERERS = {
     "cattle": draw_cattle,
     "pig": draw_pig,
     "chicken": draw_chicken,
+    "goat": draw_goat,
 }
 
 
@@ -256,3 +330,4 @@ def clear_animal_render_cache():
     _CATTLE_SPRITE_CACHE.clear()
     _PIG_SPRITE_CACHE.clear()
     _CHICKEN_SPRITE_CACHE.clear()
+    _GOAT_SPRITE_CACHE.clear()
