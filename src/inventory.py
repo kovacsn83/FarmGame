@@ -101,6 +101,12 @@ PRODUCTS = {
         "price": 60.00,
         "income_category": INCOME_LIVESTOCK_SALES,
     },
+    "goat_meat": {
+        "name": "Kecskehús",
+        "marketable": True,
+        "price": 150.00,
+        "income_category": INCOME_LIVESTOCK_SALES,
+    },
 }
 
 

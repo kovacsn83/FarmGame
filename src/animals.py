@@ -42,6 +42,8 @@ PIG_PORK_PER_CYCLE = 10
 CHICKEN_EGGS_PER_WEEK = 1
 CHICKEN_FATTENING_WEEKS = 26
 CHICKEN_MEAT_PER_CYCLE = 6
+GOAT_SLAUGHTER_AGE_WEEKS = 78
+GOAT_MEAT_PER_CYCLE = 10
 SLAUGHTER_STATE_KEY = "slaughter_state"
 SLAUGHTER_WAITING_FOR_STORAGE = "waiting_for_storage"
 
@@ -118,6 +120,26 @@ ANIMAL_TYPES = {
         },
         "weekly_feed": {
             "item": "wheat",
+            "amount": 1,
+        },
+    },
+    "goat": {
+        "name": "Kecske",
+        "purchase_price": 175.00,
+        "width": 1,
+        "height": 1,
+        "color": (190, 174, 142),
+        "periodic_products": {
+            "goat_meat": {
+                "amount": GOAT_MEAT_PER_CYCLE,
+                "interval_weeks": GOAT_SLAUGHTER_AGE_WEEKS,
+                "counter_key": "age_weeks",
+                "progress_label": "Kor",
+                "remove_animal_after_production": True,
+            },
+        },
+        "weekly_feed": {
+            "item": "alfalfa",
             "amount": 1,
         },
     },

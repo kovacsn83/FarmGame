@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Új haszonállatként bekerült a Kecske: heti 1 Lucernát fogyaszt, és
+  1,5 éves kortól vágható.
+- Új raktározható és a városi Piacon értékesíthető termék a Kecskehús.
+
 ## 0.1.2 – 2026-09-11
 
 - A 0.1.2 kiadás lezárja a farmi Piac épület kivezetését: a piaci szolgáltatás

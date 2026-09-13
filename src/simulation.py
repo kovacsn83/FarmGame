@@ -25,7 +25,8 @@ from field_automation import (
 )
 from bank import BankSystem, LOAN_INTEREST_PERCENT
 from animals import (
-    get_animal_placement_error, get_animals_in_pen_group, get_pen_group_tiles,
+    ANIMAL_TYPES, get_animal_placement_error, get_animals_in_pen_group,
+    get_pen_group_tiles,
     purchase_and_place_animal, run_weekly_animal_cycle,
 )
 from buildings import (
@@ -466,7 +467,7 @@ class SimulationBot:
                         animal_type = get_animals_in_pen_group(
                             self.animals, group,
                         )[0]["type"]
-                        feed = "alfalfa" if animal_type == "cattle" else "corn"
+                        feed = ANIMAL_TYPES[animal_type]["weekly_feed"]["item"]
                         cost = max(0.0, before_money - self.economy.money)
                         bought = round(
                             cost / get_automatic_purchase_unit_cost(
