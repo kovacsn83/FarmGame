@@ -176,6 +176,9 @@ CROP_CARD_HOVER = (220, 230, 210)
 ANIMAL_HUSBANDRY_PANEL_WIDTH = 440
 ANIMAL_CARD_HEIGHT = 82
 ANIMAL_CARD_GAP = 12
+ANIMAL_HUSBANDRY_DISPLAY_ORDER = (
+    "cattle", "goat", "pig", "chicken",
+)
 
 MARKET_PANEL_WIDTH = 760
 MARKET_PANEL_MAX_HEIGHT = 700
@@ -2997,6 +3000,16 @@ class AnimalHusbandryPanel(SelectionPanel):
     def __init__(self):
         super().__init__(ANIMAL_HUSBANDRY_PANEL_WIDTH, 170)
 
+    @staticmethod
+    def _ordered_animal_types():
+        """A popup tudatos sorrendje után az új állatokat is elérhetővé teszi."""
+        return (
+            *(animal_type for animal_type in ANIMAL_HUSBANDRY_DISPLAY_ORDER
+              if animal_type in ANIMAL_TYPES),
+            *(animal_type for animal_type in ANIMAL_TYPES
+              if animal_type not in ANIMAL_HUSBANDRY_DISPLAY_ORDER),
+        )
+
     def _update_layout(self):
         animal_count = max(1, len(ANIMAL_TYPES))
         self.rect.width = responsive_panel_width(
@@ -3010,7 +3023,7 @@ class AnimalHusbandryPanel(SelectionPanel):
 
         self.card_rects = {}
         card_y = self.rect.y + 58
-        for animal_type in ANIMAL_TYPES:
+        for animal_type in self._ordered_animal_types():
             self.card_rects[animal_type] = pygame.Rect(
                 self.rect.x + INFO_PANEL_PADDING,
                 card_y,
@@ -3030,7 +3043,8 @@ class AnimalHusbandryPanel(SelectionPanel):
             x, self.rect.y + INFO_PANEL_PADDING,
         )
         mouse_position = pygame.mouse.get_pos()
-        for animal_type, animal_data in ANIMAL_TYPES.items():
+        for animal_type in self._ordered_animal_types():
+            animal_data = ANIMAL_TYPES[animal_type]
             card_rect = self.card_rects[animal_type]
             card_color = (
                 CROP_CARD_HOVER

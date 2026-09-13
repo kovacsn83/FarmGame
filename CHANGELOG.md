@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Az Állattartás popup sorrendje most Szarvasmarha, Kecske, Sertés, Csirke.
 - Finomhangolva a húsok piaci ára: Marhahús $140, Kecskehús $120,
   Sertéshús $100, Csirkehús $70 darabonként.
 - Javítva a pénzügyi előzmények betöltési sorrendje: egy későbbi évből
