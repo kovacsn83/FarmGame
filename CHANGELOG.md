@@ -7,6 +7,8 @@
 - Új raktározható és a városi Piacon értékesíthető termék a Kecskehús.
 - A Kecske saját, procedurális felülnézeti szürke grafikát és apró szarvakat
   kapott.
+- A megfelelően etetett és itatott Kecske hetente 1 Kecsketejet termel; a
+  Kecsketej a városi Piacon darabonként $11-ért értékesíthető.
 
 ## 0.1.2 – 2026-09-11
 

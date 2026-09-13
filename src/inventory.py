@@ -107,6 +107,12 @@ PRODUCTS = {
         "price": 150.00,
         "income_category": INCOME_LIVESTOCK_SALES,
     },
+    "goat_milk": {
+        "name": "Kecsketej",
+        "marketable": True,
+        "price": 11.00,
+        "income_category": INCOME_LIVESTOCK_SALES,
+    },
 }
 
 

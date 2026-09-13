@@ -44,6 +44,7 @@ CHICKEN_FATTENING_WEEKS = 26
 CHICKEN_MEAT_PER_CYCLE = 6
 GOAT_SLAUGHTER_AGE_WEEKS = 78
 GOAT_MEAT_PER_CYCLE = 10
+GOAT_MILK_PER_WEEK = 1
 SLAUGHTER_STATE_KEY = "slaughter_state"
 SLAUGHTER_WAITING_FOR_STORAGE = "waiting_for_storage"
 
@@ -129,6 +130,12 @@ ANIMAL_TYPES = {
         "width": 1,
         "height": 1,
         "color": (190, 174, 142),
+        "weekly_products": {
+            "goat_milk": GOAT_MILK_PER_WEEK,
+        },
+        "weekly_product_tooltips": {
+            "goat_milk": "Heti kecsketejtermelés",
+        },
         "periodic_products": {
             "goat_meat": {
                 "amount": GOAT_MEAT_PER_CYCLE,

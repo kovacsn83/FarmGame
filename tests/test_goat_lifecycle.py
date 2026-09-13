@@ -21,7 +21,8 @@ from animal_renderer import (
 )
 from animal_troughs import FOOD_STOCK_KEY, WATER_STOCK_KEY
 from animals import (
-    ANIMAL_TYPES, GOAT_MEAT_PER_CYCLE, GOAT_SLAUGHTER_AGE_WEEKS,
+    ANIMAL_TYPES, GOAT_MEAT_PER_CYCLE, GOAT_MILK_PER_WEEK,
+    GOAT_SLAUGHTER_AGE_WEEKS,
     purchase_and_place_animal, run_weekly_animal_cycle,
 )
 from economy import Economy
@@ -86,6 +87,7 @@ class GoatLifecycleTests(unittest.TestCase):
     def test_one_and_ten_goats_consume_one_alfalfa_each_and_water(self):
         for count in (1, 10):
             with self.subTest(count=count):
+                self.warehouse["inventory"].clear()
                 animals = [self._goat(index) for index in range(count)]
                 self.pen[FOOD_STOCK_KEY] = count
                 self.pen[WATER_STOCK_KEY] = count
@@ -93,6 +95,23 @@ class GoatLifecycleTests(unittest.TestCase):
                 self.assertEqual(self.pen[FOOD_STOCK_KEY], 0)
                 self.assertEqual(self.pen[WATER_STOCK_KEY], 0)
                 self.assertTrue(all(goat["age_weeks"] == 1 for goat in animals))
+                self.assertEqual(
+                    self.warehouse["inventory"]["goat_milk"],
+                    count * GOAT_MILK_PER_WEEK,
+                )
+
+    def test_goat_produces_no_milk_without_both_food_and_water(self):
+        for food, water in ((0, 1), (1, 0), (0, 0)):
+            with self.subTest(food=food, water=water):
+                self.warehouse["inventory"].clear()
+                self.pen[FOOD_STOCK_KEY] = food
+                self.pen[WATER_STOCK_KEY] = water
+                goat = self._goat()
+                run_weekly_animal_cycle([goat], self.buildings, economy=None)
+                self.assertEqual(
+                    self.warehouse["inventory"].get("goat_milk", 0), 0,
+                )
+                self.assertEqual(goat["age_weeks"], 0)
 
     def test_automation_dispatches_feed_and_water_for_goats(self):
         vehicles = RecordingVehicleManager()
@@ -130,8 +149,20 @@ class GoatLifecycleTests(unittest.TestCase):
         self.assertTrue(economy.sell_item(self.buildings, "goat_meat"))
         self.assertEqual(economy.money, 1500)
 
+    def test_goat_milk_is_marketable_for_eleven_dollars(self):
+        self.assertEqual(get_inventory_item_data("goat_milk")["price"], 11)
+        self.assertIn("goat_milk", get_marketable_item_ids())
+        self.warehouse["inventory"]["goat_milk"] = 4
+        economy = Economy(0)
+        self.assertTrue(economy.sell_item(self.buildings, "goat_milk"))
+        self.assertEqual(economy.money, 44)
+        summary = economy.get_financial_summary(52)
+        self.assertEqual(
+            summary["income"]["livestock_sales"]["items"]["goat_milk"], 44,
+        )
+
     def test_goat_and_meat_are_included_once_in_farm_value(self):
-        self.warehouse["inventory"]["goat_meat"] = 10
+        self.warehouse["inventory"].update({"goat_meat": 10, "goat_milk": 3})
         economy = Economy(0)
         state = GameState(
             [[0]], [], self.buildings, economy, GameTime(start_ticks=0),
@@ -139,10 +170,10 @@ class GoatLifecycleTests(unittest.TestCase):
         )
         breakdown = economy.get_farm_value_breakdown(state)
         self.assertEqual(breakdown["animals"], 175)
-        self.assertEqual(breakdown["warehouse_inventory"], 1500)
+        self.assertEqual(breakdown["warehouse_inventory"], 1533)
 
     def test_save_load_preserves_goat_and_meat(self):
-        self.warehouse["inventory"]["goat_meat"] = 7
+        self.warehouse["inventory"].update({"goat_meat": 7, "goat_milk": 5})
         world = [[GRASS] * 20 for _ in range(20)]
         for building in self.buildings:
             for row in range(building["row"], building["row"] + building["height"]):
@@ -163,6 +194,9 @@ class GoatLifecycleTests(unittest.TestCase):
         self.assertEqual(
             state.buildings[1]["inventory"]["goat_meat"], 7,
         )
+        self.assertEqual(
+            state.buildings[1]["inventory"]["goat_milk"], 5,
+        )
 
     def test_old_save_migration_initializes_goat_meat_without_adding_goats(self):
         old_data = {
@@ -176,11 +210,15 @@ class GoatLifecycleTests(unittest.TestCase):
         self.assertEqual(
             old_data["buildings"][0]["inventory"]["goat_meat"], 0,
         )
+        self.assertEqual(
+            old_data["buildings"][0]["inventory"]["goat_milk"], 0,
+        )
 
     def test_catalog_uses_exact_requested_balance(self):
         goat = ANIMAL_TYPES["goat"]
         self.assertEqual(goat["purchase_price"], 175)
         self.assertEqual(goat["weekly_feed"], {"item": "alfalfa", "amount": 1})
+        self.assertEqual(goat["weekly_products"], {"goat_milk": 1})
         production = goat["periodic_products"]["goat_meat"]
         self.assertEqual(production["interval_weeks"], 78)
         self.assertEqual(production["amount"], 10)
