@@ -141,13 +141,13 @@ class GoatLifecycleTests(unittest.TestCase):
         )
 
     def test_goat_meat_is_urban_market_item_but_not_restaurant_item(self):
-        self.assertEqual(get_inventory_item_data("goat_meat")["price"], 150)
+        self.assertEqual(get_inventory_item_data("goat_meat")["price"], 120)
         self.assertIn("goat_meat", get_marketable_item_ids())
         self.assertNotIn("goat_meat", get_restaurant_sellable_item_ids())
         self.warehouse["inventory"]["goat_meat"] = 10
         economy = Economy(0)
         self.assertTrue(economy.sell_item(self.buildings, "goat_meat"))
-        self.assertEqual(economy.money, 1500)
+        self.assertEqual(economy.money, 1200)
 
     def test_goat_milk_is_marketable_for_eleven_dollars(self):
         self.assertEqual(get_inventory_item_data("goat_milk")["price"], 11)
@@ -170,7 +170,7 @@ class GoatLifecycleTests(unittest.TestCase):
         )
         breakdown = economy.get_farm_value_breakdown(state)
         self.assertEqual(breakdown["animals"], 175)
-        self.assertEqual(breakdown["warehouse_inventory"], 1533)
+        self.assertEqual(breakdown["warehouse_inventory"], 1233)
 
     def test_save_load_preserves_goat_and_meat(self):
         self.warehouse["inventory"].update({"goat_meat": 7, "goat_milk": 5})

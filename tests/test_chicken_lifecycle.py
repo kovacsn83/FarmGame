@@ -168,7 +168,7 @@ class ChickenLifecycleTests(unittest.TestCase):
     def test_egg_and_chicken_meat_are_marketable_at_catalog_prices(self):
         self.assertEqual(get_inventory_item_data("egg")["price"], 6.00)
         self.assertEqual(
-            get_inventory_item_data("chicken_meat")["price"], 60.00,
+            get_inventory_item_data("chicken_meat")["price"], 70.00,
         )
         self.assertIn("egg", get_marketable_item_ids())
         self.assertIn("chicken_meat", get_marketable_item_ids())
@@ -177,12 +177,12 @@ class ChickenLifecycleTests(unittest.TestCase):
         economy = Economy(starting_money=0)
         self.assertTrue(economy.sell_item(self.buildings, "egg"))
         self.assertTrue(economy.sell_item(self.buildings, "chicken_meat"))
-        self.assertEqual(economy.money, 372)
+        self.assertEqual(economy.money, 432)
         summary = economy.get_financial_summary(52)
-        self.assertEqual(summary["income"]["livestock_sales"]["total"], 372)
+        self.assertEqual(summary["income"]["livestock_sales"]["total"], 432)
         self.assertEqual(
             summary["income"]["livestock_sales"]["items"]["chicken_meat"],
-            360,
+            420,
         )
 
     def test_tooltip_shows_age_egg_rate_and_missing_supply(self):

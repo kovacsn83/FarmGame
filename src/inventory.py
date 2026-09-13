@@ -86,7 +86,7 @@ PRODUCTS = {
     "beef": {
         "name": "Marhahús",
         "marketable": True,
-        "price": 125.00,
+        "price": 140.00,
         "income_category": INCOME_LIVESTOCK_SALES,
     },
     "egg": {
@@ -98,13 +98,13 @@ PRODUCTS = {
     "chicken_meat": {
         "name": "Csirkehús",
         "marketable": True,
-        "price": 60.00,
+        "price": 70.00,
         "income_category": INCOME_LIVESTOCK_SALES,
     },
     "goat_meat": {
         "name": "Kecskehús",
         "marketable": True,
-        "price": 150.00,
+        "price": 120.00,
         "income_category": INCOME_LIVESTOCK_SALES,
     },
     "goat_milk": {

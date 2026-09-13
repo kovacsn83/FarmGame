@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Finomhangolva a húsok piaci ára: Marhahús $140, Kecskehús $120,
+  Sertéshús $100, Csirkehús $70 darabonként.
 - Javítva a pénzügyi előzmények betöltési sorrendje: egy későbbi évből
   korábbi mentésbe visszatérve sem törlődnek tévesen az összesítő adatai.
 

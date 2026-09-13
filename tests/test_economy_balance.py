@@ -150,10 +150,10 @@ class EconomyBalanceTests(unittest.TestCase):
             for entry in get_logger().entries
         ))
 
-    def test_beef_sale_uses_hundred_twenty_five_dollar_catalog_price(self):
+    def test_beef_sale_uses_hundred_forty_dollar_catalog_price(self):
         beef_data = get_inventory_item_data("beef")
         self.assertTrue(beef_data["marketable"])
-        self.assertEqual(beef_data["price"], 125.00)
+        self.assertEqual(beef_data["price"], 140.00)
         self.assertIn("beef", get_marketable_item_ids())
 
         world = [[GRASS for _ in range(20)] for _ in range(20)]
@@ -163,7 +163,7 @@ class EconomyBalanceTests(unittest.TestCase):
         economy = Economy(starting_money=0)
 
         self.assertTrue(economy.sell_item(buildings, "beef"))
-        self.assertEqual(economy.money, 1250.00)
+        self.assertEqual(economy.money, 1400.00)
         self.assertEqual(warehouse["inventory"]["beef"], 0)
 
     def test_manure_sale_uses_three_dollar_catalog_price(self):
