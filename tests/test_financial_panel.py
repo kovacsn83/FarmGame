@@ -15,7 +15,7 @@ import pygame
 from economy import Economy
 from financial_history import (
     EXPENSE_CONSTRUCTION, EXPENSE_UPGRADE, INCOME_CROP_SALES,
-    INCOME_QUEST_REWARD,
+    INCOME_LIVESTOCK_SALES, INCOME_QUEST_REWARD,
 )
 from screen_layout import set_screen_size
 from ui import FinancialSummaryPanel
@@ -69,6 +69,30 @@ class FinancialSummaryPanelTests(unittest.TestCase):
             ("detail", "  6x6-os veteményes", 2000),
             rows,
         )
+
+    def test_livestock_sale_details_use_the_requested_semantic_order(self):
+        scrambled = (
+            "manure", "egg", "goat_milk", "milk",
+            "chicken_meat", "pork", "goat_meat", "beef",
+        )
+        for amount, item_id in enumerate(scrambled, start=1):
+            self.economy.record_income(
+                INCOME_LIVESTOCK_SALES, amount, item_id,
+            )
+        summary = self.economy.get_financial_summary(52)
+        rows = self.panel._column_rows(summary, "income")
+        heading_index = rows.index(next(
+            row for row in rows
+            if row[1] == "Állati termékek értékesítése"
+        ))
+        detail_labels = [
+            row[1].strip()
+            for row in rows[heading_index + 1:heading_index + 9]
+        ]
+        self.assertEqual(detail_labels, [
+            "Marhahús", "Kecskehús", "Sertéshús", "Csirkehús",
+            "Tej", "Kecsketej", "Tojás", "Trágya",
+        ])
 
     def test_totals_are_kept_in_their_own_columns(self):
         summary = self.economy.get_financial_summary(52)

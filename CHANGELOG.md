@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- A Pénzügyi összesítő az állati termékértékesítéseket rendezett sorrendben,
+  a húsféléket, tejtermékeket, tojást és trágyát csoportosítva jeleníti meg.
 - Az Állattartás popup sorrendje most Szarvasmarha, Kecske, Sertés, Csirke.
 - Finomhangolva a húsok piaci ára: Marhahús $140, Kecskehús $120,
   Sertéshús $100, Csirkehús $70 darabonként.

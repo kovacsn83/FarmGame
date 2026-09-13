@@ -1333,6 +1333,10 @@ class FinancialSummaryPanel(PopupWindow):
         (INCOME_LOAN, "Felvett hitel"),
         (INCOME_QUEST_REWARD, "Quest jutalmak"),
     )
+    LIVESTOCK_SALES_DISPLAY_ORDER = (
+        "beef", "goat_meat", "pork", "chicken_meat",
+        "milk", "goat_milk", "egg", "manure",
+    )
     EXPENSE_LABELS = (
         (EXPENSE_MAINTENANCE, "Fenntartási költségek"),
         (EXPENSE_SHIPPING, "Szállítási költségek"),
@@ -1440,7 +1444,21 @@ class FinancialSummaryPanel(PopupWindow):
                 category_id, {"total": 0, "items": {}},
             )
             rows.append((transaction_type, label, data["total"]))
-            for item_id, amount in data["items"].items():
+            items = data["items"]
+            if (
+                    transaction_type == "income"
+                    and category_id == INCOME_LIVESTOCK_SALES
+            ):
+                ordered_item_ids = (
+                    *(item_id for item_id in self.LIVESTOCK_SALES_DISPLAY_ORDER
+                      if item_id in items),
+                    *(item_id for item_id in items
+                      if item_id not in self.LIVESTOCK_SALES_DISPLAY_ORDER),
+                )
+            else:
+                ordered_item_ids = items
+            for item_id in ordered_item_ids:
+                amount = items[item_id]
                 rows.append((
                     "detail", f"  {self._subcategory_name(item_id)}", amount,
                 ))
