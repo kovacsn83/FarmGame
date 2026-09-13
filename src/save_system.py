@@ -1174,10 +1174,6 @@ def _apply_game_data(game_state, data):
             game_state.buildings, game_state.animals,
         )
     game_state.economy.money = float(data["money"])
-    game_state.economy.load_financial_history(data.get("financial_history", []))
-    bank_system = getattr(game_state, "bank_system", None)
-    if bank_system is not None:
-        bank_system.load_save_record(data.get("bank"))
     # A régi `day` mező 1-től induló értékét a GameTime kompatibilitási
     # tulajdonsága alakítja át a belső, 0-tól induló eltelt hetekre.
     game_state.game_time.day = data["day"]
@@ -1190,6 +1186,13 @@ def _apply_game_data(game_state, data):
     # A mező opcionális: a korábbi mentések biztonságosan a hét elejéről
     # folytatódnak, az új mentések pedig pontosan a mentett részprogresszről.
     game_state.game_time.restore_week_progress(data.get("week_progress", 0.0))
+    # A pénzügyi előzmények 156 hetes megőrzési ablaka mindig a betöltött
+    # mentés saját idejéhez igazodjon. Ha ezt a játékidő előtt végeznénk el,
+    # egy későbbi játékállásból korábbiba töltve érvényes tételek vesznének el.
+    game_state.economy.load_financial_history(data.get("financial_history", []))
+    bank_system = getattr(game_state, "bank_system", None)
+    if bank_system is not None:
+        bank_system.load_save_record(data.get("bank"))
     challenge_manager = getattr(game_state, "challenge_manager", None)
     if challenge_manager is not None:
         challenge_manager.load_save_record(

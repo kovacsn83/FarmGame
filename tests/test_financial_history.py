@@ -66,6 +66,25 @@ class FinancialHistoryTests(unittest.TestCase):
             loaded.economy.get_financial_summary()["income_total"], 75,
         )
 
+    def test_loading_older_game_from_later_game_keeps_saved_history(self):
+        original = SimulationBot(41)
+        original.state.game_time.elapsed_weeks = 100
+        original.economy.record_transaction(
+            "income", INCOME_CROP_SALES, 125, "wheat", week=99,
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "older_finance_save.json"
+            self.assertTrue(save_game(original.state, path))
+            loaded = SimulationBot(42)
+            loaded.state.game_time.elapsed_weeks = 800
+            self.assertTrue(load_game(loaded.state, path))
+
+        self.assertEqual(loaded.state.game_time.elapsed_weeks, 100)
+        self.assertEqual(len(loaded.economy.financial_history), 1)
+        self.assertEqual(
+            loaded.economy.get_financial_summary()["income_total"], 125,
+        )
+
     def test_refunded_seed_removes_purchase_costs(self):
         payment = self.economy.reserve_seed([], "wheat")
         self.assertIsNotNone(payment)

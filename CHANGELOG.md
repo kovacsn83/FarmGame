@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Javítva a pénzügyi előzmények betöltési sorrendje: egy későbbi évből
+  korábbi mentésbe visszatérve sem törlődnek tévesen az összesítő adatai.
+
 - Új haszonállatként bekerült a Kecske: heti 1 Lucernát fogyaszt, és
   1,5 éves kortól vágható.
 - Új raktározható és a városi Piacon értékesíthető termék a Kecskehús.
