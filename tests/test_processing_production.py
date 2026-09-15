@@ -246,6 +246,59 @@ class ProcessingProductionTests(unittest.TestCase):
         self.assertEqual(3, plant["processing_batch"]["outputs"]["canned_tomato"])
         self.assertEqual(10000, economy.money)
 
+    def test_orphaned_processing_reservation_is_refunded_and_retried(self):
+        world = [[ROAD for _ in range(40)] for _ in range(40)]
+        garage = {"type": "garage", "row": 2, "col": 2, "width": 4, "height": 4}
+        warehouse = {
+            "type": "warehouse", "row": 2, "col": 12,
+            "width": 5, "height": 4, "capacity": 500,
+            # A korábbi, elveszett feladat létrehozásakor ezt az 5 db-ot már
+            # levonta a rendszer; az árva foglalás helyreállítása adja vissza.
+            "inventory": {"milk": 0},
+        }
+        plant = self._plant()
+        self.assertTrue(select_processing_recipe(plant, "cheese"))
+        plant["processing_in_transit"]["milk"] = 5
+        plant["processing_status"] = "in_transit"
+        buildings = [garage, warehouse, plant]
+        manager = VehicleManager()
+        manager._create_managed_asset(VehicleType.TRACTOR, garage, 0)
+        manager._create_managed_asset(VehicleType.TRAILER, garage, 1)
+        manager.ensure_idle_positions(world, buildings)
+
+        run_weekly_processing_cycle(
+            world, buildings, Economy(), manager, 1, current_ticks=0,
+        )
+
+        self.assertEqual(0, warehouse["inventory"]["milk"])
+        self.assertEqual(5, get_processing_in_transit(plant, "milk"))
+        tasks = manager._all_tasks()
+        self.assertEqual(1, len(tasks))
+        self.assertEqual("milk", tasks[0].cargo_type)
+        self.assertTrue(tasks[0].resource_reserved)
+
+    def test_live_processing_reservation_is_not_recovered(self):
+        world = [[ROAD for _ in range(40)] for _ in range(40)]
+        garage = {"type": "garage", "row": 2, "col": 2, "width": 4, "height": 4}
+        warehouse = {
+            "type": "warehouse", "row": 2, "col": 12,
+            "width": 5, "height": 4, "capacity": 500,
+            "inventory": {"tomato": 5},
+        }
+        plant = self._plant()
+        buildings = [garage, warehouse, plant]
+        manager = VehicleManager()
+        manager._create_managed_asset(VehicleType.TRACTOR, garage, 0)
+        manager._create_managed_asset(VehicleType.TRAILER, garage, 1)
+        manager.ensure_idle_positions(world, buildings)
+        self.assertEqual(5, manager.start_processing_supply(
+            world, buildings, plant, "tomato", 5, current_ticks=0,
+        ))
+
+        self.assertEqual(0, manager.reconcile_processing_deliveries(buildings))
+        self.assertEqual(0, warehouse["inventory"]["tomato"])
+        self.assertEqual(5, get_processing_in_transit(plant, "tomato"))
+
     def test_real_tractor_and_trailer_can_deliver_milk(self):
         world = [[ROAD for _ in range(40)] for _ in range(40)]
         garage = {"type": "garage", "row": 2, "col": 2, "width": 4, "height": 4}

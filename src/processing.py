@@ -369,6 +369,9 @@ def run_weekly_processing_cycle(
         world, buildings, economy, vehicle_manager, elapsed_week,
         current_ticks=None):
     """Minden üzemet egyszer futtat, majd csak a heti hiányt szerzi be."""
+    reconcile = getattr(vehicle_manager, "reconcile_processing_deliveries", None)
+    if reconcile is not None:
+        reconcile(buildings)
     for plant in get_processing_plants(buildings):
         for line in get_processing_lines(plant):
             line["processing_week"] = elapsed_week

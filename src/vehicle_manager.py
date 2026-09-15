@@ -31,7 +31,9 @@ from orchards import (
 )
 from processing import (
     PROCESSING_STATUS_IN_TRANSIT, PROCESSING_STATUS_NO_MONEY,
+    PROCESSING_STATUS_WAITING,
     cancel_processing_delivery,
+    get_processing_plants,
     initialize_processing_plant,
     get_processing_lines,
 )
@@ -1449,6 +1451,55 @@ class VehicleManager:
             vehicle.current_task for vehicle in self.vehicles
             if vehicle.current_task is not None
         )]
+
+    def reconcile_processing_deliveries(self, buildings):
+        """Visszaadja a tényleges fuvar nélküli alapanyag-foglalásokat.
+
+        Egy mentett vagy megszakadt járműfeladat után nem maradhat az üzem
+        végtelen ideig ``in_transit`` állapotban. A még élő feladatok által
+        lefoglalt mennyiséget érintetlenül hagyjuk; csak a különbözet kerül
+        vissza a központi Raktárba, ahonnan a következő heti ciklus új fizikai
+        fuvart indíthat.
+        """
+        reservations = {}
+        for task in self._all_tasks():
+            if (
+                task.task_type == TASK_PROCESSING_SUPPLY
+                and task.resource_reserved
+                and task.status in ("waiting", "active")
+                and task.field in buildings
+                and task.cargo_type is not None
+            ):
+                key = (id(task.field), task.cargo_type)
+                reservations[key] = (
+                    reservations.get(key, 0) + max(0, int(task.resource_amount))
+                )
+
+        recovered = 0
+        for plant in get_processing_plants(buildings):
+            for item_id, recorded_amount in tuple(
+                    plant["processing_in_transit"].items()):
+                recorded_amount = max(0, int(recorded_amount))
+                live_amount = reservations.get((id(plant), item_id), 0)
+                orphaned_amount = max(0, recorded_amount - live_amount)
+                if orphaned_amount <= 0:
+                    continue
+                if not store_item(buildings, item_id, orphaned_amount):
+                    log(
+                        f"{orphaned_amount} db árva feldolgozóüzemi "
+                        "alapanyag-foglalás nem fér vissza a Raktárba.",
+                        "Processing",
+                    )
+                    continue
+                plant["processing_in_transit"][item_id] = live_amount
+                if not any(plant["processing_in_transit"].values()):
+                    plant["processing_status"] = PROCESSING_STATUS_WAITING
+                recovered += orphaned_amount
+                log(
+                    f"{orphaned_amount} db árva feldolgozóüzemi "
+                    "alapanyag-foglalás helyreállítva.", "Processing",
+                )
+        return recovered
 
     def _has_equivalent_task(self, task_type, target):
         return any(

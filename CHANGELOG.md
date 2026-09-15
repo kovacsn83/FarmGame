@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Javítva a Feldolgozó üzem árva alapanyag-foglalása: ha egy mentett vagy
+  megszakadt fuvar feladata már nem létezik, az alapanyag visszakerül a
+  Raktárba, és a következő heti ciklus új fizikai szállítást indíthat.
 - A Pénzügyi összesítő az állati termékértékesítéseket rendezett sorrendben,
   a húsféléket, tejtermékeket, tojást és trágyát csoportosítva jeleníti meg.
 - Az Állattartás popup sorrendje most Szarvasmarha, Kecske, Sertés, Csirke.
