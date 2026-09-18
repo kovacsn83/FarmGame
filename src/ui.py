@@ -26,6 +26,7 @@ from game_rules import (
     is_build_option_unlocked,
 )
 from inventory import (
+    get_grouped_warehouse_inventory,
     get_inventory_item_data, get_inventory_item_ids, get_inventory_item_name,
     get_marketable_item_ids,
 )
@@ -163,6 +164,7 @@ QUEST_LABEL_LINE_GAP = 2
 INFO_PANEL_WIDTH = 360
 INFO_PANEL_PADDING = 20
 INFO_PANEL_ITEM_SPACING = 22
+WAREHOUSE_GROUP_SPACING = 10
 INFO_PANEL_BACKGROUND = (245, 245, 240)
 INFO_PANEL_BORDER = (60, 60, 60)
 INFO_PANEL_SEPARATOR = (140, 140, 140)
@@ -2618,7 +2620,11 @@ class InfoPanel(PopupWindow):
         stored_amount = sum(inventory.values())
         capacity = get_total_capacity(game_state.buildings)
         visible_item_count = max(1, len(inventory))
-        panel_height = 178 + visible_item_count * INFO_PANEL_ITEM_SPACING
+        inventory_groups = get_grouped_warehouse_inventory(inventory)
+        group_spacing = max(0, len(inventory_groups) - 1) * WAREHOUSE_GROUP_SPACING
+        panel_height = (
+            178 + visible_item_count * INFO_PANEL_ITEM_SPACING + group_spacing
+        )
         self.rect.size = (responsive_panel_width(INFO_PANEL_WIDTH), panel_height)
         self.rect.center = get_screen_center()
 
@@ -2648,10 +2654,13 @@ class InfoPanel(PopupWindow):
             self.draw_text(screen, font, "A készlet üres.", x, y)
             return
 
-        for item, amount in inventory.items():
-            item_name = get_inventory_item_name(item)
-            self.draw_text(screen, font, f"{item_name}: {amount}", x, y)
-            y += INFO_PANEL_ITEM_SPACING
+        for group_index, group in enumerate(inventory_groups):
+            if group_index:
+                y += WAREHOUSE_GROUP_SPACING
+            for item, amount in group:
+                item_name = get_inventory_item_name(item)
+                self.draw_text(screen, font, f"{item_name}: {amount}", x, y)
+                y += INFO_PANEL_ITEM_SPACING
 
     def _draw_market(self, screen, font, game_state):
         quotes = {}

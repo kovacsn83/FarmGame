@@ -116,6 +116,15 @@ PRODUCTS = {
 }
 
 
+WAREHOUSE_INVENTORY_GROUPS = (
+    ("wheat", "corn", "tomato", "alfalfa", "hops"),
+    ("beef", "goat_meat", "pork", "chicken_meat"),
+    ("milk", "goat_milk", "egg", "manure"),
+    ("apple", "cherry", "plum"),
+    ("canned_tomato", "cheese", "apple_juice", "mayonnaise"),
+)
+
+
 def get_inventory_item_ids():
     """A raktárban kezelhető összes elem azonosítóit adja vissza."""
     return (*CROPS, *PRODUCTS)
@@ -128,6 +137,35 @@ def get_inventory_item_name(item_id):
     if item_id in PRODUCTS:
         return PRODUCTS[item_id]["name"]
     return item_id.replace("_", " ").capitalize()
+
+
+def get_grouped_warehouse_inventory(inventory):
+    """Tematikus megjelenítési blokkokba rendezi a nem üres készletet."""
+    visible = {
+        item_id: amount
+        for item_id, amount in inventory.items()
+        if amount > 0
+    }
+    groups = []
+    grouped_ids = set()
+    for group_order in WAREHOUSE_INVENTORY_GROUPS:
+        group = [
+            (item_id, visible[item_id])
+            for item_id in group_order
+            if item_id in visible
+        ]
+        if group:
+            groups.append(group)
+            grouped_ids.update(item_id for item_id, _ in group)
+
+    remaining = [
+        (item_id, amount)
+        for item_id, amount in visible.items()
+        if item_id not in grouped_ids
+    ]
+    if remaining:
+        groups.append(remaining)
+    return groups
 
 
 def is_inventory_item(item_id):

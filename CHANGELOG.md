@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- A Raktár készletlistája kategóriacímek nélkül, tematikus blokkokba rendezve
+  jeleníti meg a növényeket, húsokat, állati hozadékokat és gyümölcsöket.
 - A Developer Console új játék és mentésbetöltés után alapértelmezetten rejtve
   marad; szükség esetén továbbra is az F3 billentyűvel nyitható meg.
 - A Lucerna az új év 1. hetében új növekedési és gondozási ciklust kezd;
