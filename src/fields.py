@@ -422,6 +422,7 @@ def can_fertilize_field(
         field.get("crop") in CROPS
         and (
             allow_mature
+            or crop_has_recurring_harvest(field.get("crop"))
             or (
                 crop_has_annual_perennial_cycle(field.get("crop"))
                 and field.get("annual_harvest_state") in ("growing", "ripe")
@@ -486,6 +487,7 @@ def can_spray_field(field, include_task_status=True, allow_mature=False):
         field.get("crop") in CROPS
         and (
             allow_mature
+            or crop_has_recurring_harvest(field.get("crop"))
             or crop_has_annual_perennial_cycle(field.get("crop"))
             or (
                 field.get("growth", 0) < 100

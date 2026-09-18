@@ -103,6 +103,22 @@ class LateHarvestTests(unittest.TestCase):
         self.assertTrue(can_fertilize_field(field))
         self.assertTrue(can_spray_field(field))
 
+    def test_mature_alfalfa_waiting_for_harvest_can_still_be_cared_for(self):
+        field = mature_field("alfalfa", 5, harvest_count=4)
+        field["annual_cycle_year"] = 13
+        field["watered"] = True
+        field["fertilized"] = False
+        field["sprayed"] = False
+
+        self.assertTrue(can_fertilize_field(field))
+        self.assertTrue(can_spray_field(field))
+
+        field["fertilized"] = True
+        field["sprayed"] = True
+
+        self.assertFalse(can_fertilize_field(field))
+        self.assertFalse(can_spray_field(field))
+
     def test_alfalfa_year_reset_happens_only_once(self):
         field = mature_field("alfalfa", 5, harvest_count=4)
         field["annual_cycle_year"] = 1

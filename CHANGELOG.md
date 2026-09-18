@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Az aratási időszakra váró, már érett Lucerna továbbra is trágyázható és
+  permetezhető, ha az adott gondozást még nem kapta meg.
 - A Lucerna telelés előtt elvégzett locsolása, trágyázása és permetezése
   évváltáskor megmarad, miközben a hiányzó gondozások az 1. héttől pótolhatók.
 - A Raktár készletlistája kategóriacímek nélkül, tematikus blokkokba rendezve
