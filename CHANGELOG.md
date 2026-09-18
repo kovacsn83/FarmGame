@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- A Lucerna telelés előtt elvégzett locsolása, trágyázása és permetezése
+  évváltáskor megmarad, miközben a hiányzó gondozások az 1. héttől pótolhatók.
 - A Raktár készletlistája kategóriacímek nélkül, tematikus blokkokba rendezve
   jeleníti meg a növényeket, húsokat, állati hozadékokat és gyümölcsöket.
 - A Developer Console új játék és mentésbetöltés után alapértelmezetten rejtve

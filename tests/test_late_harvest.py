@@ -67,7 +67,7 @@ class LateHarvestTests(unittest.TestCase):
         self.assertEqual(field["missed_harvest_count"], 1)
         self.assertEqual(field["growth"], 0)
 
-    def test_alfalfa_starts_new_care_cycle_in_week_one(self):
+    def test_alfalfa_preserves_winter_care_in_week_one(self):
         field = mature_field("alfalfa", 5, harvest_count=4)
         field["planted_at_week"] = 10
         field["annual_cycle_year"] = 1
@@ -82,9 +82,23 @@ class LateHarvestTests(unittest.TestCase):
         self.assertEqual(1, field["growth_weeks"])
         self.assertEqual(20, field["growth"])
         self.assertFalse(field["harvestable"])
+        self.assertTrue(field["watered"])
+        self.assertTrue(field["fertilized"])
+        self.assertTrue(field["sprayed"])
+        self.assertFalse(can_water_field(field))
+        self.assertFalse(can_fertilize_field(field))
+        self.assertFalse(can_spray_field(field))
+
+    def test_missing_alfalfa_care_is_available_in_week_one(self):
+        field = mature_field("alfalfa", 5, harvest_count=4)
+        field["planted_at_week"] = 10
+        field["annual_cycle_year"] = 1
+
+        grow_crops([field], 52)  # 2. év, 1. hét
+
         self.assertFalse(field["watered"])
         self.assertFalse(field["fertilized"])
-        self.assertFalse(field["sprayed"])
+        self.assertFalse(field.get("sprayed", False))
         self.assertTrue(can_water_field(field))
         self.assertTrue(can_fertilize_field(field))
         self.assertTrue(can_spray_field(field))
@@ -121,12 +135,12 @@ class LateHarvestTests(unittest.TestCase):
         grow_crops([field], 52)
 
         self.assertEqual(2, field["annual_cycle_year"])
-        self.assertFalse(field["watered"])
-        self.assertFalse(field["fertilized"])
-        self.assertFalse(field["sprayed"])
-        self.assertTrue(can_water_field(field))
-        self.assertTrue(can_fertilize_field(field))
-        self.assertTrue(can_spray_field(field))
+        self.assertTrue(field["watered"])
+        self.assertTrue(field["fertilized"])
+        self.assertTrue(field["sprayed"])
+        self.assertFalse(can_water_field(field))
+        self.assertFalse(can_fertilize_field(field))
+        self.assertFalse(can_spray_field(field))
 
     def test_missed_first_tomato_harvest_ends_the_whole_cycle(self):
         field = mature_field("tomato", 9)

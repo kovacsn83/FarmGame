@@ -398,9 +398,9 @@ def synchronize_recurring_crop_year(field, current_elapsed_week):
     field["growth"] = 0
     field["growth_weeks"] = 0
     field["harvestable"] = False
-    field["watered"] = False
-    field["fertilized"] = False
-    field["sprayed"] = False
+    # A telelés alatt már elvégzett gondozás a következő évi első termést
+    # készíti elő, ezért évváltáskor nem veszhet el. A False állapotok is
+    # változatlanok maradnak, így a hiányzó munkák az 1. héttől elvégezhetők.
     next_growth_weeks = get_current_growth_weeks(
         crop_id, field.get("harvest_count", 0),
     )
