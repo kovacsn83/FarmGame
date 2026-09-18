@@ -26,6 +26,19 @@ class DeveloperConsoleInputTests(unittest.TestCase):
         set_screen_size(800, 600)
         self.console = DeveloperConsole(GameLogger(), visible=True)
 
+    def test_console_is_hidden_by_default(self):
+        console = DeveloperConsole(GameLogger())
+
+        self.assertFalse(console.visible)
+        self.assertEqual(console.rect.height, 0)
+
+    def test_f3_opens_console_from_default_hidden_state(self):
+        console = DeveloperConsole(GameLogger())
+        key_down = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_F3)
+
+        self.assertTrue(console.handle_global_shortcut(key_down))
+        self.assertTrue(console.visible)
+
     def test_left_click_inside_console_is_click_through(self):
         position = self.console.rect.center
         event = pygame.event.Event(

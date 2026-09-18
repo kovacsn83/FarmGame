@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- A Developer Console új játék és mentésbetöltés után alapértelmezetten rejtve
+  marad; szükség esetén továbbra is az F3 billentyűvel nyitható meg.
 - A Lucerna az új év 1. hetében új növekedési és gondozási ciklust kezd;
   ismét locsolható, trágyázható és permetezhető az első aratás előtt.
 - Javítva a Feldolgozó üzem árva alapanyag-foglalása: ha egy mentett vagy

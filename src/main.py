@@ -220,7 +220,7 @@ def main():
         logger.set_timestamp_provider(
             lambda: format_game_time(game_time.elapsed_weeks),
         )
-        developer_console = DeveloperConsole(logger, visible=True)
+        developer_console = DeveloperConsole(logger)
         notification_manager = NotificationManager(
             start_ticks=pygame.time.get_ticks(),
         )
@@ -298,6 +298,7 @@ def main():
 
     def finish_loaded_session(slot_id=None, save_name=None):
         """A sikeres betöltés után egységesen előkészíti a játékmenetet."""
+        developer_console.set_visible(False)
         bank_panel.close()
         notification_manager.reset(pygame.time.get_ticks())
         camera.update_world_size(len(world[0]) if world else 0, len(world))

@@ -21,7 +21,7 @@ DEVELOPER_CONSOLE_FONT_SIZE = 16
 class DeveloperConsole:
     """Click-through, görgethető fejlesztői napló-overlay."""
 
-    def __init__(self, logger=None, visible=True):
+    def __init__(self, logger=None, visible=False):
         self.logger = logger or get_logger()
         self.visible = bool(visible)
         self.scroll_offset = 0
