@@ -10,7 +10,8 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from fields import (
-    calculate_harvest_yield, complete_harvest, grow_crops, prepare_harvest,
+    calculate_harvest_yield, can_fertilize_field, can_spray_field,
+    can_water_field, complete_harvest, grow_crops, plant_crop, prepare_harvest,
 )
 from notification_system import NotificationManager
 from progress_tooltips import get_field_progress_lines
@@ -65,6 +66,67 @@ class LateHarvestTests(unittest.TestCase):
         self.assertEqual(field["harvest_count"], 1)
         self.assertEqual(field["missed_harvest_count"], 1)
         self.assertEqual(field["growth"], 0)
+
+    def test_alfalfa_starts_new_care_cycle_in_week_one(self):
+        field = mature_field("alfalfa", 5, harvest_count=4)
+        field["planted_at_week"] = 10
+        field["annual_cycle_year"] = 1
+        field["watered"] = True
+        field["fertilized"] = True
+        field["sprayed"] = True
+
+        grow_crops([field], 52)  # 2. év, 1. hét
+
+        self.assertEqual("alfalfa", field["crop"])
+        self.assertEqual(2, field["annual_cycle_year"])
+        self.assertEqual(1, field["growth_weeks"])
+        self.assertEqual(20, field["growth"])
+        self.assertFalse(field["harvestable"])
+        self.assertFalse(field["watered"])
+        self.assertFalse(field["fertilized"])
+        self.assertFalse(field["sprayed"])
+        self.assertTrue(can_water_field(field))
+        self.assertTrue(can_fertilize_field(field))
+        self.assertTrue(can_spray_field(field))
+
+    def test_alfalfa_year_reset_happens_only_once(self):
+        field = mature_field("alfalfa", 5, harvest_count=4)
+        field["annual_cycle_year"] = 1
+        grow_crops([field], 52)
+        field["watered"] = True
+        field["fertilized"] = True
+        field["sprayed"] = True
+
+        grow_crops([field], 53)  # 2. év, 2. hét
+
+        self.assertEqual(2, field["growth_weeks"])
+        self.assertTrue(field["watered"])
+        self.assertTrue(field["fertilized"])
+        self.assertTrue(field["sprayed"])
+
+    def test_new_alfalfa_tracks_its_planting_year(self):
+        field = mature_field("wheat", 0)
+        field["crop"] = None
+        self.assertTrue(plant_crop(field, "alfalfa", 62))
+        self.assertEqual(2, field["annual_cycle_year"])
+
+    def test_legacy_alfalfa_detects_year_change_from_last_harvest(self):
+        field = mature_field("alfalfa", 5, harvest_count=4)
+        field["annual_cycle_year"] = None
+        field["last_harvest_at_week"] = 39
+        field["watered"] = True
+        field["fertilized"] = True
+        field["sprayed"] = True
+
+        grow_crops([field], 52)
+
+        self.assertEqual(2, field["annual_cycle_year"])
+        self.assertFalse(field["watered"])
+        self.assertFalse(field["fertilized"])
+        self.assertFalse(field["sprayed"])
+        self.assertTrue(can_water_field(field))
+        self.assertTrue(can_fertilize_field(field))
+        self.assertTrue(can_spray_field(field))
 
     def test_missed_first_tomato_harvest_ends_the_whole_cycle(self):
         field = mature_field("tomato", 9)

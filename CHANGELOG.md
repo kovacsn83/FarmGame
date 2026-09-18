@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- A Lucerna az új év 1. hetében új növekedési és gondozási ciklust kezd;
+  ismét locsolható, trágyázható és permetezhető az első aratás előtt.
 - Javítva a Feldolgozó üzem árva alapanyag-foglalása: ha egy mentett vagy
   megszakadt fuvar feladata már nem létezik, az alapanyag visszakerül a
   Raktárba, és a következő heti ciklus új fizikai szállítást indíthat.

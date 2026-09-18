@@ -196,9 +196,13 @@ def plant_crop(field, crop, current_elapsed_week=None):
     field["missed_harvest_count"] = 0
     field["annual_cycle_year"] = None
     field["annual_harvest_state"] = None
-    if crop_has_annual_perennial_cycle(crop) and current_elapsed_week is not None:
+    if (
+        (crop_has_annual_perennial_cycle(crop) or crop_has_recurring_harvest(crop))
+        and current_elapsed_week is not None
+    ):
         calendar_year, _week = get_year_and_week(current_elapsed_week)
         field["annual_cycle_year"] = calendar_year
+    if crop_has_annual_perennial_cycle(crop) and current_elapsed_week is not None:
         field["annual_harvest_state"] = "ineligible"
     return True
 
@@ -366,6 +370,47 @@ def synchronize_annual_crop_cycle(field, current_elapsed_week):
         field["harvestable"] = True
 
 
+def synchronize_recurring_crop_year(field, current_elapsed_week):
+    """Az ismétlődően aratható növény új éves növekedését indítja el."""
+    crop_id = field.get("crop")
+    if not crop_has_recurring_harvest(crop_id) or current_elapsed_week is None:
+        return
+    calendar_year, _current_week = get_year_and_week(current_elapsed_week)
+    previous_year = field.get("annual_cycle_year")
+    if previous_year is None:
+        # Régi mentésnél az utolsó aratás (ennek hiányában az ültetés) éve
+        # megmutatja, hogy közben valóban történt-e naptári évváltás.
+        reference_week = field.get("last_harvest_at_week")
+        if reference_week is None:
+            reference_week = field.get("planted_at_week")
+        reference_year = (
+            get_year_and_week(reference_week)[0]
+            if reference_week is not None else calendar_year
+        )
+        if reference_year >= calendar_year:
+            field["annual_cycle_year"] = calendar_year
+            return
+        previous_year = reference_year
+    if previous_year == calendar_year:
+        return
+
+    field["annual_cycle_year"] = calendar_year
+    field["growth"] = 0
+    field["growth_weeks"] = 0
+    field["harvestable"] = False
+    field["watered"] = False
+    field["fertilized"] = False
+    field["sprayed"] = False
+    next_growth_weeks = get_current_growth_weeks(
+        crop_id, field.get("harvest_count", 0),
+    )
+    field["next_maturity_at_week"] = (
+        current_elapsed_week + next_growth_weeks
+        if next_growth_weeks is not None else None
+    )
+    _reset_late_harvest(field)
+
+
 def can_fertilize_field(
         field, include_task_status=True, allow_mature=False):
     """Megadja, hogy a mező aktuális növekedési ciklusa trágyázható-e."""
@@ -469,6 +514,8 @@ def grow_crops(fields, current_elapsed_week=None, notification_manager=None):
             continue
         if crop_has_annual_perennial_cycle(field.get("crop")):
             synchronize_annual_crop_cycle(field, current_elapsed_week)
+        elif crop_has_recurring_harvest(field.get("crop")):
+            synchronize_recurring_crop_year(field, current_elapsed_week)
         if (
             crop is not None
             and not crop_lifecycle_is_active(field, current_elapsed_week)
