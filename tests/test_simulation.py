@@ -77,27 +77,50 @@ class FiveYearSimulationTests(unittest.TestCase):
             self.assertIn("economic_summary", data)
 
     def test_annual_ledgers_reconcile_with_their_totals(self):
-        with tempfile.TemporaryDirectory() as report_dir:
-            result = run_simulation(2, 23, report_dir)
-        for snapshot in result["snapshots"]:
-            self.assertAlmostEqual(
-                sum(snapshot["income_breakdown"].values()),
-                snapshot["income"], places=2,
-            )
-            self.assertAlmostEqual(
-                sum(snapshot["expense_breakdown"].values()),
-                snapshot["expenses"], places=2,
-            )
-            self.assertAlmostEqual(
-                snapshot["income"] - snapshot["expenses"],
-                snapshot["net_profit"], places=2,
-            )
+        bot = SimulationBot(23)
+        starting_cash = bot.economy.money
+        bot.bootstrap()
+        for elapsed_week in range(1, 105):
+            bot.run_week()
+            if elapsed_week % 52:
+                continue
+            year = elapsed_week // 52
+            raw_income = bot.income[year]
+            raw_expenses = bot.expenses[year]
+            self.assertAlmostEqual(sum(bot.income_breakdown[year].values()),
+                                   raw_income, delta=1e-7)
+            self.assertAlmostEqual(sum(bot.expense_breakdown[year].values()),
+                                   raw_expenses, delta=1e-7)
+            # Check the year assignment against actual, unrounded transactions.
+            for kind, total in (("income", raw_income), ("expense", raw_expenses)):
+                self.assertAlmostEqual(sum(
+                    record["amount"] for record in bot.economy.financial_history
+                    if record["type"] == kind and record["week"] // 52 + 1 == year
+                ), total, delta=1e-7)
+            snapshot = vars(bot.take_snapshot(year))
+            self.assertEqual(snapshot["income"], round(raw_income, 2))
+            self.assertEqual(snapshot["expenses"], round(raw_expenses, 2))
+            self.assertEqual(snapshot["net_profit"], round(raw_income - raw_expenses, 2))
+            # Precise totals need not equal the sum of rounded report rows.
+            if year == 1:
+                self.assertEqual(snapshot["expenses"], 9560.12)
+                self.assertAlmostEqual(sum(snapshot["expense_breakdown"].values()),
+                                       9560.11, delta=1e-7)
+                self.assertAlmostEqual(bot.expenses[2], 13.884615384615245,
+                                       delta=1e-7)
             self.assertIn("building_maintenance", snapshot["expense_breakdown"])
             self.assertIn("road_maintenance", snapshot["expense_breakdown"])
             self.assertIn("vehicle_maintenance", snapshot["expense_breakdown"])
             self.assertIn("crop_sales", snapshot["income_breakdown"])
             self.assertIn("milk_sales", snapshot["income_breakdown"])
             self.assertIn("pork_sales", snapshot["income_breakdown"])
+        self.assertAlmostEqual(starting_cash + sum(bot.income.values())
+                               - sum(bot.expenses.values()), bot.economy.money,
+                               delta=1e-7)
+        self.assertAlmostEqual(starting_cash + sum(
+            record["amount"] * (1 if record["type"] == "income" else -1)
+            for record in bot.economy.financial_history
+        ), bot.economy.money, delta=1e-7)
 
     def test_report_summary_calculates_ratios_and_largest_categories(self):
         snapshots = [{

@@ -580,6 +580,10 @@ class SimulationBot:
             self.drain_vehicle_tasks()
         self._sell_market_surplus()
 
+        # Bot decisions belong to the starting week. Weekly callbacks and
+        # drained vehicle completions must all observe the new logical week.
+        self.game_time.elapsed_weeks += 1
+        elapsed_week = self.game_time.elapsed_weeks
         year = self.year
         road_count = sum(tile == ROAD for row in self.world for tile in row)
         maintenance_breakdown = {
@@ -624,9 +628,9 @@ class SimulationBot:
                 repayment * LOAN_INTEREST_PERCENT
                 / (100 + LOAN_INTEREST_PERCENT)
             )
-        grow_crops(self.fields, self.game_time.elapsed_weeks + 1)
+        grow_crops(self.fields, elapsed_week)
         run_weekly_orchard_cycle(
-            self.buildings, self.game_time.elapsed_weeks + 1,
+            self.buildings, elapsed_week,
         )
         run_weekly_animal_cycle(self.animals, self.buildings, self.economy)
         if run_weekly_animal_supply_automation(
@@ -634,15 +638,13 @@ class SimulationBot:
                 self.vehicles, self.state.purchased_upgrades,
                 current_ticks=self.virtual_ticks):
             self.drain_vehicle_tasks()
-        next_elapsed_week = self.game_time.elapsed_weeks + 1
         if run_field_automation(
                 self.world, self.buildings, self.economy, self.fields,
                 self.vehicles, self.state.purchased_upgrades,
                 current_ticks=self.virtual_ticks,
-                current_week=get_year_and_week(next_elapsed_week)[1],
-                current_elapsed_week=next_elapsed_week):
+                current_week=get_year_and_week(elapsed_week)[1],
+                current_elapsed_week=elapsed_week):
             self.drain_vehicle_tasks()
-        self.game_time.elapsed_weeks += 1
         if self.bank_system.observe_balance():
             if self.accept_first_bank_offer and self.bank_system.loan.loans_taken == 0:
                 if self.bank_system.accept_offer():
