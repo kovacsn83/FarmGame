@@ -24,6 +24,7 @@ class ChallengeLeaderboardPanel:
     def __init__(self, controller):
         self.controller = controller
         self.visible = False
+        self.scroll_row = 0
         self.rect = pygame.Rect(0, 0, PANEL_WIDTH, PANEL_HEIGHT)
         self.action_rect = pygame.Rect(0, 0, 170, BUTTON_HEIGHT)
         self.close_rect = pygame.Rect(0, 0, 150, BUTTON_HEIGHT)
@@ -47,11 +48,28 @@ class ChallengeLeaderboardPanel:
 
     def open(self):
         self.visible = True
+        self.scroll_row = 0
         self._update_layout()
         self.controller.request()
 
     def close(self):
         self.visible = False
+
+    def _table_layout(self):
+        table = pygame.Rect(
+            self.rect.left + PADDING, self.rect.top + 62,
+            self.rect.width - 2 * PADDING,
+            min(11 * ROW_HEIGHT, self.rect.height - 162),
+        )
+        row_height = min(ROW_HEIGHT, max(26, table.height // 11))
+        return table, row_height
+
+    def _clamp_scroll(self):
+        table, row_height = self._table_layout()
+        visible_rows = max(1, table.height // row_height - 1)
+        maximum = max(0, len(self.controller.state.entries) - visible_rows)
+        self.scroll_row = max(0, min(self.scroll_row, maximum))
+        return visible_rows
 
     def handle_event(self, event):
         if not self.visible:
@@ -60,11 +78,19 @@ class ChallengeLeaderboardPanel:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             self.close()
             return True
+        if event.type == pygame.MOUSEWHEEL:
+            self.scroll_row -= event.y
+            self._clamp_scroll()
+            return True
         if event.type != pygame.MOUSEBUTTONDOWN:
             return event.type in (
                 pygame.KEYDOWN, pygame.KEYUP, pygame.TEXTINPUT,
                 pygame.MOUSEWHEEL,
             )
+        if event.button in (4, 5):
+            self.scroll_row += -1 if event.button == 4 else 1
+            self._clamp_scroll()
+            return True
         if event.button != 1:
             return True
         if is_outside_popup_click(event, self.rect):
@@ -73,6 +99,7 @@ class ChallengeLeaderboardPanel:
         if self.close_rect.collidepoint(event.pos):
             self.close()
         elif self.action_rect.collidepoint(event.pos) and not self.controller.loading:
+            self.scroll_row = 0
             self.controller.request()
         return True
 
@@ -109,11 +136,8 @@ class ChallengeLeaderboardPanel:
         pygame.draw.rect(screen, INFO_PANEL_BORDER, self.rect, 2)
         left = self.rect.left + PADDING
         self._text(screen, font, "10 éves Challenge – Top 10", left, self.rect.top + 20)
-        table = pygame.Rect(
-            left, self.rect.top + 62, self.rect.width - 2 * PADDING,
-            min(11 * ROW_HEIGHT, self.rect.height - 142),
-        )
-        row_height = min(ROW_HEIGHT, max(26, table.height // 11))
+        table, row_height = self._table_layout()
+        visible_rows = self._clamp_scroll()
         pygame.draw.rect(screen, HEADER_BACKGROUND, (
             table.left, table.top, table.width, row_height,
         ))
@@ -130,10 +154,11 @@ class ChallengeLeaderboardPanel:
 
         state = self.controller.state
         if state.status == "success":
-            for index, entry in enumerate(state.entries[:10]):
+            for index, entry in enumerate(state.entries[
+                    self.scroll_row:self.scroll_row + visible_rows]):
                 row_y = table.top + row_height * (index + 1)
-                if index < 3:
-                    pygame.draw.rect(screen, TOP_ROW_BACKGROUNDS[index], (
+                if 1 <= entry["rank"] <= 3:
+                    pygame.draw.rect(screen, TOP_ROW_BACKGROUNDS[entry["rank"] - 1], (
                         table.left, row_y, table.width, row_height,
                     ))
                 self._text(screen, font, f"{entry['rank']}.", rank_x, row_y + 6)
@@ -145,6 +170,10 @@ class ChallengeLeaderboardPanel:
                            value_x, row_y + 6)
                 self._text(screen, font, entry["game_version"],
                            version_x, row_y + 6)
+            if len(state.entries) > visible_rows:
+                self._text(screen, font,
+                           f"{self.scroll_row + 1}–{min(len(state.entries), self.scroll_row + visible_rows)} / {len(state.entries)}",
+                           table.left, table.bottom + 4)
         else:
             for index, line in enumerate(state.message.splitlines() or [""]):
                 rendered = font.render(line, True, COLOR_TEXT)

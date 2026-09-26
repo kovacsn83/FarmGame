@@ -36,6 +36,20 @@ def as_utc(value):
     return value.astimezone(timezone.utc)
 
 
+def ranked_challenge_results(game_version=None):
+    """Competition rank depends only on the stored cent-precision score."""
+    query = select(
+        ChallengeResult.id.label("result_id"),
+        func.rank().over(order_by=ChallengeResult.farm_value.desc()).label("rank"),
+    ).where(
+        ChallengeResult.challenge_type == CHALLENGE_TYPE,
+        ChallengeResult.challenge_years == CHALLENGE_YEARS,
+    )
+    if game_version is not None:
+        query = query.where(ChallengeResult.game_version == game_version)
+    return query.subquery()
+
+
 def create_app(database_url=None):
     engine = create_database_engine(database_url)
     session_factory = create_session_factory(engine)
@@ -138,25 +152,14 @@ def create_app(database_url=None):
                 "The result could not be stored.",
             )
 
-        ranked = select(
-            ChallengeResult.id.label("result_id"),
-            func.row_number().over(order_by=(
-                ChallengeResult.farm_value.desc(),
-                ChallengeResult.completed_at.asc(),
-                ChallengeResult.submitted_at.asc(),
-                ChallengeResult.id.asc(),
-            )).label("rank"),
-        ).where(
-            ChallengeResult.challenge_type == CHALLENGE_TYPE,
-            ChallengeResult.challenge_years == CHALLENGE_YEARS,
-        ).subquery()
+        ranked = ranked_challenge_results()
         rank = session.scalar(select(ranked.c.rank).where(
             ranked.c.result_id == record.id,
         ))
         logger.info("Challenge submission accepted (result_id=%s)", record.id)
         return SubmissionResponse(
             status="accepted", result_id=record.id, game_id=record.game_id,
-            farm_value=float(record.farm_value), rank=rank,
+            farm_value=record.farm_value, rank=rank,
         )
 
     @app.get(
@@ -167,28 +170,24 @@ def create_app(database_url=None):
             limit: int = Query(default=10, ge=1, le=100),
             game_version: str | None = Query(default=None, min_length=1, max_length=40),
             session: Session = Depends(get_session)):
-        query = select(ChallengeResult).where(
-            ChallengeResult.challenge_type == CHALLENGE_TYPE,
-            ChallengeResult.challenge_years == CHALLENGE_YEARS,
-        )
-        if game_version is not None:
-            query = query.where(ChallengeResult.game_version == game_version)
-        records = session.scalars(query.order_by(
+        ranked = ranked_challenge_results(game_version)
+        records = session.execute(select(ChallengeResult, ranked.c.rank).join(
+            ranked, ranked.c.result_id == ChallengeResult.id,
+        ).where(ranked.c.rank <= limit).order_by(
             ChallengeResult.farm_value.desc(),
-            ChallengeResult.completed_at.asc(),
             ChallengeResult.submitted_at.asc(),
             ChallengeResult.id.asc(),
-        ).limit(limit)).all()
+        )).all()
         return LeaderboardResponse(
             challenge=CHALLENGE_TYPE,
             challenge_years=CHALLENGE_YEARS,
             results=[LeaderboardEntry(
-                rank=index,
+                rank=rank,
                 player_name=record.player_name,
-                farm_value=float(record.farm_value),
+                farm_value=record.farm_value,
                 game_version=record.game_version,
                 completed_at=as_utc(record.completed_at),
-            ) for index, record in enumerate(records, start=1)],
+            ) for record, rank in records],
         )
 
     return app

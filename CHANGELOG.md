@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## 0.1.3 – 2026-09-26
+
+- A technikai stabilizációs kiadás megerősíti a Challenge snapshotok,
+  helyi eredmények, játékosnevek és online ranglistaválaszok validációját.
+- A hibás helyi Challenge-rekordok nem akadályozzák a jó eredmények olvasását;
+  a forrásadatok automatikus törlése és felülírása továbbra is tiltott.
+- A negatív nettó Farm Value érvényes Challenge-eredmény. Azonos centes
+  eredménynél valódi holtverseny van (1, 2, 2, 4); a Top 10 minden határon
+  holtversenyes rekordot visszaad, a popup görgetéssel kezeli a hosszabb listát.
+- Az API Farm Value válaszai pontos, két tizedesjegyes decimális szövegek;
+  az új kliens a régi numerikus válaszokat is kezeli. A klienst a backend
+  frissítése előtt kell kiadni a korábbi kliensek kompatibilitása miatt.
+- A backend ellenőrzi a Numeric(24,2) tárolási tartományát; az adatbázisséma
+  és a játékmentés 4-es verziója nem változott.
+- Javítva a SimulationBot heti időzítése és a pontos éves pénzügyi
+  összesítések regressziós ellenőrzése.
+- Új Windows EXE és hordozható 0.1.3-as kiadási csomag.
+
 - Stabilabb mentésbetöltés és járműfeladat-helyreállítás; javítva a régi
   Piac épületet tartalmazó mentések hivatkozásainak kompatibilitása.
 - A 10 éves Challenge eredménye sikertelen helyi mentéskor is megmarad,

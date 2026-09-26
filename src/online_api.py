@@ -1,7 +1,8 @@
 """Small, offline-safe HTTP client for FarmGame online services."""
 
 import os
-from decimal import DecimalException
+import re
+from decimal import Decimal, DecimalException
 from dataclasses import asdict, dataclass, is_dataclass
 from typing import Any, Callable
 
@@ -56,6 +57,23 @@ def _error_message(data, fallback):
     return fallback
 
 
+def _parse_response_farm_value(value):
+    """Exact two-decimal text, or legacy numeric JSON; never alter snapshots."""
+    if isinstance(value, str):
+        if not re.fullmatch(r"-?[0-9]+\.[0-9]{2}", value):
+            return None
+    elif not is_finite_farm_value(value):
+        return None
+    try:
+        parsed = Decimal(str(value))
+        if not parsed.is_finite():
+            return None
+        format_money(parsed)
+    except (DecimalException, ValueError, OverflowError):
+        return None
+    return parsed
+
+
 def _valid_leaderboard_entry(entry):
     valid = (
         isinstance(entry, dict)
@@ -64,14 +82,14 @@ def _valid_leaderboard_entry(entry):
         and isinstance(entry.get("player_name"), str)
         and bool(entry["player_name"].strip())
         and not has_name_control_characters(entry["player_name"])
-        and is_finite_farm_value(entry.get("farm_value"))
+        and _parse_response_farm_value(entry.get("farm_value")) is not None
         and isinstance(entry.get("game_version"), str)
         and bool(entry["game_version"])
     )
     if not valid:
         return False
     try:
-        format_money(entry["farm_value"])
+        format_money(_parse_response_farm_value(entry["farm_value"]))
     except (DecimalException, ValueError, OverflowError):
         return False
     return True
@@ -196,7 +214,8 @@ class OnlineApiClient:
             )
         clean_data = dict(result.data)
         clean_data["results"] = [
-            entry for entry in entries if _valid_leaderboard_entry(entry)
+            {**entry, "farm_value": _parse_response_farm_value(entry["farm_value"])}
+            for entry in entries if _valid_leaderboard_entry(entry)
         ]
         log("Leaderboard loaded.", "OnlineAPI")
         return ApiResult(True, status_code=200, data=clean_data)
@@ -222,6 +241,14 @@ class OnlineApiClient:
             )
         response = self._call("POST", TEN_YEAR_SUBMIT_PATH, payload=payload)
         if response.success and response.status_code == 201:
+            if isinstance(response.data, dict) and "farm_value" in response.data:
+                value = _parse_response_farm_value(response.data["farm_value"])
+                if value is None:
+                    return ApiResult(False, status_code=201,
+                                     error_code="invalid_response",
+                                     error_message="Invalid submission Farm Value.")
+                response = ApiResult(True, status_code=201,
+                                     data={**response.data, "farm_value": value})
             log("Challenge result submitted.", "OnlineAPI")
             return response
         if response.success:

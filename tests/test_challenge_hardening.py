@@ -2,9 +2,10 @@ import json
 import sys
 import tempfile
 import unittest
-from dataclasses import asdict
+from dataclasses import asdict, replace
+from types import SimpleNamespace
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
@@ -13,6 +14,7 @@ from challenge_results import ChallengeResultStore, local_result_from_snapshot
 from online_api import OnlineApiClient, _valid_leaderboard_entry
 from player_profile import validate_player_name
 from money_format import format_money
+from challenge_submission import ChallengeSubmissionController
 
 
 class ChallengeHardeningTests(unittest.TestCase):
@@ -68,13 +70,13 @@ class ChallengeHardeningTests(unittest.TestCase):
         self.assertEqual(manager.result, self.snapshot)
 
     def test_local_extra_and_missing_fields_are_controlled(self):
-        self.assertIsNone(self.load_local({**self.local, "unexpected": 1}))
+        self.assertEqual(self.load_local({**self.local, "unexpected": 1}), [])
         for field in ("player_id", "player_name", "game_id", "game_version",
                       "farm_value", "challenge_years", "completed_at"):
             with self.subTest(field=field):
                 record = dict(self.local)
                 del record[field]
-                self.assertIsNone(self.load_local(record))
+                self.assertEqual(self.load_local(record), [])
 
     def test_invalid_numeric_values_are_rejected_at_all_boundaries(self):
         for value in (float("nan"), float("inf"), -float("inf"), 10**400,
@@ -82,7 +84,7 @@ class ChallengeHardeningTests(unittest.TestCase):
             with self.subTest(value=str(value)):
                 self.record["result"]["farm_value"] = value
                 self.assertFalse(is_valid_challenge_save_record(self.record))
-                self.assertIsNone(self.load_local({**self.local, "farm_value": value}))
+                self.assertEqual(self.load_local({**self.local, "farm_value": value}), [])
                 self.assertFalse(_valid_leaderboard_entry({**self.entry, "farm_value": value}))
 
     def test_finite_numbers_without_business_maximum(self):
@@ -103,7 +105,7 @@ class ChallengeHardeningTests(unittest.TestCase):
                         validate_player_name(name)
                     self.record["result"]["player_name"] = name
                     self.assertFalse(is_valid_challenge_save_record(self.record))
-                    self.assertIsNone(self.load_local({**self.local, "player_name": name}))
+                    self.assertEqual(self.load_local({**self.local, "player_name": name}), [])
                     self.assertFalse(_valid_leaderboard_entry({**self.entry, "player_name": name}))
 
     def test_unicode_spaces_and_plain_text_remain_supported(self):
@@ -126,3 +128,28 @@ class ChallengeHardeningTests(unittest.TestCase):
         result = OnlineApiClient(request=Mock(return_value=response)).get_ten_year_leaderboard()
         self.assertTrue(result.success)
         self.assertEqual(result.data["results"], [self.entry])
+
+    def test_negative_snapshot_persists_loads_and_submits_from_durable_record(self):
+        snapshot = replace(self.snapshot, farm_value=-50000.25)
+        record = {"status": "completed", "result": asdict(snapshot)}
+        self.assertTrue(is_valid_challenge_save_record(record))
+        manager = ChallengeManager(None)
+        manager.load_save_record(record, 520, snapshot.game_id)
+        self.assertEqual(manager.result, snapshot)
+        with tempfile.TemporaryDirectory() as directory:
+            store = ChallengeResultStore(Path(directory) / "results.json")
+            self.assertTrue(store.save_snapshot(snapshot))
+            self.assertEqual(store.find(snapshot.game_id).farm_value, -50000.25)
+            response = Mock(status_code=201)
+            response.json.return_value = {"result_id": 1, "rank": 10}
+            request = Mock(return_value=response)
+            controller = ChallengeSubmissionController(store, OnlineApiClient(request=request))
+            # Execute the unchanged worker synchronously for deterministic testing.
+            def immediate_thread(target, args, **kwargs):
+                return SimpleNamespace(start=lambda: target(*args))
+            with patch("challenge_submission.Thread", side_effect=immediate_thread):
+                self.assertTrue(controller.request_for_game(snapshot.game_id))
+            self.assertTrue(controller.update())
+            self.assertEqual(request.call_args.kwargs["json"]["farm_value"], -50000.25)
+            self.assertEqual(controller.feedback.rank, 10)
+            self.assertEqual(store.find(snapshot.game_id).submission_status, "submitted")

@@ -115,7 +115,8 @@ class ChallengeResultStore:
     def _path(self):
         return self.path or get_challenge_results_path()
 
-    def load(self):
+    def load(self, *, skip_invalid=True):
+        """Isolate bad records when reading; writes require an intact source."""
         path = self._path()
         if not path.exists():
             return []
@@ -128,19 +129,31 @@ class ChallengeResultStore:
                     LEGACY_RESULTS_FORMAT_VERSION, RESULTS_FORMAT_VERSION):
                 raise ValueError("unsupported format version")
             records = document.get("results")
-            if isinstance(records, list):
-                records = [_normalize_record(record) if isinstance(record, dict)
-                           else record for record in records]
-            if not isinstance(records, list) or not all(
-                    _is_valid_result(record) for record in records):
-                raise ValueError("invalid result record")
-            keys = {
-                (record["game_id"], record["challenge_years"])
-                for record in records
-            }
-            if len(keys) != len(records):
-                raise ValueError("duplicate result key")
-            return [LocalChallengeResult(**record) for record in records]
+            if not isinstance(records, list):
+                raise ValueError("results is not a list")
+            results = []
+            keys = set()
+            for index, record in enumerate(records):
+                try:
+                    if not isinstance(record, dict):
+                        raise ValueError("record is not an object")
+                    normalized = _normalize_record(record)
+                    if not _is_valid_result(normalized):
+                        raise ValueError("invalid fields or values")
+                    result = LocalChallengeResult(**normalized)
+                except (TypeError, ValueError) as error:
+                    if not skip_invalid:
+                        raise ValueError(f"invalid result record at index {index}") from error
+                    log(f"Local Challenge result record at index {index} skipped: {error}",
+                        "Challenge", level="WARNING")
+                    continue
+                key = (result.game_id, result.challenge_years)
+                if key in keys:
+                    # Keep the existing rejection of ambiguous duplicate keys.
+                    raise ValueError("duplicate result key")
+                keys.add(key)
+                results.append(result)
+            return results
         except (OSError, UnicodeError, TypeError, ValueError) as error:
             log(
                 f"Local Challenge results could not be loaded: {error}",
@@ -185,7 +198,7 @@ class ChallengeResultStore:
             log("Invalid Challenge snapshot was not persisted.", "Challenge",
                 level="ERROR")
             return False
-        results = self.load()
+        results = self.load(skip_invalid=False)
         if results is None:
             return False
         key = (result.game_id, result.challenge_years)
@@ -224,7 +237,7 @@ class ChallengeResultStore:
             status = SubmissionStatus(status)
         except (ValueError, TypeError):
             return False
-        results = self.load()
+        results = self.load(skip_invalid=False)
         if results is None:
             return False
         key = (game_id, challenge_years)

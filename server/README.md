@@ -83,18 +83,29 @@ következő `challenge_type=ten_year`, valamint a szerver által generált
 `submitted_at` nincs a kliens requestben. Ismételt futam HTTP 409 választ kap
 `challenge_result_already_submitted` hibakóddal.
 
+A beküldési válasz és a leaderboard `farm_value` mezője pontos, két
+tizedesjegyes JSON szöveg, például `"482350.00"` vagy `"-50000.25"`.
+A backend a tárolt Decimal értéket float-konverzió nélkül küldi vissza.
+A request hét mezője és a helyi snapshot formátuma nem változik.
+Az új kliens Decimal-ként dolgozza fel a szöveget, és a régi backend numerikus
+válaszait is elfogadja. Előbb az új klienst érdemes kiadni, majd a backendet:
+a korábbi kliensek nem feltétlenül kezelik az új válaszmező-típust.
+
 ### `GET /api/v1/challenges/ten-year/leaderboard`
 
-Alapból a Top 10-et adja; a `limit` 1–100 között állítható. Az opcionális
-`game_version` paraméter előkészíti a verziónkénti szűrést. Rendezés:
+Alapból a legjobb 10 helyezést adja, a határon lévő összes holtversenyes
+rekorddal együtt; ezért tíznél több rekord is visszakerülhet. A `limit`
+1–100 között állítható. Az opcionális `game_version` paraméter verziónként
+szűr. Rendezés:
 
 1. `farm_value DESC`
-2. `completed_at ASC`
-3. `submitted_at ASC`
-4. belső rekordazonosító `ASC`
+2. `submitted_at ASC` (csak stabil technikai sorrend)
+3. belső rekordazonosító `ASC` (csak stabil technikai sorrend)
 
-Így azonos értéknél a korábban teljesített eredmény kerül előrébb. A publikus
-válasz nem tartalmaz `player_id` vagy `game_id` értéket.
+A `rank` kizárólag a tárolt centes Farm Value-tól függ, competition ranking
+szerint: `1, 2, 2, 4`. A negatív eredmények érvényesek. A `completed_at`
+metadata marad, nem rangsorol. A publikus válasz nem tartalmaz `player_id`
+vagy `game_id` értéket.
 
 ## Railway telepítés
 
