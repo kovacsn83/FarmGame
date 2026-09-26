@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from calendar_utils import get_year_and_week
+
 from collections import Counter, defaultdict
 from contextlib import nullcontext, redirect_stdout
 from dataclasses import asdict, dataclass
@@ -637,7 +639,7 @@ class SimulationBot:
                 self.world, self.buildings, self.economy, self.fields,
                 self.vehicles, self.state.purchased_upgrades,
                 current_ticks=self.virtual_ticks,
-                current_week=((next_elapsed_week - 1) % 52) + 1,
+                current_week=get_year_and_week(next_elapsed_week)[1],
                 current_elapsed_week=next_elapsed_week):
             self.drain_vehicle_tasks()
         self.game_time.elapsed_weeks += 1

@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Stabilabb mentésbetöltés és járműfeladat-helyreállítás; javítva a régi
+  Piac épületet tartalmazó mentések hivatkozásainak kompatibilitása.
+- A 10 éves Challenge eredménye sikertelen helyi mentéskor is megmarad,
+  és az eredeti eredmény rögzítése újrapróbálható.
+- A régi mentések játékazonosítója betöltések között is állandó marad.
+- Javítva a többhetes időfeldolgozás és az évhatár kezelése; a Challenge
+  lezárása megállítja a további heti feldolgozást.
+- Az automatikus aratás a központi naptár szerinti, helyes hetet használja.
+
 - Az aratási időszakra váró, már érett Lucerna továbbra is trágyázható és
   permetezhető, ha az adott gondozást még nem kapta meg.
 - A Lucerna telelés előtt elvégzett locsolása, trágyázása és permetezése

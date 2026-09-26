@@ -17,9 +17,7 @@ def is_valid_game_id(value):
 
 
 def restore_or_generate_game_id(saved_game_id, current_game_id=None):
-    """Mentett ID-t állít vissza, legacy/hibás adatnál sessionönként egyet készít."""
+    """Mentett ID-t állít vissza; hiányzó ID-t nem vesz át másik farmból."""
     if is_valid_game_id(saved_game_id):
         return saved_game_id, False
-    if is_valid_game_id(current_game_id):
-        return current_game_id, True
     return generate_game_id(), True

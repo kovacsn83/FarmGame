@@ -1,6 +1,7 @@
 """A megvásárolható, járműves veteményes-automatizálások koordinátora."""
 
 from game_logger import log
+from calendar_utils import get_year_and_week
 
 
 AUTOMATED_FIELD_WATERING_UPGRADE = "automated_field_watering"
@@ -17,6 +18,9 @@ def run_field_automation(
     A request metódusok végzik az összes készlet-, infrastruktúra-, útvonal- és
     duplikációellenőrzést; ez a réteg semmilyen mezőállapotot nem állít át.
     """
+    if current_elapsed_week is not None:
+        # The elapsed index is authoritative, including year-boundary ticks.
+        current_week = get_year_and_week(current_elapsed_week)[1]
     watering_enabled = (
         AUTOMATED_FIELD_WATERING_UPGRADE in purchased_upgrades
     )

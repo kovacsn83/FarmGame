@@ -3,6 +3,7 @@
 import pygame
 
 from constants import COLOR_TEXT
+from challenge_results import local_result_from_snapshot
 from money_format import format_money
 from screen_layout import get_screen_center, get_screen_size
 from ui import (
@@ -21,6 +22,8 @@ class ChallengeCompletionPanel:
         self.submission_controller = submission_controller
         self.visible = False
         self.record = None
+        self.challenge_manager = None
+        self._presented_snapshot = None
         self.rect = pygame.Rect(0, 0, PANEL_WIDTH, PANEL_HEIGHT)
         self.submit_rect = pygame.Rect(0, 0, 230, BUTTON_HEIGHT)
         self.leaderboard_rect = pygame.Rect(0, 0, 155, BUTTON_HEIGHT)
@@ -67,6 +70,29 @@ class ChallengeCompletionPanel:
         self._update_layout()
         return True
 
+    def open_snapshot(self, manager):
+        self.challenge_manager = manager
+        manager.persistence_notice_pending = False
+        self._presented_snapshot = manager.result
+        record = self.submission_controller.get_record(manager.result.game_id)
+        if not manager.persisted:
+            record = None
+        return self.open(record or local_result_from_snapshot(manager.result))
+
+    @property
+    def persistence_pending(self):
+        return (self.challenge_manager is not None
+                and self.record is not None
+                and self.challenge_manager.result is not None
+                and self.challenge_manager.result.game_id == self.record.game_id
+                and not self.challenge_manager.persisted)
+
+    def show_pending_after_load(self, manager):
+        if (manager.result is not None
+                and (not manager.persisted or manager.persistence_notice_pending)
+                and self._presented_snapshot is not manager.result):
+            self.open_snapshot(manager)
+
     def close(self):
         self.visible = False
 
@@ -97,14 +123,19 @@ class ChallengeCompletionPanel:
         elif self.leaderboard_rect.collidepoint(event.pos):
             self._leaderboard_requested = True
             self.close()
-        elif self.submit_rect.collidepoint(event.pos) and self.can_submit:
-            self.submission_controller.request(self.record)
+        elif self.submit_rect.collidepoint(event.pos):
+            if self.persistence_pending:
+                self.challenge_manager.retry_persistence()
+            elif self.can_submit:
+                self.submission_controller.request(self.record)
         return True
 
     @property
     def current_record(self):
         if self.record is None:
             return None
+        if self.persistence_pending:
+            return self.record
         return self.submission_controller.get_record(
             self.record.game_id, self.record.challenge_years,
         ) or self.record
@@ -114,6 +145,8 @@ class ChallengeCompletionPanel:
         record = self.current_record
         return (
             record is not None
+            and not self.persistence_pending
+            and self.submission_controller.get_record(record.game_id, record.challenge_years) is not None
             and record.submission_status != "submitted"
             and not self.submission_controller.submitting
         )
@@ -151,14 +184,20 @@ class ChallengeCompletionPanel:
         self._text(screen, font, f"Játékverzió: {record.game_version}", x,
                    self.rect.top + 188)
         feedback = self.submission_controller.feedback
-        if feedback.message:
+        if self.persistence_pending:
+            self._text(screen, font, "A helyi mentés sikertelen. Próbáld újra!", x,
+                       self.rect.top + 232)
+        elif feedback.message:
             self._text(screen, font, feedback.message, x, self.rect.top + 232)
         submitted = record.submission_status == "submitted"
         label = "Beküldve" if submitted else (
             "Beküldés..." if self.submission_controller.submitting
             else "Beküldés a ranglistára"
         )
-        self._button(screen, font, self.submit_rect, label, self.can_submit)
+        if self.persistence_pending:
+            label = "Mentés újrapróbálása"
+        self._button(screen, font, self.submit_rect, label,
+                     self.persistence_pending or self.can_submit)
         self._button(
             screen, font, self.leaderboard_rect, "Top 10 ranglista",
         )

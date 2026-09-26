@@ -757,7 +757,12 @@ def main():
                 if exit_action == "cancel":
                     cancel_pending_exit()
                 elif exit_action == "discard":
-                    running = False
+                    if game_state.challenge_manager.ensure_result_safe_to_discard():
+                        running = False
+                    else:
+                        exit_confirmation_panel.set_feedback(
+                            "A Challenge még nincs rögzítve. Válaszd a mentést vagy a Mégsét."
+                        )
                 elif exit_action == "save_and_exit":
                     if unsaved_changes.current_slot_id is None:
                         pending_exit_after_save = True
@@ -1120,6 +1125,7 @@ def main():
     
         save_slots_menu.update()
         challenge_submission.update()
+        challenge_completion_panel.show_pending_after_load(game_state.challenge_manager)
         leaderboard_controller.update()
         menu_system_active = (
             game_menu.visible
@@ -1140,25 +1146,15 @@ def main():
             animal_movement.update(animals, buildings, game_time)
     
             # Minden ténylegesen eltelt játékbeli héthez pontosan egy frissítés tartozik.
-            for elapsed_week in game_time.update():
+            for elapsed_week in game_time.iter_weekly_updates():
                 completed_result = game_state.challenge_manager.handle_week_transition(
                     elapsed_week - 1, elapsed_week, game_state,
                 )
                 if completed_result is not None:
-                    local_result = challenge_submission.get_record(
-                        completed_result.game_id,
-                    )
-                    if local_result is not None:
-                        game_time.set_time_speed(TIME_PAUSED)
-                        vehicles.synchronize_time()
-                        animal_movement.synchronize()
-                        challenge_completion_panel.open(local_result)
-                    else:
-                        logger.log(
-                            "Challenge completed, but no stable local result exists; "
-                            "completion popup was not opened.",
-                            "Challenge", level="ERROR",
-                        )
+                    game_time.set_time_speed(TIME_PAUSED)
+                    vehicles.synchronize_time()
+                    animal_movement.synchronize()
+                    challenge_completion_panel.open_snapshot(game_state.challenge_manager)
                 logger.log(
                     f"Új hét kezdődött: {format_game_time(elapsed_week)}",
                     "Time",
@@ -1191,7 +1187,7 @@ def main():
                     world, buildings, economy, fields, vehicles,
                     game_state.purchased_upgrades,
                     current_ticks=pygame.time.get_ticks(),
-                    current_week=((elapsed_week - 1) % 52) + 1,
+                    current_week=game_time.week,
                     current_elapsed_week=elapsed_week,
                 )
                 notification_manager.process_week(elapsed_week)

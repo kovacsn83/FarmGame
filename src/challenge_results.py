@@ -37,6 +37,15 @@ class LocalChallengeResult:
     server_result_id: int | None = None
 
 
+def local_result_from_snapshot(snapshot):
+    return LocalChallengeResult(
+        player_id=snapshot.player_id, player_name=snapshot.player_name,
+        game_id=snapshot.game_id, game_version=snapshot.game_version,
+        farm_value=snapshot.farm_value, challenge_years=TEN_YEAR_CHALLENGE_YEARS,
+        completed_at=snapshot.completed_at,
+    )
+
+
 def _is_valid_result(record):
     if not isinstance(record, dict):
         return False
@@ -129,7 +138,7 @@ class ChallengeResultStore:
             if len(keys) != len(records):
                 raise ValueError("duplicate result key")
             return [LocalChallengeResult(**record) for record in records]
-        except (OSError, json.JSONDecodeError, ValueError) as error:
+        except (OSError, UnicodeError, TypeError, ValueError) as error:
             log(
                 f"Local Challenge results could not be loaded: {error}",
                 "Challenge", level="ERROR",
@@ -168,15 +177,7 @@ class ChallengeResultStore:
         """Persist a trusted completed snapshot; never recompute its value."""
         if snapshot is None:
             return False
-        result = LocalChallengeResult(
-            player_id=snapshot.player_id,
-            player_name=snapshot.player_name,
-            game_id=snapshot.game_id,
-            game_version=snapshot.game_version,
-            farm_value=snapshot.farm_value,
-            challenge_years=TEN_YEAR_CHALLENGE_YEARS,
-            completed_at=snapshot.completed_at,
-        )
+        result = local_result_from_snapshot(snapshot)
         if not _is_valid_result(asdict(result)):
             log("Invalid Challenge snapshot was not persisted.", "Challenge",
                 level="ERROR")
@@ -185,8 +186,18 @@ class ChallengeResultStore:
         if results is None:
             return False
         key = (result.game_id, result.challenge_years)
-        if any((item.game_id, item.challenge_years) == key for item in results):
-            return True
+        for item in results:
+            if (item.game_id, item.challenge_years) == key:
+                immutable_fields = (
+                    "player_id", "player_name", "game_id", "game_version",
+                    "farm_value", "challenge_years", "completed_at",
+                )
+                matches = all(getattr(item, field) == getattr(result, field)
+                              for field in immutable_fields)
+                if not matches:
+                    log("Existing Challenge result differs from pending snapshot; "
+                        "neither result was overwritten.", "Challenge", level="ERROR")
+                return matches
         if not self._write([*results, result]):
             return False
         log("Local Challenge result saved.", "Challenge")

@@ -50,6 +50,14 @@ class ChallengeSubmissionController:
         return self.request(record)
 
     def request(self, record):
+        # Only a durable local record is eligible, never a runtime-only snapshot.
+        local_record = self.get_record(record.game_id, record.challenge_years)
+        if local_record is None:
+            self.feedback = SubmissionFeedback(
+                "failed", "Az eredményt előbb helyileg el kell menteni.",
+            )
+            return False
+        record = local_record
         key = (record.game_id, record.challenge_years)
         if record.submission_status == SubmissionStatus.SUBMITTED.value:
             self.feedback = SubmissionFeedback(

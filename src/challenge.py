@@ -42,6 +42,8 @@ def is_valid_challenge_save_record(record):
         return True
     if not isinstance(record, dict):
         return False
+    if "persisted" in record and not isinstance(record["persisted"], bool):
+        return False
     try:
         status = ChallengeStatus(record.get("status"))
     except (ValueError, TypeError):
@@ -97,6 +99,31 @@ class ChallengeManager:
         self.result_store = result_store
         self.status = ChallengeStatus.NOT_COMPLETED
         self.result = None
+        self.persisted = False
+        self.persistence_notice_pending = False
+
+    def retry_persistence(self):
+        """Retry only the original frozen snapshot; never recalculate value."""
+        if self.result is None:
+            return False
+        if self.persisted:
+            return True
+        try:
+            self.persisted = bool(
+                self.result_store is not None
+                and self.result_store.save_snapshot(self.result)
+            )
+        except (OSError, ValueError, TypeError) as error:
+            self.persisted = False
+            log(f"Challenge local persistence failed: {error}", "Challenge", level="ERROR")
+        if not self.persisted and self.result_store is not None:
+            log("Challenge snapshot retained; local saving can be retried.",
+                "Challenge", level="ERROR")
+        return self.persisted
+
+    def ensure_result_safe_to_discard(self):
+        """Do not abandon an unpersisted snapshot via 'exit without saving'."""
+        return self.result is None or self.retry_persistence()
 
     def handle_week_transition(
             self, previous_elapsed_week, new_elapsed_week, game_state):
@@ -129,11 +156,8 @@ class ChallengeManager:
             ),
         )
         self.status = ChallengeStatus.COMPLETED
-        stored = (
-            self.result_store.save_snapshot(self.result)
-            if self.result_store is not None else True
-        )
-        if stored and getattr(game_state, "game_time", None) is not None:
+        self.retry_persistence()
+        if getattr(game_state, "game_time", None) is not None:
             game_state.game_time.set_time_speed(TIME_PAUSED)
         log(
             f"10-year challenge completed. Farm Value: {format_money(farm_value)}",
@@ -145,10 +169,16 @@ class ChallengeManager:
         return {
             "status": self.status.value,
             "result": asdict(self.result) if self.result is not None else None,
+            "persisted": self.persisted,
         }
 
     def load_save_record(self, record, elapsed_weeks, game_id=None):
         """Régi 11. év feletti farmhoz nem talál ki utólagos eredményt."""
+        self.persisted = False
+        self.persistence_notice_pending = bool(
+            isinstance(record, dict) and record.get("persisted") is False
+            and record.get("result") is not None
+        )
         if record is None:
             if get_year_and_week(elapsed_weeks) >= (11, 1):
                 self.status = ChallengeStatus.LEGACY_INELIGIBLE
@@ -173,7 +203,6 @@ class ChallengeManager:
             self.result = ChallengeResult(**result)
             # Egy korábbi, hiteles snapshotból biztonságosan pótolható a
             # hiányzó helyi rekord. Aktuális Farm Value újraszámítás nincs.
-            if self.result_store is not None:
-                self.result_store.save_snapshot(self.result)
+            self.retry_persistence()
         else:
             self.result = None

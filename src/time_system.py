@@ -199,6 +199,15 @@ class GameTime:
 
     def update(self, current_ticks=None):
         """Visszaadja az előző frissítés óta eltelt hetek 0-alapú indexeit."""
+        return list(self.iter_weekly_updates(current_ticks))
+
+    def iter_weekly_updates(self, current_ticks=None):
+        """Advance immediately before each weekly callback, stopping on pause.
+
+        Unprocessed catch-up weeks are discarded on pause. Only the fractional
+        progress remains, so saving or resuming cannot silently skip ahead.
+        The list-returning update API remains available for non-callback callers.
+        """
         now = pygame.time.get_ticks() if current_ticks is None else current_ticks
 
         self._accumulate_until(now)
@@ -206,12 +215,14 @@ class GameTime:
             self.elapsed_time_in_week_ms // BASE_WEEK_DURATION_MS
         )
         if passed_weeks <= 0:
-            return []
+            return
 
-        first_week_index = self.elapsed_weeks + 1
-        self.elapsed_weeks += passed_weeks
         self.elapsed_time_in_week_ms -= passed_weeks * BASE_WEEK_DURATION_MS
-        return list(range(first_week_index, self.elapsed_weeks + 1))
+        for _ in range(passed_weeks):
+            if self.current_time_speed == TIME_PAUSED:
+                return
+            self.elapsed_weeks += 1
+            yield self.elapsed_weeks
 
     def synchronize(self, current_ticks=None):
         """Külső, ideiglenes szünet alatt eldobja az eltelt valós időt."""

@@ -1,4 +1,5 @@
 import hashlib
+import copy
 import json
 import math
 import os
@@ -22,12 +23,12 @@ from buildings import (
     apply_garage_upgrades,
 )
 from constants import (
-    BUILDING, FIELD, GRASS, ROAD, WORLD_HEIGHT_TILES, WORLD_WIDTH_TILES,
+    BUILDING, FIELD, GRASS, ROAD, TILE_SIZE, WORLD_HEIGHT_TILES, WORLD_WIDTH_TILES,
 )
 from crops import CROPS, get_crop_growth_weeks, get_crop_harvest_stages
 from game_rules import FIELD_TYPES, UPGRADES
 from game_logger import log
-from game_identity import restore_or_generate_game_id
+from game_identity import is_valid_game_id, restore_or_generate_game_id
 from game_version import get_game_version
 from inventory import get_inventory_item_ids
 from financial_history import is_valid_transaction
@@ -227,6 +228,7 @@ def _migrate_removed_market_buildings(data):
     world = data.get("world")
     if not isinstance(buildings, list) or not isinstance(world, list):
         return
+    old_buildings = list(buildings)
     markets = [
         building for building in buildings
         if isinstance(building, dict) and building.get("type") == "market"
@@ -248,6 +250,62 @@ def _migrate_removed_market_buildings(data):
                             and world[tile_row][tile_col] == BUILDING):
                         world[tile_row][tile_col] = GRASS
         buildings.remove(market)
+    if not markets:
+        return
+    index_map = {}
+    for old_index, building in enumerate(old_buildings):
+        if building not in markets:
+            index_map[old_index] = len(index_map)
+    runtime = data.get("vehicle_runtime")
+    if not isinstance(runtime, dict):
+        return
+    if any(not isinstance(runtime.get(key), list)
+           for key in ("tasks", "queue", "assets")):
+        return  # The validator will reject this malformed runtime.
+
+    def remap(reference):
+        if (isinstance(reference, dict)
+                and reference.get("kind") == "building"
+                and _is_plain_int(reference.get("index"))):
+            old_index = reference["index"]
+            if old_index in index_map:
+                reference["index"] = index_map[old_index]
+            elif 0 <= old_index < len(old_buildings):
+                return None
+        return reference
+
+    removed_tasks = set()
+    for task in runtime.get("tasks", []):
+        if not isinstance(task, dict):
+            continue
+        lost_reference = False
+        for key in ("field", "pond", "source_building"):
+            old_reference = task.get(key)
+            task[key] = remap(old_reference)
+            lost_reference |= old_reference is not None and task[key] is None
+        group = task.get("target_group")
+        if isinstance(group, list):
+            mapped = [remap(reference) for reference in group]
+            lost_reference |= any(reference is None for reference in mapped)
+            task["target_group"] = [ref for ref in mapped if ref is not None]
+        if lost_reference and _is_plain_int(task.get("task_id")):
+            removed_tasks.add(task["task_id"])
+    runtime["tasks"] = [task for task in runtime.get("tasks", [])
+                        if not isinstance(task, dict)
+                        or not _is_plain_int(task.get("task_id"))
+                        or task["task_id"] not in removed_tasks]
+    runtime["queue"] = [task_id for task_id in runtime.get("queue", [])
+                        if not _is_plain_int(task_id) or task_id not in removed_tasks]
+    for asset in runtime.get("assets", []):
+        if not isinstance(asset, dict):
+            continue
+        asset["unreachable_parking_building"] = remap(
+            asset.get("unreachable_parking_building"))
+        for key in ("current_task_id", "assigned_task_id"):
+            if _is_plain_int(asset.get(key)) and asset[key] in removed_tasks:
+                asset[key] = None
+                # Keep the travel state so restore performs its existing
+                # orphan-task reset and restores the normal parking position.
 
 
 def _migrate_farmhouse_footprints(data):
@@ -470,15 +528,7 @@ def _is_valid_save_data(data):
         return False
     if not _validate_vehicles(data):
         return False
-    runtime = data.get("vehicle_runtime")
-    if runtime is not None and not (
-        isinstance(runtime, dict)
-        and isinstance(runtime.get("tasks"), list)
-        and isinstance(runtime.get("queue"), list)
-        and isinstance(runtime.get("assets"), list)
-        and isinstance(runtime.get("next_task_order"), int)
-        and not isinstance(runtime.get("next_task_order"), bool)
-    ):
+    if not _validate_vehicle_runtime(data):
         return False
     if not _validate_animals(data):
         return False
@@ -497,6 +547,226 @@ def _is_valid_save_data(data):
 
 def _is_plain_int(value):
     return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _validate_vehicle_runtime(data):
+    """Validate restore's input before any live GameState is changed."""
+    try:
+        return _validate_vehicle_runtime_schema(data)
+    except (TypeError, ValueError, OverflowError, KeyError):
+        # Malformed nested JSON must be a rejected save, not a load exception.
+        return False
+
+
+def _validate_vehicle_runtime_schema(data):
+    from dataclasses import fields as dataclass_fields
+    import tractor
+
+    runtime = data.get("vehicle_runtime")
+    if runtime is None:
+        return True
+    if (not isinstance(runtime, dict)
+            or any(not isinstance(runtime.get(key), list)
+                   for key in ("tasks", "assets", "queue"))
+            or not _is_plain_int(runtime.get("next_task_order"))
+            or runtime["next_task_order"] < 1):
+        return False
+    world = data["world"]
+    vehicles = {record["id"]: record for record in data.get("tractors", [])}
+    states = {value for name, value in vars(tractor).items()
+              if name.startswith("TRACTOR_") and isinstance(value, str)}
+    task_types = {value for name, value in vars(tractor).items()
+                  if name.startswith("TASK_") and isinstance(value, str)}
+
+    def number(value):
+        return (not isinstance(value, bool) and isinstance(value, (int, float))
+                and math.isfinite(value))
+
+    def point(value, tile=True):
+        if not isinstance(value, (list, tuple)) or len(value) != 2:
+            return False
+        if tile:
+            return (all(_is_plain_int(v) for v in value)
+                    and 0 <= value[0] < len(world)
+                    and 0 <= value[1] < len(world[value[0]]))
+        return all(number(v) for v in value)
+
+    def reference(value, optional=True):
+        if value is None:
+            return optional
+        if not isinstance(value, dict) or value.get("kind") not in ("field", "building"):
+            return False
+        collection = data["fields"] if value["kind"] == "field" else data["buildings"]
+        return (_is_plain_int(value.get("index"))
+                and 0 <= value["index"] < len(collection))
+
+    def asset_id(value):
+        return value is None or (_is_plain_int(value) and value in vehicles)
+
+    routes = {"route_to_implement", "route_to_source", "route_to_pond",
+              "route_pond_to_field", "return_route", "route_implement_to_home",
+              "route_source_to_target", "orchard_internal_path"}
+    points = {"entry_tile", "connection_road", "implement_connection_road",
+              "pond_connection_road", "orchard_entry_tile", "harvest_approach_position"}
+    numeric = {"resource_amount", "remaining_wait_ms", "loading_duration_ms",
+               "unloading_duration_ms", "creation_order", "warehouse_amount",
+               "purchased_amount", "remaining_payload", "tree_slot"}
+    booleans = {"resource_reserved", "manually_initiated", "capacity_limited"}
+    tasks = {}
+    defaults = tractor.FieldTask(field={})
+    for record in runtime["tasks"]:
+        if not isinstance(record, dict):
+            return False
+        task_id = record.get("task_id")
+        if not _is_plain_int(task_id) or task_id <= 0 or task_id in tasks:
+            return False
+        if not reference(record.get("field"), optional=False):
+            return False
+        if record.get("task_type", defaults.task_type) not in task_types:
+            return False
+        target_ref = record["field"]
+        target_type = {
+            "supply_feed": "animal_pen", "supply_water": "animal_pen",
+            "processing_supply": "processing_plant", "orchard_harvest": "orchard",
+        }.get(record.get("task_type", defaults.task_type))
+        if target_type is None:
+            if target_ref["kind"] != "field":
+                return False
+        elif (target_ref["kind"] != "building"
+              or data["buildings"][target_ref["index"]].get("type") != target_type):
+            return False
+        if record.get("status", "waiting") not in ("waiting", "active", "completed", "cancelled"):
+            return False
+        for field in dataclass_fields(tractor.FieldTask):
+            key = field.name
+            value = record.get(key, getattr(defaults, key))
+            if key in ("pond", "source_building") and not reference(value):
+                return False
+            if key == "target_group" and value is not None and (
+                    not isinstance(value, list) or not all(reference(v, False) for v in value)):
+                return False
+            if key in routes and value is not None and (
+                    not isinstance(value, list) or not all(point(v) for v in value)):
+                return False
+            if key in points and value is not None and not point(
+                    value, tile=key != "harvest_approach_position"):
+                return False
+            if key in numeric and value is not None and (
+                    not _is_plain_int(value)
+                    or (key != "remaining_wait_ms" and value < 0)):
+                return False
+            if key in numeric and value is None and key not in ("remaining_payload", "tree_slot"):
+                return False
+            if key in booleans and not isinstance(value, bool):
+                return False
+            if key == "purchase_cost" and (not number(value) or value < 0):
+                return False
+            if key in ("implement", "required_vehicle_id") and not asset_id(value):
+                return False
+            if key == "required_implement_type" and value is not None and (
+                    normalize_vehicle_type(value) not in (VehicleType.TRAILER, VehicleType.WATER_TANK)):
+                return False
+            if key == "payment" and value is not None and not isinstance(value, dict):
+                return False
+            if key in ("crop", "trough_type", "source_type", "tree_type", "cargo_type") and value is not None and not isinstance(value, str):
+                return False
+        tasks[task_id] = record
+    queue = runtime["queue"]
+    if (any(not _is_plain_int(v) or v not in tasks for v in queue)
+            or len(queue) != len(set(queue))):
+        return False
+    seen_assets = set()
+    assigned = set()
+    towing = set()
+    for record in runtime["assets"]:
+        if not isinstance(record, dict):
+            return False
+        identity = record.get("id")
+        if not _is_plain_int(identity) or identity not in vehicles or identity in seen_assets:
+            return False
+        seen_assets.add(identity)
+        position = [record.get(key) for key in ("row", "col", "world_x", "world_y")]
+        # Newly created idle assets may not have acquired a parking position yet.
+        unpositioned = all(value is None for value in position)
+        if unpositioned:
+            if record.get("state", "idle") != "idle" or record.get("current_task_id") is not None:
+                return False
+        elif (not all(number(value) for value in position)
+              or not point((record["row"], record["col"]))
+              or not 0 <= record["world_x"] < len(world[0]) * TILE_SIZE
+              or not 0 <= record["world_y"] < len(world) * TILE_SIZE):
+            return False
+        if record.get("facing_direction", "up") not in ("up", "down", "left", "right"):
+            return False
+        towable = VEHICLE_TYPE_DEFINITIONS[normalize_vehicle_type(
+            vehicles[identity].get("vehicle_type", "tractor"))].get("towable", False)
+        task_id = record.get("assigned_task_id" if towable else "current_task_id")
+        if task_id is not None:
+            if not _is_plain_int(task_id) or task_id not in tasks:
+                return False
+            if not towable:
+                if task_id in assigned or task_id in queue:
+                    return False
+                assigned.add(task_id)
+        for key in ("attached_to_id", "attached_implement_id"):
+            value = record.get(key)
+            if not asset_id(value) or value == identity:
+                return False
+            if value is not None:
+                other_towable = VEHICLE_TYPE_DEFINITIONS[normalize_vehicle_type(
+                    vehicles[value].get("vehicle_type", "tractor"))].get("towable", False)
+                if ((key == "attached_to_id" and (not towable or other_towable))
+                        or (key == "attached_implement_id" and (towable or not other_towable))):
+                    return False
+            if key == "attached_to_id" and value is not None:
+                if value in towing:
+                    return False
+                towing.add(value)
+        if towable:
+            for key in ("loading_location", "unloading_location"):
+                if record.get(key) is not None and not isinstance(record[key], str):
+                    return False
+            continue
+        if record.get("state", "idle") not in states:
+            return False
+        if record.get("state_after_parking_exit") is not None and record["state_after_parking_exit"] not in states:
+            return False
+        for key in ("path", "protected_road_tiles", "orchard_exit_path"):
+            value = record.get(key, [])
+            if not isinstance(value, list) or not all(point(v) for v in value):
+                return False
+        index = record.get("next_path_index", 0)
+        if not _is_plain_int(index) or not 0 <= index <= len(record.get("path", [])):
+            return False
+        if not number(record.get("movement_accumulator_ms", 0)) or record.get("movement_accumulator_ms", 0) < 0:
+            return False
+        for key in ("parking_tile", "orchard_exit_road"):
+            if record.get(key) is not None and not point(record[key]):
+                return False
+        if record.get("parking_world_position") is not None and not point(record["parking_world_position"], False):
+            return False
+        if not reference(record.get("unreachable_parking_building")):
+            return False
+    runtime_assets = {record["id"]: record for record in runtime["assets"]}
+    for record in runtime["assets"]:
+        for key, reciprocal in (("attached_to_id", "attached_implement_id"),
+                                ("attached_implement_id", "attached_to_id")):
+            other = record.get(key)
+            if other is not None and (
+                    other not in runtime_assets
+                    or runtime_assets[other].get(reciprocal) != record["id"]):
+                return False
+        task_id = record.get("current_task_id")
+        if task_id is not None:
+            task = tasks[task_id]
+            required = task.get("required_vehicle_id")
+            if required is not None and required != record["id"]:
+                return False
+            definition = VEHICLE_TYPE_DEFINITIONS[normalize_vehicle_type(
+                vehicles[record["id"]].get("vehicle_type", "tractor"))]
+            if task.get("task_type", defaults.task_type) not in definition.get("supported_tasks", ()):
+                return False
+    return True
 
 
 def _validate_tiles(data):
@@ -1234,7 +1504,9 @@ def load_game_from_slot(game_state, slot_id):
         path = get_slot_path(slot_id)
     except ValueError:
         return False
-    validated = _validate_slot_document(_read_json(path), slot_id)
+    document = _read_json(path)
+    original_document = copy.deepcopy(document)
+    validated = _validate_slot_document(document, slot_id)
     if validated is None:
         log(
             "A kiválasztott mentés hiányzik, sérült vagy nem kompatibilis.",
@@ -1242,6 +1514,8 @@ def load_game_from_slot(game_state, slot_id):
         )
         return False
     _, game_data = validated
+    if not _persist_legacy_game_id(path, original_document, game_data, slot=True):
+        return False
     _apply_game_data(game_state, game_data)
     log("Játék sikeresen betöltve.", "Load")
     return True
@@ -1261,6 +1535,8 @@ def load_game(game_state, save_path=None):
         log("A mentés sérült vagy nem olvasható.", "Load")
         return False
 
+    original_document = copy.deepcopy(data)
+
     if not _migrate_save_schema(data):
         log("A mentés verziója nem kompatibilis.", "Load")
         return False
@@ -1277,7 +1553,27 @@ def load_game(game_state, save_path=None):
         log("A mentés sérült vagy nem olvasható.", "Load")
         return False
 
+    if not _persist_legacy_game_id(path, original_document, data):
+        return False
     _apply_game_data(game_state, data)
 
     log("Játék sikeresen betöltve.", "Load")
+    return True
+
+
+def _persist_legacy_game_id(path, document, data, slot=False):
+    """Assign identity once, before changing the live farm, preserving other data."""
+    if is_valid_game_id(data.get("game_id")):
+        return True
+    # A snapshot with an existing identity already belongs to this farm.
+    challenge = data.get("ten_year_challenge") or {}
+    snapshot = challenge.get("result") or {}
+    identity, _ = restore_or_generate_game_id(snapshot.get("game_id"))
+    target = document["game_state"] if slot else document
+    target["game_id"] = identity
+    if not _atomic_write_json(path, document):
+        log("Legacy farm identity could not be saved; load cancelled without "
+            "changing the current game.", "Load", level="ERROR")
+        return False
+    data["game_id"] = identity
     return True
