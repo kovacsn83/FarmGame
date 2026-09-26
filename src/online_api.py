@@ -1,12 +1,15 @@
 """Small, offline-safe HTTP client for FarmGame online services."""
 
 import os
+from decimal import DecimalException
 from dataclasses import asdict, dataclass, is_dataclass
 from typing import Any, Callable
 
 import requests
 
 from game_logger import log
+from challenge_validation import is_finite_farm_value, has_name_control_characters
+from money_format import format_money
 from game_version import get_game_version
 
 
@@ -54,17 +57,24 @@ def _error_message(data, fallback):
 
 
 def _valid_leaderboard_entry(entry):
-    return (
+    valid = (
         isinstance(entry, dict)
         and isinstance(entry.get("rank"), int)
         and not isinstance(entry.get("rank"), bool)
         and isinstance(entry.get("player_name"), str)
         and bool(entry["player_name"].strip())
-        and isinstance(entry.get("farm_value"), (int, float))
-        and not isinstance(entry.get("farm_value"), bool)
+        and not has_name_control_characters(entry["player_name"])
+        and is_finite_farm_value(entry.get("farm_value"))
         and isinstance(entry.get("game_version"), str)
         and bool(entry["game_version"])
     )
+    if not valid:
+        return False
+    try:
+        format_money(entry["farm_value"])
+    except (DecimalException, ValueError, OverflowError):
+        return False
+    return True
 
 
 class OnlineApiClient:

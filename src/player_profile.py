@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from game_logger import get_logger
+from challenge_validation import has_name_control_characters
 from user_data import get_player_profile_path
 
 
@@ -34,6 +35,8 @@ def normalize_player_name(name):
 
 
 def validate_player_name(name):
+    if has_name_control_characters(str(name)):
+        raise ValueError("A játékosnév nem tartalmazhat vezérlőkaraktert.")
     normalized = normalize_player_name(name)
     if not normalized:
         raise ValueError("A játékosnév nem lehet üres.")

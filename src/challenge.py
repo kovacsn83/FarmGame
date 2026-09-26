@@ -1,11 +1,11 @@
 """Helyi Challenge-eredmények, online kommunikáció nélkül."""
 
-import math
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields
 from datetime import datetime, timezone
 from enum import Enum
 
 from calendar_utils import get_year_and_week
+from challenge_validation import is_finite_farm_value, has_name_control_characters
 from game_logger import log
 from game_identity import is_valid_game_id, restore_or_generate_game_id
 from game_version import get_game_version
@@ -53,6 +53,9 @@ def is_valid_challenge_save_record(record):
         return result is None
     if not isinstance(result, dict):
         return False
+    # Legacy snapshots may omit game_id; load_save_record supplies the farm ID.
+    if set(result) - {field.name for field in fields(ChallengeResult)}:
+        return False
     required_types = {
         "challenge_type": str,
         "farm_value": (int, float),
@@ -74,10 +77,11 @@ def is_valid_challenge_save_record(record):
         result["challenge_type"] == TEN_YEAR_CHALLENGE
         and result["completed_year"] == 10
         and result["completed_week"] == 52
-        and math.isfinite(result["farm_value"])
+        and is_finite_farm_value(result["farm_value"])
         and bool(result["game_version"])
         and bool(result["player_id"])
         and bool(result["player_name"])
+        and not has_name_control_characters(result["player_name"])
     )
     if not fields_valid:
         return False

@@ -1,13 +1,13 @@
 """Persistent, upload-ready local Challenge results without networking."""
 
 import json
-import math
 import os
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields
 from datetime import datetime
 from enum import Enum
 
 from game_identity import is_valid_game_id
+from challenge_validation import is_finite_farm_value, has_name_control_characters
 from game_logger import log
 from user_data import get_challenge_results_path
 
@@ -49,6 +49,8 @@ def local_result_from_snapshot(snapshot):
 def _is_valid_result(record):
     if not isinstance(record, dict):
         return False
+    if set(record) - {field.name for field in fields(LocalChallengeResult)}:
+        return False
     required_types = {
         "player_id": str,
         "player_name": str,
@@ -68,7 +70,8 @@ def _is_valid_result(record):
         record["player_id"] and record["player_name"]
         and is_valid_game_id(record["game_id"])
         and record["game_version"] and record["challenge_years"] > 0
-        and math.isfinite(record["farm_value"])
+        and is_finite_farm_value(record["farm_value"])
+        and not has_name_control_characters(record["player_name"])
     ):
         return False
     try:
