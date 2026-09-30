@@ -217,7 +217,7 @@ class FarmhousePlotTests(unittest.TestCase):
         plot_size = 8 * TILE_SIZE
         background = (1, 2, 3)
 
-        for level in (1, 2, 3):
+        for level in (1, 2, 3, 4):
             with self.subTest(level=level):
                 screen = pygame.Surface((300, 300))
                 screen.fill(background)
@@ -255,6 +255,54 @@ class FarmhousePlotTests(unittest.TestCase):
         self.assertEqual(FARMHOUSE_LEVELS[1]["size"], (3, 3))
         self.assertEqual(FARMHOUSE_LEVELS[2]["size"], (4, 4))
         self.assertEqual(FARMHOUSE_LEVELS[3]["size"], (4, 4))
+        self.assertEqual(FARMHOUSE_LEVELS[4]["size"], (4, 4))
+
+    def test_level_four_purchase_requires_three_and_saves_without_changing_plot(self):
+        house = place_building(self.world, self.buildings, 2, 2, "farmhouse")
+        state = GameState(self.world, [], self.buildings, Economy(45000), GameTime(start_ticks=0))
+        for level in (1, 2):
+            house["farmhouse_level"] = level
+            self.assertFalse(state.economy.purchase_upgrade(state, "farmhouse_level_4"))
+            self.assertEqual(state.economy.money, 45000)
+        house["farmhouse_level"] = 3
+        state.economy.money = 24999
+        self.assertFalse(state.economy.purchase_upgrade(state, "farmhouse_level_4"))
+        state.economy.money = 45000
+        world_before = [row[:] for row in self.world]
+        self.assertTrue(state.economy.purchase_upgrade(state, "farmhouse_level_4"))
+        self.assertEqual(state.economy.money, 20000)
+        self.assertEqual(house["farmhouse_level"], 4)
+        self.assertEqual(get_building_maintenance_base(house), 25000)
+        self.assertEqual(self.world, world_before)
+        self.assertFalse(state.economy.purchase_upgrade(state, "farmhouse_level_4"))
+        self.assertEqual(state.economy.money, 20000)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "level-four.json"
+            self.assertTrue(save_game(state, path))
+            house["farmhouse_level"] = 1
+            self.assertTrue(load_game(state, path))
+        self.assertEqual(state.buildings[0]["farmhouse_level"], 4)
+
+    def test_level_four_garden_is_confined_to_upper_left_corner(self):
+        pygame.init()
+        set_screen_size(300, 300)
+        set_camera(None)
+        surfaces = []
+        for level in (3, 4):
+            surface = pygame.Surface((300, 300))
+            surface.fill((1, 2, 3))
+            draw_farmhouse(surface, {"type": "farmhouse", "row": 1, "col": 1,
+                                   "width": 8, "height": 8, "farmhouse_level": level})
+            surfaces.append(surface)
+        x, y = map(round, world_to_screen(TILE_SIZE, TILE_SIZE))
+        garden = pygame.Rect(x, y, 2 * TILE_SIZE, 2 * TILE_SIZE)
+        changed = 0
+        for py in range(300):
+            for px in range(300):
+                if surfaces[0].get_at((px, py)) != surfaces[1].get_at((px, py)):
+                    changed += 1
+                    self.assertTrue(garden.collidepoint(px, py))
+        self.assertGreater(changed, 100)
 
     def test_level_three_draws_driveway_garage_pool_and_keeps_hedge(self):
         pygame.init()

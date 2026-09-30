@@ -29,7 +29,7 @@ class UpgradeDependencyTests(unittest.TestCase):
         return state, economy
 
     def test_tree_metadata_is_complete_and_extensible(self):
-        self.assertEqual(len(get_upgrade_tree_columns()), 3)
+        self.assertEqual(len(get_upgrade_tree_columns()), 4)
         expected_dependencies = {
             "unlock_field_8x8": "unlock_field_6x6",
             "garage_level_3": "garage_level_2",

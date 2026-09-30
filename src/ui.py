@@ -933,8 +933,13 @@ class PopupWindow:
         pygame.draw.rect(screen, INFO_PANEL_BORDER, self.rect, 2)
 
     @staticmethod
-    def draw_text(screen, font, text, x, y):
+    def draw_text(screen, font, text, x, y, max_width=None):
         rendered_text = font.render(text, True, COLOR_TEXT)
+        if max_width is not None and rendered_text.get_width() > max_width:
+            ratio = max_width / rendered_text.get_width()
+            rendered_text = pygame.transform.smoothscale(rendered_text, (
+                max_width, max(1, round(rendered_text.get_height() * ratio)),
+            ))
         screen.blit(rendered_text, (x, y))
 
 
@@ -2842,7 +2847,7 @@ class InfoPanel(PopupWindow):
         content_left = self.rect.x + INFO_PANEL_PADDING
         content_width = self.rect.width - INFO_PANEL_PADDING * 2
         column_width = max(
-            150,
+            1,
             (content_width - UPGRADE_COLUMN_GAP * (column_count - 1))
             // column_count,
         )
@@ -2957,15 +2962,15 @@ class InfoPanel(PopupWindow):
             self.upgrade_info_rects[upgrade_id] = info_rect
             text_x = card_rect.x + 14
             text_y = card_rect.y + 8
-            self.draw_text(screen, font, upgrade["name"], text_x, text_y)
-            self.draw_text(
-                screen, font, f"Ár: {format_money(upgrade['price'])}",
-                text_x, text_y + 26,
-            )
+            def draw_card_text(text, y, available_width):
+                self.draw_text(screen, font, text, text_x, y, max_width=available_width)
+
+            draw_card_text(upgrade["name"], text_y, max(1, info_rect.left - text_x - 4))
+            draw_card_text(f"Ár: {format_money(upgrade['price'])}", text_y + 26,
+                           max(1, card_rect.right - text_x - 8))
             display_status = "Zárolt" if locked else status
-            self.draw_text(
-                screen, font, display_status, text_x, text_y + 52,
-            )
+            draw_card_text(display_status, text_y + 52,
+                           max(1, card_rect.right - text_x - 8))
 
             pygame.draw.ellipse(screen, UPGRADE_INFO_FILL, info_rect)
             pygame.draw.ellipse(screen, UPGRADE_INFO_BORDER, info_rect, 1)

@@ -370,6 +370,48 @@ def _draw_farmhouse_level_three_yard(screen, plot):
     )
 
 
+def _draw_farmhouse_level_four_yard(screen, plot):
+    """Pixelpontos, dekoratív pihenőkert a bal felső 2×2 csempén."""
+    patio = pygame.Rect(plot.x + 6, plot.y + 6, 2 * TILE_SIZE - 12, 2 * TILE_SIZE - 12)
+    pygame.draw.rect(screen, (153, 148, 125), patio)
+    pygame.draw.rect(screen, (111, 112, 91), patio, 1)
+    for offset in range(8, patio.width, 8):
+        pygame.draw.line(screen, (133, 130, 111), (patio.x + offset, patio.top + 1), (patio.x + offset, patio.bottom - 2))
+        pygame.draw.line(screen, (133, 130, 111), (patio.left + 1, patio.y + offset), (patio.right - 2, patio.y + offset))
+
+    # A közös bal alsó megvilágításhoz tartozó árnyék jobbra/felfelé vetül.
+    grill = pygame.Rect(patio.left + 4, patio.top + 4, 10, 8)
+    _draw_building_shadow(screen, grill, PROCEDURAL_SHADOW_COLOR)
+    pygame.draw.rect(screen, (105, 100, 89), grill)
+    pygame.draw.rect(screen, (52, 57, 54), grill.inflate(-4, -4))
+    for x in range(grill.left + 3, grill.right - 2, 3):
+        pygame.draw.line(screen, (153, 156, 143), (x, grill.top + 2), (x, grill.bottom - 3))
+    pygame.draw.line(screen, (189, 180, 155), grill.bottomleft, (grill.right - 1, grill.bottom - 1))
+    pygame.draw.rect(screen, (72, 75, 67), grill, 1)
+
+    # Keskeny faasztal két paddal, szabad átjárással a grill mellett.
+    table = pygame.Rect(patio.left + 3, patio.bottom - 12, 21, 7)
+    for furniture in (table, table.move(0, -6).inflate(-2, -3), table.move(0, 7).inflate(-2, -3)):
+        _draw_building_shadow(screen, furniture, PROCEDURAL_SHADOW_COLOR)
+        pygame.draw.rect(screen, (160, 119, 73), furniture)
+        pygame.draw.rect(screen, (92, 72, 47), furniture, 1)
+        pygame.draw.line(screen, (197, 155, 98), (furniture.left + 1, furniture.bottom - 2), (furniture.right - 2, furniture.bottom - 2))
+
+    bed = pygame.Rect(patio.right - 14, patio.top + 4, 10, 18)
+    _draw_building_shadow(screen, bed, PROCEDURAL_SHADOW_COLOR)
+    pygame.draw.rect(screen, (160, 119, 73), bed)
+    pygame.draw.rect(screen, (85, 65, 43), bed.inflate(-4, -4))
+    for y in range(bed.top + 4, bed.bottom - 3, 5):
+        pygame.draw.rect(screen, (49, 108, 55), (bed.left + 3, y, 4, 3))
+        pygame.draw.rect(screen, (107, 154, 73), (bed.left + 3, y + 1, 2, 2))
+    pygame.draw.rect(screen, (94, 73, 46), bed, 1)
+
+    hedge = pygame.Rect(patio.right + 1, patio.top, 3, patio.height)
+    pygame.draw.rect(screen, FARMHOUSE_FENCE_COLOR, hedge)
+    for y in range(hedge.top + 1, hedge.bottom - 1, 5):
+        pygame.draw.rect(screen, (78, 135, 64), (hedge.left, y, 2, 3))
+
+
 def draw_farmhouse(screen, building):
     """A füves Farmház-telket, kerítést és jobb alsó házat rajzolja."""
     plot = _building_rect(building)
@@ -395,6 +437,8 @@ def draw_farmhouse(screen, building):
     )
     if level >= 3:
         _draw_farmhouse_level_three_yard(screen, plot)
+    if level >= 4:
+        _draw_farmhouse_level_four_yard(screen, plot)
     _draw_farmhouse_fence(screen, plot)
     if level == 1:
         _draw_farmhouse_level_one(screen, footprint)

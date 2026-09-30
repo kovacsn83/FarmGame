@@ -62,7 +62,7 @@ class FarmhouseUpgradeUiTests(unittest.TestCase):
     def test_description_is_not_drawn_as_normal_card_text(self):
         drawn_texts = []
         self.panel.draw_text = (
-            lambda screen, font, text, x, y: drawn_texts.append(text)
+            lambda screen, font, text, x, y, **kwargs: drawn_texts.append(text)
         )
         self._draw_at((-1, -1))
         for upgrade in UPGRADES.values():
@@ -171,10 +171,11 @@ class FarmhouseUpgradeUiTests(unittest.TestCase):
             self.panel.draw(self.screen, self.font, self.state)
         tooltip.assert_called_once()
 
-    def test_tree_has_three_columns_and_vertical_branch_order(self):
+    def test_tree_has_four_columns_and_vertical_branch_order(self):
         self._draw_at((-1, -1))
         columns = get_upgrade_tree_columns()
-        self.assertEqual(len(columns), 3)
+        self.assertEqual(len(columns), 4)
+        self.assertEqual(columns[3], ())
         self.assertEqual(columns[0], (
             "unlock_field_6x6",
             "automated_animal_watering",

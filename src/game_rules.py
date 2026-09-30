@@ -16,6 +16,7 @@ WEED_PENALTY = 0.10
 
 from constants import (
     FARMHOUSE_LEVEL_2_UPGRADE_PRICE, FARMHOUSE_LEVEL_3_UPGRADE_PRICE,
+    FARMHOUSE_LEVEL_4_UPGRADE_PRICE,
 )
 
 
@@ -100,6 +101,19 @@ UPGRADES = {
         "target_building_type": "farmhouse",
         "target_level": 3,
         "tree_column": 3,
+        "tree_order": 0,
+    },
+    "farmhouse_level_4": {
+        "name": "Farmház IV.",
+        "description": "Kerti sütögetővel, ülőhelyekkel és fűszernövényes magaságyással bővíti az udvart.",
+        "price": FARMHOUSE_LEVEL_4_UPGRADE_PRICE,
+        "unlocks": None,
+        "state_key": "farmhouse_level_4",
+        "requires": None,
+        "required_level": 3,
+        "target_building_type": "farmhouse",
+        "target_level": 4,
+        "tree_column": 4,
         "tree_order": 0,
     },
     "unlock_field_6x6": {
@@ -293,7 +307,7 @@ def get_upgrade_status(upgrade_id, purchased_upgrades, farmhouse_level=None):
 
 def _farmhouse_level_requirement(level):
     """Egységes, felhasználói Farmház-szint feltételt formáz."""
-    roman_levels = {1: "I", 2: "II", 3: "III"}
+    roman_levels = {1: "I", 2: "II", 3: "III", 4: "IV"}
     display_level = roman_levels.get(level, str(level))
     return f"Zárolt: Farmház {display_level}. szükséges"
 

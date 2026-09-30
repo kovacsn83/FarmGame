@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Új Farmház IV. fejlesztés $25 000 áron, Farmház III. előfeltétellel.
+  A változatlan 8×8-as telken kerti sütögető, ülőhelyek, elválasztó sövény
+  és fűszernövényes magaságyás jelenik meg. Fenntartási alap: $25 000.
+
 ## 0.1.3 – 2026-09-26
 
 - A technikai stabilizációs kiadás megerősíti a Challenge snapshotok,
