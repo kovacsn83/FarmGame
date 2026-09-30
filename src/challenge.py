@@ -105,12 +105,13 @@ class ChallengeManager:
         self.result = None
         self.persisted = False
         self.persistence_notice_pending = False
+        self.submitted_snapshot_conflict_preserved = False
 
     def retry_persistence(self):
         """Retry only the original frozen snapshot; never recalculate value."""
         if self.result is None:
             return False
-        if self.persisted:
+        if self.persisted or self.submitted_snapshot_conflict_preserved:
             return True
         try:
             self.persisted = bool(
@@ -120,6 +121,17 @@ class ChallengeManager:
         except (OSError, ValueError, TypeError) as error:
             self.persisted = False
             log(f"Challenge local persistence failed: {error}", "Challenge", level="ERROR")
+        if not self.persisted:
+            preserve = getattr(self.result_store, "preserve_submitted_conflict", None)
+            if preserve is not None:
+                try:
+                    self.submitted_snapshot_conflict_preserved = bool(preserve(self.result))
+                except (OSError, ValueError, TypeError):
+                    self.submitted_snapshot_conflict_preserved = False
+            if self.submitted_snapshot_conflict_preserved:
+                self.persistence_notice_pending = False
+                log("Submitted result retained; differing save snapshot archived without resubmission.", "Challenge")
+                return True
         if not self.persisted and self.result_store is not None:
             log("Challenge snapshot retained; local saving can be retried.",
                 "Challenge", level="ERROR")
@@ -179,6 +191,7 @@ class ChallengeManager:
     def load_save_record(self, record, elapsed_weeks, game_id=None):
         """Régi 11. év feletti farmhoz nem talál ki utólagos eredményt."""
         self.persisted = False
+        self.submitted_snapshot_conflict_preserved = False
         self.persistence_notice_pending = bool(
             isinstance(record, dict) and record.get("persisted") is False
             and record.get("result") is not None

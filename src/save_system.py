@@ -206,6 +206,7 @@ def _migrate_save_schema(data):
     version = data.get("save_version")
     if version == SAVE_VERSION:
         _migrate_removed_market_buildings(data)
+        _repair_legacy_processing_references(data)
         data.setdefault("vehicle_runtime", None)
         data.setdefault("financial_history", [])
         data.setdefault("restaurant_auto_sell", {})
@@ -215,11 +216,59 @@ def _migrate_save_schema(data):
         _migrate_farmhouse_levels(data)
         _migrate_removed_market_buildings(data)
         data["save_version"] = SAVE_VERSION
+        _repair_legacy_processing_references(data)
         data.setdefault("vehicle_runtime", None)
         data.setdefault("financial_history", [])
         data.setdefault("restaurant_auto_sell", {})
         return True
     return False
+
+
+def _repair_legacy_processing_references(data):
+    """Repair old off-by-one targets only when the saved route proves the destination."""
+    buildings = data.get("buildings")
+    runtime = data.get("vehicle_runtime")
+    if not isinstance(buildings, list) or not isinstance(runtime, dict):
+        return
+    tasks = runtime.get("tasks")
+    if not isinstance(tasks, list):
+        return
+    for task in tasks:
+        if not isinstance(task, dict) or task.get("task_type") != "processing_supply":
+            continue
+        ref = task.get("field")
+        if not isinstance(ref, dict) or ref.get("kind") != "building":
+            continue
+        index = ref.get("index")
+        if not _is_plain_int(index) or not 0 < index < len(buildings):
+            continue
+        if not isinstance(buildings[index], dict) or not isinstance(buildings[index - 1], dict):
+            continue
+        if buildings[index].get("type") == "processing_plant":
+            continue
+        candidate = buildings[index - 1]
+        route = task.get("route_source_to_target")
+        if (candidate.get("type") != "processing_plant"
+                or not isinstance(route, list) or not route):
+            continue
+        endpoint = route[-1]
+        def borders(building):
+            if not isinstance(endpoint, (list, tuple)) or len(endpoint) != 2:
+                return False
+            values = [building.get(k) for k in ("row", "col", "width", "height")]
+            if not all(_is_plain_int(v) for v in values + list(endpoint)):
+                return False
+            row, col, width, height = values
+            r, c = endpoint
+            return ((r in (row - 1, row + height) and col <= c < col + width)
+                    or (c in (col - 1, col + width) and row <= r < row + height))
+        matches = [i for i, b in enumerate(buildings)
+                   if isinstance(b, dict) and b.get("type") == "processing_plant" and borders(b)]
+        group = task.get("target_group")
+        if matches != [index - 1] or group != [ref]:
+            continue
+        task["field"] = {"kind": "building", "index": index - 1}
+        task["target_group"] = [dict(task["field"])]
 
 
 def _migrate_removed_market_buildings(data):

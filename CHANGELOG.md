@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- A már beküldött Challenge-eredménnyel ütköző mentési snapshot külön
+  helyi archívumba kerül; betöltéskor nem kér ismét mentést vagy beküldést.
+
+- Javítva a régi mentések elcsúszott Feldolgozó üzem fuvarhivatkozásainak
+  betöltése: kizárólag egyértelmű mentett útvonal alapján állnak helyre.
+
 - Új Farmház IV. fejlesztés $25 000 áron, Farmház III. előfeltétellel.
   A változatlan 8×8-as telken kerti sütögető, ülőhelyek, elválasztó sövény
   és fűszernövényes magaságyás jelenik meg. Fenntartási alap: $25 000.

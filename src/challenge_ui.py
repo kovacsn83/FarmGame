@@ -89,6 +89,7 @@ class ChallengeCompletionPanel:
 
     def show_pending_after_load(self, manager):
         if (manager.result is not None
+                and not getattr(manager, "submitted_snapshot_conflict_preserved", False)
                 and (not manager.persisted or manager.persistence_notice_pending)
                 and self._presented_snapshot is not manager.result):
             self.open_snapshot(manager)

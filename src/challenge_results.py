@@ -1,6 +1,7 @@
 """Persistent, upload-ready local Challenge results without networking."""
 
 import json
+import hashlib
 import os
 from dataclasses import asdict, dataclass, fields
 from datetime import datetime
@@ -188,6 +189,20 @@ class ChallengeResultStore:
                 "Challenge", level="ERROR",
             )
             return False
+
+    def preserve_submitted_conflict(self, snapshot):
+        """Archive a differing snapshot without touching the submitted canonical record."""
+        result = local_result_from_snapshot(snapshot)
+        existing = self.find(result.game_id, result.challenge_years)
+        if existing is None or existing.submission_status != SubmissionStatus.SUBMITTED.value:
+            return False
+        immutable = ("player_id", "player_name", "game_id", "game_version",
+                     "farm_value", "challenge_years", "completed_at")
+        if all(getattr(existing, key) == getattr(result, key) for key in immutable):
+            return False
+        digest = hashlib.sha256(json.dumps(asdict(result), sort_keys=True).encode("utf-8")).hexdigest()
+        path = self._path().with_name(f"snapshot-conflict-{digest}.json")
+        return ChallengeResultStore(path).save_snapshot(snapshot)
 
     def save_snapshot(self, snapshot):
         """Persist a trusted completed snapshot; never recompute its value."""
