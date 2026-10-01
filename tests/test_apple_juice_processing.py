@@ -52,7 +52,7 @@ class AppleJuiceProcessingTests(unittest.TestCase):
     def _plant(row=15, col=18):
         return initialize_processing_plant({
             "type": "processing_plant", "row": row, "col": col,
-            "width": 6, "height": 5,
+            "width": 6, "height": 5, "_processing_plant_level": 2, "active_recipe": None,
         })
 
     def test_catalog_recipe_and_ui_use_apple_juice_data(self):
@@ -75,7 +75,7 @@ class AppleJuiceProcessingTests(unittest.TestCase):
         panel = InfoPanel()
         panel.open_for_building(plant)
         state = GameState(
-            [], [], [plant], Economy(), GameTime(start_ticks=0),
+            [], [], [plant], Economy(), GameTime(start_ticks=0), purchased_upgrades={"processing_plant_level_2"},
         )
         captured = []
         with patch.object(
@@ -87,7 +87,7 @@ class AppleJuiceProcessingTests(unittest.TestCase):
             )
         self.assertEqual(
             {"canned_tomato", "cheese", "apple_juice", "mayonnaise"},
-            set(panel.processing_recipe_rects),
+            {key[0] for key in panel.processing_recipe_rects},
         )
         self.assertIn("  Alma: 0 db", captured)
         self.assertIn("  Almalé: 0 db", captured)
@@ -206,13 +206,15 @@ class AppleJuiceProcessingTests(unittest.TestCase):
         plant = place_building(
             world, buildings, 15, 18, "processing_plant",
         )
+        from processing import apply_processing_upgrades
+        apply_processing_upgrades([plant], {"processing_plant_level_2"})
         self.assertTrue(select_processing_recipe(plant, "apple_juice"))
         plant["processing_inventory"]["apple"] = 8
         self.assertEqual(5, start_processing_batch(plant, 12))
         plant["processing_inventory"]["apple_juice"] = 4
-        self.assertIn("Almalé", get_processing_tooltip_lines(plant))
+        self.assertTrue(any("Almalé" in line for line in get_processing_tooltip_lines(plant)))
         state = GameState(
-            world, [], buildings, Economy(), GameTime(start_ticks=0),
+            world, [], buildings, Economy(), GameTime(start_ticks=0), purchased_upgrades={"processing_plant_level_2"},
         )
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "apple-juice.json"

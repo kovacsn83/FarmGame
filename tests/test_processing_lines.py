@@ -33,7 +33,7 @@ from vehicle_types import VehicleType
 
 class ProcessingLineTests(unittest.TestCase):
     def plant(self, upgraded=True):
-        plant = initialize_processing_plant({"type": "processing_plant"})
+        plant = initialize_processing_plant({"type": "processing_plant", "active_recipe": "canned_tomato"})
         apply_processing_upgrades([plant], {PROCESSING_UPGRADE_ID} if upgraded else set())
         return plant
 
@@ -119,6 +119,7 @@ class ProcessingLineTests(unittest.TestCase):
         world = [[GRASS] * 40 for _ in range(35)]
         buildings = []
         plant = place_building(world, buildings, 8, 8, "processing_plant")
+        plant["active_recipe"] = "canned_tomato"
         state = GameState(world, [], buildings, Economy(), GameTime(start_ticks=0),
                           purchased_upgrades={PROCESSING_UPGRADE_ID})
         select_processing_recipe(plant, "cheese", 1)
@@ -147,6 +148,7 @@ class ProcessingLineTests(unittest.TestCase):
         garage = place_building(world, buildings, 2, 2, "garage")
         place_building(world, buildings, 2, 10, "warehouse")
         plant = place_building(world, buildings, 15, 18, "processing_plant")
+        plant["active_recipe"] = "canned_tomato"
         apply_processing_upgrades(buildings, {PROCESSING_UPGRADE_ID})
         select_processing_recipe(plant, "cheese", 1)
         manager = VehicleManager()
@@ -214,7 +216,7 @@ class ProcessingLineUiTests(unittest.TestCase):
         pygame.init()
         self.addCleanup(pygame.quit)
         set_screen_size(1000, 800)
-        plant = initialize_processing_plant({"type": "processing_plant"})
+        plant = initialize_processing_plant({"type": "processing_plant", "active_recipe": None})
         state = GameState([[0]], [], [plant], Economy(), GameTime(start_ticks=0),
                           purchased_upgrades={PROCESSING_UPGRADE_ID})
         panel = InfoPanel()

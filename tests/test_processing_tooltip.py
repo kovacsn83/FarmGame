@@ -23,6 +23,7 @@ class ProcessingTooltipTests(unittest.TestCase):
             "col": col,
             "width": 6,
             "height": 5,
+            "active_recipe": "canned_tomato", "_processing_plant_level": 2,
         })
 
     def _find(self, row, col, buildings):

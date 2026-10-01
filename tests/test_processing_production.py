@@ -68,7 +68,7 @@ class ProcessingProductionTests(unittest.TestCase):
     def _plant(self):
         return initialize_processing_plant({
             "type": "processing_plant", "row": 15, "col": 18,
-            "width": 6, "height": 5,
+            "width": 6, "height": 5, "_processing_plant_level": 2, "active_recipe": "canned_tomato",
         })
 
     def test_weekly_capacity_and_partial_production(self):

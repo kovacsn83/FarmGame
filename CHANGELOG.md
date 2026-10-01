@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Feldolgozó üzem III. ($12 000), Farmház IV. és Feldolgozó üzem II.
+  előfeltétellel: három gyártósor, soronként heti 6, összesen 18 termék;
+  legfeljebb 6 egységes fizikai alapanyagfuvarok, $12 000 fenntartási alap.
+- Szintenként feloldott termékek: I. Sajt/Majonéz; II. Paradicsomkonzerv/Almalé;
+  III. Kefír (1 Kecsketej → 1 Kefír, $22) és Szilva lekvár (1 Szilva → 1 lekvár, $20).
+- Az Étterem legfeljebb 8. szintű: 1–3. szinten két, 4–6. szinten négy,
+  7–8. szinten hat terméket kér. A terméklista görgethető.
+- Régi mentésekben a 9–10. éttermi szint 8-ra kerül; a készletek és már futó
+  gyártási adagok megmaradnak, a szint miatt zárolt receptek további gyártása leáll.
+
 - A már beküldött Challenge-eredménnyel ütköző mentési snapshot külön
   helyi archívumba kerül; betöltéskor nem kér ismét mentést vagy beküldést.
 

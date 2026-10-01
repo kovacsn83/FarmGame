@@ -12,23 +12,22 @@ from money_format import format_money
 RESTAURANT_BASE_BONUS_PERCENT = 20
 RESTAURANT_BONUS_PERCENT_PER_LEVEL = 2
 RESTAURANT_MIN_LEVEL = 1
-RESTAURANT_MAX_LEVEL = 10
+RESTAURANT_MAX_LEVEL = 8
 RESTAURANT_PERIOD_WEEKS = 13
 RESTAURANT_LEVEL_UP_RATIO = 0.75
 RESTAURANT_LEVEL_DOWN_RATIO = 0.40
 
 
-def get_restaurant_sellable_item_ids():
+def get_restaurant_sellable_item_ids(level=None):
     """A katalógus sorrendjében adja vissza az éttermi termékeket."""
-    from inventory import PRODUCTS
-    return tuple(
-        item_id for item_id, definition in PRODUCTS.items()
-        if definition.get("restaurant_sellable", False)
-    )
+    ids = ("cheese", "mayonnaise", "canned_tomato", "apple_juice", "kefir", "plum_jam")
+    if level is None:
+        return ids
+    return ids[:2 if level <= 3 else 4 if level <= 6 else 6]
 
 
 def get_restaurant_bonus_percent(level):
-    """Az 1–10 közé szorított szint központi felvásárlási prémiuma."""
+    """Az 1–8 közé szorított szint központi felvásárlási prémiuma."""
     normalized_level = (
         max(RESTAURANT_MIN_LEVEL, min(RESTAURANT_MAX_LEVEL, level))
         if isinstance(level, int) and not isinstance(level, bool)
@@ -60,7 +59,7 @@ def get_restaurant_period(elapsed_week):
 
 
 def is_valid_restaurant_save_record(record):
-    """Elfogadja az új progressziót és a korábbi lapos checkbox-sémát is."""
+    """A korábbi 9–10. szintet is elfogadja; betöltéskor 8-ra korlátozzuk."""
     if not isinstance(record, dict):
         return False
     if "auto_sell" not in record:
@@ -75,7 +74,7 @@ def is_valid_restaurant_save_record(record):
         return False
     level = record.get("level")
     if (not isinstance(level, int) or isinstance(level, bool)
-            or not RESTAURANT_MIN_LEVEL <= level <= RESTAURANT_MAX_LEVEL):
+            or not RESTAURANT_MIN_LEVEL <= level <= 10):
         return False
     for key in ("period_requested_units", "period_fulfilled_units"):
         value = record.get(key)
@@ -121,7 +120,7 @@ class RestaurantSystem:
         return bool(self.auto_sell.get(item_id, False))
 
     def toggle(self, item_id):
-        if item_id not in get_restaurant_sellable_item_ids():
+        if item_id not in get_restaurant_sellable_item_ids(self.level):
             return False
         self.auto_sell[item_id] = not self.is_enabled(item_id)
         return True
@@ -220,7 +219,7 @@ class RestaurantSystem:
             self.period_requested_units = 0
             self.period_fulfilled_units = 0
 
-        item_ids = get_restaurant_sellable_item_ids()
+        item_ids = get_restaurant_sellable_item_ids(self.level)
         requested_per_product = self.weekly_quantity_per_product
         self.period_requested_units += requested_per_product * len(item_ids)
         sales = []

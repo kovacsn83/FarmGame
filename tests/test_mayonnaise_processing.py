@@ -86,7 +86,7 @@ class MayonnaiseProcessingTests(unittest.TestCase):
                 pygame.display.get_surface(), pygame.font.Font(None, 20), state,
             )
         self.assertEqual(
-            {"canned_tomato", "cheese", "apple_juice", "mayonnaise"},
+            {"cheese", "mayonnaise"},
             set(panel.processing_recipe_rects),
         )
         self.assertIn("  Tojás: 0 db", captured)

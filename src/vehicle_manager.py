@@ -1233,13 +1233,14 @@ class VehicleManager:
             current_ticks=None):
         """Saját Raktárból Traktor + Pótkocsi fuvart foglal egy üzemhez."""
         initialize_processing_plant(plant)
-        amount = max(0, int(amount))
+        from processing import get_processing_line_capacity
+        amount = min(max(0, int(amount)), get_processing_line_capacity(plant))
         if amount <= 0 or plant not in buildings:
             return 0
         if (len(get_processing_lines(plant)) == 1
                 and self._has_equivalent_task(TASK_PROCESSING_SUPPLY, plant)):
             return 0
-        if any(task.task_type == TASK_PROCESSING_SUPPLY
+        if len(get_processing_lines(plant)) == 1 and any(task.task_type == TASK_PROCESSING_SUPPLY
                and task.field is plant and task.cargo_type == item_id
                and task.source_type == "warehouse" for task in self._all_tasks()):
             return 0
@@ -1291,13 +1292,14 @@ class VehicleManager:
             current_ticks=None):
         """Piacról vásárol, majd a Raktártól fizikai fuvart indít az üzemhez."""
         initialize_processing_plant(plant)
-        amount = max(0, int(amount))
+        from processing import get_processing_line_capacity
+        amount = min(max(0, int(amount)), get_processing_line_capacity(plant))
         if amount <= 0 or plant not in buildings:
             return 0
         if (len(get_processing_lines(plant)) == 1
                 and self._has_equivalent_task(TASK_PROCESSING_SUPPLY, plant)):
             return 0
-        if any(task.task_type == TASK_PROCESSING_SUPPLY
+        if len(get_processing_lines(plant)) == 1 and any(task.task_type == TASK_PROCESSING_SUPPLY
                and task.field is plant and task.cargo_type == item_id
                and task.source_type == "market" for task in self._all_tasks()):
             return 0

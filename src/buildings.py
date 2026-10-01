@@ -25,7 +25,7 @@ WAREHOUSE_UPGRADE_LEVELS = {"warehouse_level_2": 2, "warehouse_level_3": 3}
 BUILDING_LEVEL_MAINTENANCE_BASES = {
     "garage": {1: GARAGE_BUILD_COST, 2: 3000.00, 3: 6000.00},
     "warehouse": {1: WAREHOUSE_BUILD_COST, 2: 2000.00, 3: 5000.00},
-    "processing_plant": {1: PROCESSING_PLANT_BUILD_COST, 2: 6000.00},
+    "processing_plant": {1: PROCESSING_PLANT_BUILD_COST, 2: 6000.00, 3: 12000.00},
 }
 def get_warehouse_capacity(purchased_upgrades=()):
     level = max((level for upgrade, level in WAREHOUSE_UPGRADE_LEVELS.items()
@@ -174,7 +174,7 @@ BUILDING_TYPES = {
         "description": "Mezőgazdasági alapanyagok feldolgozása.",
         # A részletes adatok a központi processing.PROCESSING_RECIPES katalógusban vannak.
         "recipes": (
-            "canned_tomato", "cheese", "apple_juice", "mayonnaise",
+            "cheese", "mayonnaise", "canned_tomato", "apple_juice", "kefir", "plum_jam",
         ),
     },
 }

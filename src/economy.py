@@ -445,7 +445,7 @@ class Economy:
             log("Nincs elegendő pénz.", "Economy")
             return False
         game_state.purchased_upgrades.add(upgrade_id)
-        if upgrade_id == "processing_plant_level_2":
+        if upgrade_id in ("processing_plant_level_2", "processing_plant_level_3"):
             game_state.synchronize_processing_upgrades()
         if upgrade_id in GARAGE_UPGRADE_LEVELS:
             game_state.synchronize_garage_upgrades()

@@ -7,6 +7,20 @@ from financial_history import (
 
 # Az állati termékek a közös raktárkapacitást és az adatvezérelt piaci szabályt használják.
 PRODUCTS = {
+    "kefir": {
+        "product_id": "kefir", "name": "Kefír", "price": 22.00,
+        "product_category": "processed_products",
+        "income_category": INCOME_PROCESSED_PRODUCT_SALES,
+        "inventory_source": "processing_plant", "marketable": True,
+        "restaurant_sellable": True,
+    },
+    "plum_jam": {
+        "product_id": "plum_jam", "name": "Szilva lekvár", "price": 20.00,
+        "product_category": "processed_products",
+        "income_category": INCOME_PROCESSED_PRODUCT_SALES,
+        "inventory_source": "processing_plant", "marketable": True,
+        "restaurant_sellable": True,
+    },
     "mayonnaise": {
         "product_id": "mayonnaise",
         "name": "Majonéz",
@@ -121,7 +135,7 @@ WAREHOUSE_INVENTORY_GROUPS = (
     ("beef", "goat_meat", "pork", "chicken_meat"),
     ("milk", "goat_milk", "egg", "manure"),
     ("apple", "cherry", "plum"),
-    ("canned_tomato", "cheese", "apple_juice", "mayonnaise"),
+    ("canned_tomato", "cheese", "apple_juice", "mayonnaise", "kefir", "plum_jam"),
 )
 
 

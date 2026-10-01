@@ -9,8 +9,9 @@ from inventory import get_inventory_item_data, get_inventory_item_name
 
 PROCESSING_UPGRADE_ID = "processing_plant_level_2"
 PROCESSING_LEVELS = {
-    1: {"lines": 1, "storage": 200},
-    2: {"lines": 2, "storage": 400},
+    1: {"lines": 1, "storage": 200, "per_line": 5},
+    2: {"lines": 2, "storage": 400, "per_line": 5},
+    3: {"lines": 3, "storage": 400, "per_line": 6},
 }
 PROCESSING_STORAGE_CAPACITY = PROCESSING_LEVELS[1]["storage"]
 PROCESSING_STATUS_READY = "ready"
@@ -55,7 +56,19 @@ PROCESSING_RECIPES = {
         "weekly_capacity": 5,
     },
 }
-DEFAULT_PROCESSING_RECIPE = "canned_tomato"
+PROCESSING_RECIPES.update({
+    "kefir": {"name": "Kefír", "input_product": "goat_milk", "input_amount": 1,
+              "output_product": "kefir", "output_amount": 1, "weekly_capacity": 5},
+    "plum_jam": {"name": "Szilva lekvár", "input_product": "plum", "input_amount": 1,
+                 "output_product": "plum_jam", "output_amount": 1, "weekly_capacity": 5},
+})
+PROCESSING_RECIPE_LEVELS = {"cheese": 1, "mayonnaise": 1, "canned_tomato": 2,
+                            "apple_juice": 2, "kefir": 3, "plum_jam": 3}
+DEFAULT_PROCESSING_RECIPE = "cheese"
+
+
+def get_processing_line_capacity(plant):
+    return PROCESSING_LEVELS.get(plant.get("_processing_plant_level", 1), PROCESSING_LEVELS[1])["per_line"]
 
 
 def initialize_processing_plant(plant):
@@ -91,7 +104,8 @@ def get_processing_lines(plant):
 
 def apply_processing_upgrades(buildings, purchased_upgrades):
     """Globális, idempotens fejlesztés; készletet és futó adagot nem ír felül."""
-    level = 2 if PROCESSING_UPGRADE_ID in purchased_upgrades else 1
+    level = (3 if "processing_plant_level_3" in purchased_upgrades
+             else 2 if PROCESSING_UPGRADE_ID in purchased_upgrades else 1)
     definition = PROCESSING_LEVELS[level]
     for plant in get_processing_plants(buildings):
         plant["_processing_plant_level"] = level
@@ -104,13 +118,15 @@ def apply_processing_upgrades(buildings, purchased_upgrades):
                 "processed_this_week": 0,
                 "processing_status": PROCESSING_STATUS_STOPPED,
             })
+        for line in get_processing_lines(plant):
+            if line.get("active_recipe") not in get_processing_recipe_ids(plant):
+                line["active_recipe"] = None
+                if line.get("processing_batch") is None:
+                    line["processing_status"] = PROCESSING_STATUS_STOPPED
 
 
 def get_processing_weekly_capacity(plant):
-    return len(get_processing_lines(plant)) * max(
-        (recipe["weekly_capacity"] for recipe in PROCESSING_RECIPES.values()),
-        default=0,
-    )
+    return len(get_processing_lines(plant)) * get_processing_line_capacity(plant)
 
 
 def _pending_output_amount(plant):
@@ -136,15 +152,23 @@ def get_processing_recipe_ids(plant):
     return tuple(
         recipe_id for recipe_id in configured_ids
         if recipe_id in PROCESSING_RECIPES
+        and PROCESSING_RECIPE_LEVELS.get(recipe_id, 1) <= plant.get("_processing_plant_level", 1)
     )
 
 
 def get_processing_output_ids(plant):
     """Az üzem összes lehetséges késztermékét ismétlés nélkül adja vissza."""
-    return tuple(dict.fromkeys(
+    available = tuple(dict.fromkeys(
         PROCESSING_RECIPES[recipe_id]["output_product"]
         for recipe_id in get_processing_recipe_ids(plant)
     ))
+    # A régi mentésből megmaradt, az új szintszabály szerint zárolt
+    # késztermék is látható és értékesíthető marad.
+    stored = tuple(recipe["output_product"] for recipe in PROCESSING_RECIPES.values()
+                   if plant["processing_inventory"].get(recipe["output_product"], 0) > 0)
+    pending = tuple(item for line in get_processing_lines(plant)
+                    for item in (line.get("processing_batch") or {}).get("outputs", {}))
+    return tuple(dict.fromkeys((*available, *stored, *pending)))
 
 
 def get_processing_tooltip_lines(plant):
@@ -292,7 +316,11 @@ def _start_processing_line(plant, line, line_number, elapsed_week=None):
         return 0
     recipe = PROCESSING_RECIPES[line["active_recipe"]]
     unit_input, unit_output = _recipe_unit_amounts(recipe)
-    units = recipe["weekly_capacity"] // unit_output
+    if line["active_recipe"] not in get_processing_recipe_ids(plant):
+        line["active_recipe"] = None
+        line["processing_status"] = PROCESSING_STATUS_STOPPED
+        return 0
+    units = get_processing_line_capacity(plant) // unit_output
     inventory = plant["processing_inventory"]
     units = min(
         units,
@@ -359,9 +387,9 @@ def _complete_processing_line(plant, line, line_number, elapsed_week):
     return output_total
 
 
-def _required_input_for_capacity(recipe):
+def _required_input_for_capacity(recipe, plant):
     unit_input, unit_output = _recipe_unit_amounts(recipe)
-    units = recipe["weekly_capacity"] // unit_output
+    units = get_processing_line_capacity(plant) // unit_output
     return units * unit_input
 
 
@@ -384,7 +412,7 @@ def run_weekly_processing_cycle(
             if recipe is not None and line.get("processing_batch") is None:
                 input_id = recipe["input_product"]
                 requirements[input_id] = (
-                    requirements.get(input_id, 0) + _required_input_for_capacity(recipe)
+                    requirements.get(input_id, 0) + _required_input_for_capacity(recipe, plant)
                 )
         for input_id, required in requirements.items():
             first_line_status = plant["processing_status"]
@@ -435,12 +463,15 @@ def _request_processing_input(
     warehouse_available = get_total_inventory(buildings).get(input_id, 0)
     warehouse_request = min(missing, warehouse_available)
     transported = 0
-    if warehouse_request > 0:
-        transported = vehicle_manager.start_processing_supply(
-            world, buildings, plant, input_id, warehouse_request,
+    while transported < warehouse_request:
+        delivered = vehicle_manager.start_processing_supply(
+            world, buildings, plant, input_id, warehouse_request - transported,
             current_ticks=current_ticks,
         )
-        missing -= transported
+        if delivered <= 0:
+            break
+        transported += delivered
+        missing -= delivered
 
     # A saját raktárban lévő, de útvonal/jármű hiányában el nem indítható
     # mennyiséget nem kerüljük meg felesleges piaci vásárlással.
@@ -451,10 +482,16 @@ def _request_processing_input(
         if item_data is None:
             plant["processing_status"] = PROCESSING_STATUS_WAITING
             return
-        transported = vehicle_manager.start_processing_market_supply(
-            world, buildings, plant, input_id, market_missing, economy,
-            current_ticks=current_ticks,
-        )
+        transported = 0
+        while market_missing > 0:
+            delivered = vehicle_manager.start_processing_market_supply(
+                world, buildings, plant, input_id, market_missing, economy,
+                current_ticks=current_ticks,
+            )
+            if delivered <= 0:
+                break
+            transported += delivered
+            market_missing -= delivered
         if transported > 0:
             plant["processing_status"] = PROCESSING_STATUS_IN_TRANSIT
         elif plant.get("processing_status") != PROCESSING_STATUS_NO_MONEY:

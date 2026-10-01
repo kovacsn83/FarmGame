@@ -959,6 +959,10 @@ def _validate_buildings(data):
                 and building.get("additional_processing_lines")
                 and PROCESSING_UPGRADE_ID not in data.get("purchased_upgrades", [])):
             return False
+        if (building_type == "processing_plant"
+                and len(building.get("additional_processing_lines", [])) > 1
+                and "processing_plant_level_3" not in data.get("purchased_upgrades", [])):
+            return False
         if (
             building_type == "farmhouse"
             and building.get("farmhouse_level") not in FARMHOUSE_LEVELS

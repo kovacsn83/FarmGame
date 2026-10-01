@@ -31,6 +31,7 @@ class UpgradeDependencyTests(unittest.TestCase):
     def test_tree_metadata_is_complete_and_extensible(self):
         self.assertEqual(len(get_upgrade_tree_columns()), 4)
         expected_dependencies = {
+            "processing_plant_level_3": "processing_plant_level_2",
             "unlock_field_8x8": "unlock_field_6x6",
             "garage_level_3": "garage_level_2",
             "warehouse_level_3": "warehouse_level_2",
@@ -200,6 +201,7 @@ class UpgradeDependencyTests(unittest.TestCase):
         plant = initialize_processing_plant({"type": "processing_plant"})
         state.buildings.append(plant)
         self.assertTrue(economy.purchase_upgrade(state, "processing_plant_level_2"))
+        plant["active_recipe"] = "canned_tomato"
         plant["processing_inventory"]["tomato"] = 20
         self.assertEqual(start_processing_batch(plant, 1), 5)
         self.assertEqual(plant["processing_capacity"], 400)

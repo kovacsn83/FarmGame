@@ -175,7 +175,7 @@ class FarmhouseUpgradeUiTests(unittest.TestCase):
         self._draw_at((-1, -1))
         columns = get_upgrade_tree_columns()
         self.assertEqual(len(columns), 4)
-        self.assertEqual(columns[3], ())
+        self.assertEqual(columns[3], ("processing_plant_level_3",))
         self.assertEqual(columns[0], (
             "unlock_field_6x6",
             "automated_animal_watering",

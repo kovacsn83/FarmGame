@@ -33,6 +33,22 @@ from time_system import GameTime
 from ui import BuildingSelectionPanel, InfoPanel
 
 
+# These legacy production/UI tests exercise the four-product level-II catalog.
+_original_place_building = place_building
+_original_game_state = GameState
+
+def place_building(*args, **kwargs):
+    plant = _original_place_building(*args, **kwargs)
+    if plant is not None and plant.get("type") == "processing_plant":
+        from processing import apply_processing_upgrades
+        plant["active_recipe"] = "canned_tomato"
+        apply_processing_upgrades([plant], {"processing_plant_level_2"})
+    return plant
+
+def GameState(*args, **kwargs):
+    kwargs.setdefault("purchased_upgrades", {"processing_plant_level_2"})
+    return _original_game_state(*args, **kwargs)
+
 class ProcessingPlantTests(unittest.TestCase):
     def setUp(self):
         pygame.init()
@@ -59,7 +75,7 @@ class ProcessingPlantTests(unittest.TestCase):
         self.assertEqual(PROCESSING_PLANT_BUILD_COST, definition["build_cost"])
         self.assertEqual(300.0, calculate_annual_maintenance(3000.0))
         self.assertEqual(
-            ("canned_tomato", "cheese", "apple_juice", "mayonnaise"),
+            ("cheese", "mayonnaise", "canned_tomato", "apple_juice", "kefir", "plum_jam"),
             definition["recipes"],
         )
 
@@ -120,7 +136,7 @@ class ProcessingPlantTests(unittest.TestCase):
             GameTime(start_ticks=0),
         )
         info.draw(surface, font, state)
-        row = info.processing_recipe_rects["canned_tomato"]
+        row = info.processing_recipe_rects[("canned_tomato", 0)]
 
         info.handle_event(pygame.event.Event(
             pygame.MOUSEBUTTONDOWN, {"pos": row.center, "button": 1},
@@ -136,10 +152,10 @@ class ProcessingPlantTests(unittest.TestCase):
 
         with patch.object(info, "draw_text", side_effect=capture_text):
             info.draw(surface, font, state)
-        self.assertIn("Állapot: Leállítva", captured_text)
+        self.assertIn("1. sor: Leállítva", captured_text)
         self.assertIn("  Nincs kiválasztott termék.", captured_text)
 
-        row = info.processing_recipe_rects["canned_tomato"]
+        row = info.processing_recipe_rects[("canned_tomato", 0)]
         info.handle_event(pygame.event.Event(
             pygame.MOUSEBUTTONDOWN, {"pos": row.center, "button": 1},
         ))
@@ -159,9 +175,9 @@ class ProcessingPlantTests(unittest.TestCase):
         info.draw(surface, font, state)
         self.assertEqual(
             {"canned_tomato", "cheese", "apple_juice", "mayonnaise"},
-            set(info.processing_recipe_rects),
+            {key[0] for key in info.processing_recipe_rects},
         )
-        cheese_row = info.processing_recipe_rects["cheese"]
+        cheese_row = info.processing_recipe_rects[("cheese", 0)]
         info.handle_event(pygame.event.Event(
             pygame.MOUSEBUTTONDOWN, {"pos": cheese_row.center, "button": 1},
         ))
@@ -224,10 +240,10 @@ class ProcessingPlantTests(unittest.TestCase):
             self.assertIn("Gyártandó termék:", captured_text)
             self.assertEqual(
                 {"canned_tomato", "apple_juice"},
-                set(info.processing_recipe_rects),
+                {key[0] for key in info.processing_recipe_rects},
             )
 
-            row = info.processing_recipe_rects["apple_juice"]
+            row = info.processing_recipe_rects[("apple_juice", 0)]
             info.handle_event(pygame.event.Event(
                 pygame.MOUSEBUTTONDOWN, {"pos": row.center, "button": 1},
             ))

@@ -958,6 +958,8 @@ class RestaurantPanel(PopupWindow):
         self.restaurant_system = None
         self.checkbox_rects = {}
         self.cards_top = 0
+        self.scroll_offset = 0
+        self.max_scroll = 0
 
     def open(self, restaurant_system):
         self.rect.width = responsive_panel_width(self.WIDTH, 420)
@@ -965,15 +967,23 @@ class RestaurantPanel(PopupWindow):
         self.rect.center = get_screen_center()
         self.restaurant_system = restaurant_system
         self.checkbox_rects = {}
+        self.scroll_offset = 0
         super().open()
 
     def handle_event(self, event):
         if not self.visible:
             return False
+        if event.type == pygame.MOUSEWHEEL:
+            self.scroll_offset = max(0, min(self.max_scroll, self.scroll_offset - event.y * 48))
+            return True
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             self.close()
             return True
         if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button in (4, 5):
+                self.scroll_offset = max(0, min(self.max_scroll,
+                    self.scroll_offset + (-48 if event.button == 4 else 48)))
+                return True
             if is_outside_popup_click(event, self.rect):
                 self.close()
                 return True
@@ -1052,7 +1062,16 @@ class RestaurantPanel(PopupWindow):
         y += 34
         self.cards_top = y
         self.checkbox_rects = {}
-        for item_id in get_restaurant_sellable_item_ids():
+        item_ids = get_restaurant_sellable_item_ids(level)
+        viewport = pygame.Rect(x, y, self.rect.width - 2 * self.PADDING,
+                               max(1, self.rect.bottom - self.PADDING - y))
+        self.max_scroll = max(0, len(item_ids) * (self.CARD_HEIGHT + self.CARD_GAP)
+                              - self.CARD_GAP - viewport.height)
+        self.scroll_offset = min(self.scroll_offset, self.max_scroll)
+        y -= self.scroll_offset
+        previous_clip = screen.get_clip()
+        screen.set_clip(viewport.clip(previous_clip))
+        for item_id in item_ids:
             item = get_inventory_item_data(item_id)
             card = pygame.Rect(
                 x, y, self.rect.width - 2 * self.PADDING, self.CARD_HEIGHT,
@@ -1063,7 +1082,8 @@ class RestaurantPanel(PopupWindow):
                 card.left + 14, card.top + 14,
                 self.CHECKBOX_SIZE, self.CHECKBOX_SIZE,
             )
-            self.checkbox_rects[item_id] = checkbox
+            if viewport.colliderect(checkbox):
+                self.checkbox_rects[item_id] = checkbox.clip(viewport)
             checked = (
                 self.restaurant_system is not None
                 and self.restaurant_system.is_enabled(item_id)
@@ -1082,6 +1102,7 @@ class RestaurantPanel(PopupWindow):
                 self.draw_text(screen, font, line, card.left + 14, line_y)
                 line_y += 24
             y += self.CARD_HEIGHT + self.CARD_GAP
+        screen.set_clip(previous_clip)
 
 
 class BankPanel(PopupWindow):
@@ -2319,16 +2340,19 @@ class InfoPanel(PopupWindow):
         visible_recipe_rows = min(
             len(recipe_ids), PROCESSING_RECIPE_VISIBLE_ROWS,
         )
+        if len(lines) >= 3:
+            visible_recipe_rows = min(3, visible_recipe_rows)
         recipe_view_height = visible_recipe_rows * PROCESSING_RECIPE_ROW_HEIGHT
         panel_width = INFO_PANEL_WIDTH
         if len(lines) > 1:
             label_width = max(font.size(PROCESSING_RECIPES[item]["name"])[0]
                               for item in recipe_ids)
             panel_width = max(panel_width,
-                              label_width + INFO_PANEL_PADDING * 2 + 180)
+                              label_width + INFO_PANEL_PADDING * 2 + len(lines) * 70 + 40)
         self.rect.size = (
             responsive_panel_width(panel_width),
-            320 + recipe_view_height + len(output_ids) * 28 + (len(lines) - 1) * 98,
+            (640 if len(lines) >= 3 else
+             320 + recipe_view_height + len(output_ids) * 28 + (len(lines) - 1) * 98),
         )
         self.rect.center = get_screen_center()
         self.draw_frame(screen)
@@ -2348,12 +2372,13 @@ class InfoPanel(PopupWindow):
         )
         y += 38
 
-        self.draw_text(screen, font, "Gyártandó termék:", x, y)
+        self.draw_text(screen, font, "Gyártandó termék (görgethető):" if len(lines) >= 3
+                       else "Gyártandó termék:", x, y)
         if len(lines) > 1:
             y += 26
             for line_index in range(len(lines)):
                 self.draw_text(screen, font, f"{line_index + 1}. sor",
-                               self.rect.right - INFO_PANEL_PADDING - 140 + line_index * 70, y)
+                               self.rect.right - INFO_PANEL_PADDING - len(lines) * 70 + line_index * 70, y)
         y += 26
         list_width = self.rect.width - INFO_PANEL_PADDING * 2
         self.processing_recipe_view_rect = pygame.Rect(
@@ -2381,7 +2406,7 @@ class InfoPanel(PopupWindow):
                 self.draw_text(screen, font, PROCESSING_RECIPES[recipe_id]["name"], x + 2, row_y + 4)
                 for line_index, line in enumerate(lines):
                     checkbox = pygame.Rect(
-                        self.rect.right - INFO_PANEL_PADDING - 128 + line_index * 70,
+                        self.rect.right - INFO_PANEL_PADDING - len(lines) * 70 + 12 + line_index * 70,
                         row_y + 4, PROCESSING_RECIPE_CHECKBOX_SIZE,
                         PROCESSING_RECIPE_CHECKBOX_SIZE,
                     )
@@ -2443,13 +2468,21 @@ class InfoPanel(PopupWindow):
         y += 38
         self.draw_text(screen, font, "Késztermékek:", x, y)
         y += 26
-        for output_id in output_ids:
+        for output_index, output_id in enumerate(output_ids):
+            output_x = x
+            output_y = y
+            if len(lines) >= 3:
+                output_x += (output_index % 2) * (self.rect.width - 2 * INFO_PANEL_PADDING) // 2
+                output_y += (output_index // 2) * 28
             self.draw_text(
                 screen, font,
                 f"  {get_inventory_item_name(output_id)}: "
-                f"{inventory.get(output_id, 0)} db", x, y,
+                f"{inventory.get(output_id, 0)} db", output_x, output_y,
             )
-            y += 28
+            if len(lines) < 3:
+                y += 28
+        if len(lines) >= 3:
+            y += ((len(output_ids) + 1) // 2) * 28
         y += 10
         for line_index, line in enumerate(lines):
             prefix = "Állapot" if len(lines) == 1 else f"{line_index + 1}. sor"

@@ -260,6 +260,17 @@ UPGRADES = {
         "tree_column": 3,
         "tree_order": 2,
     },
+    "processing_plant_level_3": {
+        "name": "Feldolgozó üzem III.",
+        "description": "A Feldolgozó üzem heti kapacitását 18-ra növeli.",
+        "price": 12000.00,
+        "unlocks": None,
+        "state_key": "processing_plant_level_3",
+        "requires": "processing_plant_level_2",
+        "required_farmhouse_level": 4,
+        "tree_column": 4,
+        "tree_order": 1,
+    },
     "processing_plant_level_2": {
         "name": "Feldolgozó üzem II.",
         "description": "A Feldolgozó üzem heti kapacitását 10 db-ra növeli.",
