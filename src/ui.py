@@ -2341,7 +2341,7 @@ class InfoPanel(PopupWindow):
             len(recipe_ids), PROCESSING_RECIPE_VISIBLE_ROWS,
         )
         if len(lines) >= 3:
-            visible_recipe_rows = min(3, visible_recipe_rows)
+            visible_recipe_rows = len(recipe_ids)
         recipe_view_height = visible_recipe_rows * PROCESSING_RECIPE_ROW_HEIGHT
         panel_width = INFO_PANEL_WIDTH
         if len(lines) > 1:
@@ -2351,7 +2351,7 @@ class InfoPanel(PopupWindow):
                               label_width + INFO_PANEL_PADDING * 2 + len(lines) * 70 + 40)
         self.rect.size = (
             responsive_panel_width(panel_width),
-            (640 if len(lines) >= 3 else
+            (640 + max(0, len(recipe_ids) - 3) * PROCESSING_RECIPE_ROW_HEIGHT if len(lines) >= 3 else
              320 + recipe_view_height + len(output_ids) * 28 + (len(lines) - 1) * 98),
         )
         self.rect.center = get_screen_center()
@@ -2372,8 +2372,7 @@ class InfoPanel(PopupWindow):
         )
         y += 38
 
-        self.draw_text(screen, font, "Gyártandó termék (görgethető):" if len(lines) >= 3
-                       else "Gyártandó termék:", x, y)
+        self.draw_text(screen, font, "Gyártandó termék:", x, y)
         if len(lines) > 1:
             y += 26
             for line_index in range(len(lines)):

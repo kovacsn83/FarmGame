@@ -228,7 +228,7 @@ class ProcessingLevelThreeTests(unittest.TestCase):
         self.assertEqual(system.period_fulfilled_units, 36)
         self.assertEqual(system.period_ratio, 0.75)
 
-    def test_three_selector_columns_fit_and_scroll_to_new_recipes(self):
+    def test_three_selector_columns_show_all_six_recipes_without_scroll(self):
         pygame.init()
         set_screen_size(1000, 800)
         screen = pygame.Surface((1000, 800))
@@ -240,6 +240,8 @@ class ProcessingLevelThreeTests(unittest.TestCase):
         panel.open_for_building(plant)
         panel.draw(screen, font, state)
         self.assertLessEqual(panel.rect.height, 800)
+        self.assertEqual(panel.processing_recipe_max_scroll, 0)
+        self.assertEqual(len(panel.processing_recipe_rects), 18)
         for rect in panel.processing_recipe_rects.values():
             self.assertTrue(panel.rect.contains(rect))
         panel.processing_recipe_scroll = panel.processing_recipe_max_scroll
