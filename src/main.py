@@ -2,6 +2,7 @@ import traceback
 from datetime import datetime
 
 import pygame
+from minimap import draw_minimap, get_minimap_rect
 
 from app_state import AppState, AppStateManager
 from animals import (
@@ -38,7 +39,6 @@ from constants import (
     TOOL_ANIMAL_HUSBANDRY, TOOL_BUILD, TOOL_BULLDOZER, TOOL_HARVEST,
     TOOL_CITY, TOOL_FERTILIZE, TOOL_INSPECT, TOOL_ORCHARD, TOOL_PLANT, TOOL_ROAD,
     TOOL_SPRAYING, TOOL_WATERING,
-    WINDOW_HEIGHT, WINDOW_WIDTH,
 )
 from developer_console import DeveloperConsole
 from economy import Economy
@@ -140,7 +140,7 @@ def main():
     clock = pygame.time.Clock()
     font = pygame.font.SysFont(None, 24)
     screen = pygame.display.set_mode(
-        (WINDOW_WIDTH, WINDOW_HEIGHT), pygame.RESIZABLE,
+        (0, 0), pygame.FULLSCREEN,
     )
     set_screen_size(*screen.get_size())
     camera = Camera()
@@ -641,7 +641,6 @@ def main():
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     running = False
                 elif event.type == pygame.VIDEORESIZE:
-                    screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
                     set_screen_size(*screen.get_size())
             app_state.update()
             splash_screen.draw(screen)
@@ -655,7 +654,6 @@ def main():
                     running = False
                     continue
                 if event.type == pygame.VIDEORESIZE:
-                    screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
                     set_screen_size(*screen.get_size())
                     continue
 
@@ -744,7 +742,6 @@ def main():
 
             if event.type == pygame.VIDEORESIZE:
                 road_drag.cancel()
-                screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
                 set_screen_size(*screen.get_size())
                 buttons = create_buttons(city_toolbar_expanded)
                 menu_button = create_menu_button()
@@ -957,9 +954,6 @@ def main():
                         player_profile, game_state, challenge_submission,
                     )
                 elif menu_action == "new_game":
-                    screen = pygame.display.set_mode(
-                        (WINDOW_WIDTH, WINDOW_HEIGHT), pygame.RESIZABLE,
-                    )
                     set_screen_size(*screen.get_size())
                     initialize_game_session(start_quest=True)
                 elif menu_action == "exit_game":
@@ -1053,6 +1047,8 @@ def main():
                     game_time.set_time_speed(TIME_NORMAL)
     
             elif event.type == pygame.MOUSEBUTTONDOWN:
+                if get_minimap_rect(world).inflate(6, 6).collidepoint(event.pos):
+                    continue
                 if event.button == 1:
                     tool = clicked_tool(buttons, event.pos)
                     if tool is not None:
@@ -1245,6 +1241,7 @@ def main():
             mouse_row, mouse_col,
             road_preview_tiles=road_drag.tiles,
         )
+        draw_minimap(screen, world, buildings, camera)
         developer_console.draw(screen)
         draw_notification_bar(
             screen, font, notification_manager,

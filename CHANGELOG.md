@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Jobb alsó minimap mutatja a teljes farm elrendezését és a kamera által
+  aktuálisan látható területet; a térkép feletti kattintás nem módosítja a farmot.
+
+- A játék a monitor aktuális felbontásán, teljes képernyős módban indul;
+  új játék indításakor is megmarad a teljes képernyős megjelenítés.
+
 - Feldolgozó üzem III. ($12 000), Farmház IV. és Feldolgozó üzem II.
   előfeltétellel: három gyártósor, soronként heti 6, összesen 18 termék;
   legfeljebb 6 egységes fizikai alapanyagfuvarok, $12 000 fenntartási alap.

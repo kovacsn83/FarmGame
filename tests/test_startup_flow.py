@@ -120,7 +120,8 @@ class StartupFlowTests(unittest.TestCase):
         pygame.display.set_mode((1, 1))
 
     def test_new_game_choice_initializes_once_and_enters_playing(self):
-        set_screen_size(1500, 1000)
+        screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+        set_screen_size(*screen.get_size())
         manager = AppStateManager(start_ticks=0)
         manager.show_main_menu()
         menu = MainMenu()
