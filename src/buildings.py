@@ -5,7 +5,7 @@ from constants import (
     FARMHOUSE_LEVEL_3_UPGRADE_PRICE, FARMHOUSE_LEVEL_4_UPGRADE_PRICE,
     FARMHOUSE_LEVEL_4_MAINTENANCE_BASE, GARAGE_BUILD_COST, GRASS,
     ORCHARD_BUILD_COST, ROAD, TILE_SIZE, POND_BUILD_COST,
-    PROCESSING_PLANT_BUILD_COST, WAREHOUSE_BUILD_COST,
+    PROCESSING_PLANT_BUILD_COST, FEED_MILL_BUILD_COST, WAREHOUSE_BUILD_COST,
 )
 from crops import CROPS
 from game_rules import FIELD_TYPES, can_build_more
@@ -105,6 +105,15 @@ def apply_garage_upgrades(buildings, purchased_upgrades):
 
 # Az épülettípusok központi leírása. Új épület hozzáadásához ezt kell bővíteni.
 BUILDING_TYPES = {
+    "feed_mill": {
+        "name": "Takarmánykeverő üzem",
+        "width": 6,
+        "height": 5,
+        "color": (165, 155, 115),
+        "build_cost": FEED_MILL_BUILD_COST,
+        "placement_rule": "road",
+        "renderer_type": "feed_mill",
+    },
     "farmhouse": {
         "name": "Farmház",
         "width": FARMHOUSE_PLOT_SIZE,

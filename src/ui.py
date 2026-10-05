@@ -275,6 +275,7 @@ BUILDING_SELECTION_ORDER = (
     "warehouse", "pond",
     "field_4x4", "animal_pen",
     "orchard", "processing_plant",
+    "feed_mill",
 )
 
 PRIMARY_TOOL_GROUPS = [

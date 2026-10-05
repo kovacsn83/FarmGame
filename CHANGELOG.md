@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Előkészített Takarmánykeverő üzem: $3 000, 6×5 csempe, legfeljebb két
+  példány, útkapcsolat és évi 10% fenntartás; egyelőre termelési funkció nélkül.
+
 - Jobb alsó minimap mutatja a teljes farm elrendezését és a kamera által
   aktuálisan látható területet; a térkép feletti kattintás nem módosítja a farmot.
 

@@ -900,8 +900,32 @@ def draw_pond(screen, building):
     screen.blit(pond_surface, footprint.topleft)
 
 
+def draw_feed_mill(screen, building):
+    """Top-down mixing hall and two silos; graphics only, no production state."""
+    footprint = _building_rect(building)
+    _draw_building_shadow(screen, footprint, PROCEDURAL_SHADOW_COLOR)
+    pygame.draw.rect(screen, (159, 151, 126), footprint)
+    pygame.draw.rect(screen, (67, 73, 60), footprint, 2)
+    roof = pygame.Rect(footprint.x + 7, footprint.y + 7,
+                       footprint.width - 44, footprint.height - 22)
+    pygame.draw.rect(screen, (108, 120, 91), roof)
+    pygame.draw.rect(screen, (61, 72, 57), roof, 2)
+    for offset in range(12, roof.width, 12):
+        pygame.draw.line(screen, (137, 145, 113),
+                         (roof.x + offset, roof.top + 2),
+                         (roof.x + offset, roof.bottom - 3))
+    for y in (footprint.y + 24, footprint.y + 61):
+        center = (footprint.right - 21, y)
+        pygame.draw.circle(screen, (66, 71, 63), center, 15)
+        pygame.draw.circle(screen, (189, 192, 169), center, 12)
+        pygame.draw.circle(screen, (142, 150, 127), center, 8, 2)
+    pygame.draw.rect(screen, (74, 77, 68),
+                     (roof.centerx - 12, footprint.bottom - 13, 24, 9))
+
+
 # Új, típusonkénti procedurális épületgrafika egyetlen regisztrációval adható hozzá.
 BUILDING_RENDERERS = {
+    "feed_mill": draw_feed_mill,
     "farmhouse": draw_farmhouse,
     "warehouse": draw_warehouse,
     "garage": draw_garage,
