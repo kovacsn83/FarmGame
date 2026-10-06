@@ -903,6 +903,18 @@ def draw_pond(screen, building):
 def draw_feed_mill(screen, building):
     """Top-down mixing hall and two silos; graphics only, no production state."""
     footprint = _building_rect(building)
+    if building["width"] == 12 and building["height"] == 8:
+        x, y = footprint.topleft
+        tile = footprint.width // 12
+        fence = [(x + 2, y + 2), (footprint.right - 2, y + 2),
+                 (footprint.right - 2, footprint.bottom - 2),
+                 (x + 4 * tile, footprint.bottom - 2),
+                 (x + 4 * tile, y + 4 * tile),
+                 (x + 2, y + 4 * tile), (x + 2, y + 2)]
+        pygame.draw.lines(screen, (96, 72, 42), False, fence, 3)
+        from animal_troughs import draw_feed_mill_troughs
+        draw_feed_mill_troughs(screen, building)
+        footprint = pygame.Rect(x, y + 4 * tile, 4 * tile, 4 * tile)
     _draw_building_shadow(screen, footprint, PROCEDURAL_SHADOW_COLOR)
     pygame.draw.rect(screen, (159, 151, 126), footprint)
     pygame.draw.rect(screen, (67, 73, 60), footprint, 2)
@@ -914,7 +926,7 @@ def draw_feed_mill(screen, building):
         pygame.draw.line(screen, (137, 145, 113),
                          (roof.x + offset, roof.top + 2),
                          (roof.x + offset, roof.bottom - 3))
-    for y in (footprint.y + 24, footprint.y + 61):
+    for y in (footprint.y + 22, footprint.y + 53):
         center = (footprint.right - 21, y)
         pygame.draw.circle(screen, (66, 71, 63), center, 15)
         pygame.draw.circle(screen, (189, 192, 169), center, 12)

@@ -75,7 +75,7 @@ VEHICLE_TYPE_DEFINITIONS = {
         "parking_slots": 1,
         "cargo_states": (
             "empty", "alfalfa", "apple", "corn", "egg", "tomato",
-            "milk", "wheat",
+            "milk", "wheat", "goat_milk", "plum",
         ),
         # A későbbi Dispatcher-integrációhoz csak leíró előkészítés.
         "future_supported_tasks": (

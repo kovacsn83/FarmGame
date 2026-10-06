@@ -2086,7 +2086,7 @@ class InfoPanel(PopupWindow):
         """Megnyitja a panelt, ha az épülettípushoz már tartozik nézet."""
         if building["type"] not in (
                 "warehouse", "farmhouse", "garage", "pond",
-                "processing_plant"):
+                "processing_plant", "feed_mill"):
             return False
         self._open_for_type(building["type"], building)
         return True
@@ -2312,11 +2312,33 @@ class InfoPanel(PopupWindow):
             self._draw_garage(screen, font, game_state)
         elif self.building_type == "pond":
             self._draw_pond(screen, font)
+        elif self.building_type == "feed_mill":
+            self._draw_feed_mill(screen, font, game_state)
         elif self.building_type == "processing_plant":
             apply_processing_upgrades(
                 [self.building], getattr(game_state, "purchased_upgrades", ()),
             )
             self._draw_processing_plant(screen, font)
+
+    def _draw_feed_mill(self, screen, font, game_state):
+        from feed_mill import initialize_feed_mill, mill_animals
+        initialize_feed_mill(self.building)
+        self.rect.size = (500, 390)
+        self.rect.center = get_screen_center()
+        pygame.draw.rect(screen, (245, 245, 239), self.rect)
+        pygame.draw.rect(screen, (60, 60, 60), self.rect, 2)
+        inventory = self.building["processing_inventory"]
+        lines = ["Takarmánykeverő üzem I.",
+                 f"Csirkék: {len(mill_animals(self.building, game_state.animals))} / 12",
+                 "Heti recept: 5 Búza + 5 Kukorica = 12 Csirketáp",
+                 f"Üzemi raktár: {sum(inventory.values())} / 200",
+                 f"Búza: {inventory['wheat']}", f"Kukorica: {inventory['corn']}",
+                 f"Csirketáp: {inventory['chicken_feed']}",
+                 f"Úton lévő alapanyag: {sum(self.building['processing_in_transit'].values())}",
+                 "Heti etetés: " + ("Biztosítva" if self.building['fed_this_week'] else "Táphiány / nincs állat"),
+                 "Automatikus itatás | Tojás és hús: +10%"]
+        for index, line in enumerate(lines):
+            self.draw_text(screen, font, line, self.rect.x + 20, self.rect.y + 22 + index * 32)
 
     def _draw_processing_plant(self, screen, font):
         """Az üzem termékválasztását, készletét és állapotát mutatja."""

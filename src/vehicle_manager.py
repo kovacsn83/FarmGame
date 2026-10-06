@@ -1237,7 +1237,7 @@ class VehicleManager:
         amount = min(max(0, int(amount)), get_processing_line_capacity(plant))
         if amount <= 0 or plant not in buildings:
             return 0
-        if (len(get_processing_lines(plant)) == 1
+        if (plant.get("type") != "feed_mill" and len(get_processing_lines(plant)) == 1
                 and self._has_equivalent_task(TASK_PROCESSING_SUPPLY, plant)):
             return 0
         if len(get_processing_lines(plant)) == 1 and any(task.task_type == TASK_PROCESSING_SUPPLY
@@ -1296,7 +1296,7 @@ class VehicleManager:
         amount = min(max(0, int(amount)), get_processing_line_capacity(plant))
         if amount <= 0 or plant not in buildings:
             return 0
-        if (len(get_processing_lines(plant)) == 1
+        if (plant.get("type") != "feed_mill" and len(get_processing_lines(plant)) == 1
                 and self._has_equivalent_task(TASK_PROCESSING_SUPPLY, plant)):
             return 0
         if len(get_processing_lines(plant)) == 1 and any(task.task_type == TASK_PROCESSING_SUPPLY
@@ -1478,7 +1478,8 @@ class VehicleManager:
                 )
 
         recovered = 0
-        for plant in get_processing_plants(buildings):
+        for plant in [b for b in buildings if b.get("type") in ("processing_plant", "feed_mill")]:
+            initialize_processing_plant(plant)
             for item_id, recorded_amount in tuple(
                     plant["processing_in_transit"].items()):
                 recorded_amount = max(0, int(recorded_amount))
@@ -1621,7 +1622,7 @@ class VehicleManager:
             if task.task_type == TASK_PROCESSING_SUPPLY:
                 return (
                     task.field in buildings
-                    and task.field.get("type") == "processing_plant"
+                    and task.field.get("type") in ("processing_plant", "feed_mill")
                     and any(b.get("type") == source_building_type for b in buildings)
                     and any(i.vehicle_type == VehicleType.TRAILER for i in self.implements)
                     and bool(self.tractors)

@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- Javítva a szilvát vagy kecsketejet szállító pótkocsik mentésellenőrzése:
+  a szabályos rakomány miatt többé nem minősül sérültnek a mentés.
+
+- Működő Takarmánykeverő üzem I.: 12 csirke, heti 5 Búza + 5 Kukorica →
+  12 Csirketáp, 200-as közös alapanyag-/tápraktár. Fizikai traktor+pótkocsi
+  ellátás saját készletből vagy piaci beszerzésből a meglévő szállítási díjjal.
+  Automatikus heti etetés és itatás (Tó nélkül), egységes táphiányos szünet,
+  +10% tojás- és húsbónusz megőrzött tizedes maradékokkal.
+
+- A Takarmánykeverő üzem új, 12×8-as telke bal alul 4×4-es üzemet és
+  dekoratív L alakú karámot tartalmaz. Ár: $5 000, fenntartás: $500/év.
+  A korábban épített kisebb példányok betöltése megmarad, automatikus bővítés nélkül.
+
+- A Takarmánykeverő üzem mérete 4×4 csempére csökkent; a korábbi 6×5-ös
+  példányok betöltéskor az eredeti bal felső pozíciójukon zsugorodnak.
+
 - Előkészített Takarmánykeverő üzem: $3 000, 6×5 csempe, legfeljebb két
   példány, útkapcsolat és évi 10% fenntartás; egyelőre termelési funkció nélkül.
 

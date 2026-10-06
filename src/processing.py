@@ -73,6 +73,9 @@ def get_processing_line_capacity(plant):
 
 def initialize_processing_plant(plant):
     """Új és korábbi mentésből érkező üzemhez biztonságos alapállapotot ad."""
+    if plant.get("type") == "feed_mill":
+        from feed_mill import initialize_feed_mill
+        return initialize_feed_mill(plant)
     plant.setdefault("processing_inventory", {})
     inventory = plant["processing_inventory"]
     if not isinstance(inventory, dict):
@@ -99,6 +102,8 @@ def initialize_processing_plant(plant):
 def get_processing_lines(plant):
     """Az első sor régi mezőit megőrzi; a további sorok azonos sémájú rekordok."""
     initialize_processing_plant(plant)
+    if plant.get("type") == "feed_mill":
+        return [plant]
     return [plant, *plant["additional_processing_lines"]]
 
 
@@ -246,7 +251,8 @@ def receive_processing_delivery(plant, item_id, amount):
     pending = get_processing_in_transit(plant, item_id)
     plant["processing_in_transit"][item_id] = max(0, pending - amount)
     plant["processing_status"] = PROCESSING_STATUS_READY
-    start_processing_batch(plant)
+    if plant.get("type") != "feed_mill":
+        start_processing_batch(plant)
     return amount
 
 

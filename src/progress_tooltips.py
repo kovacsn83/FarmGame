@@ -246,7 +246,7 @@ def find_timed_object_tooltip(
         processing_plant = next(
             (
                 building for building in buildings
-                if building.get("type") == "processing_plant"
+                if building.get("type") in ("processing_plant", "feed_mill")
                 and building.get("row", 0) <= row
                 < building.get("row", 0) + building.get("height", 0)
                 and building.get("col", 0) <= col
@@ -255,6 +255,9 @@ def find_timed_object_tooltip(
             None,
         )
         if processing_plant is not None:
+            if processing_plant.get("type") == "feed_mill":
+                from feed_mill import get_feed_mill_tooltip_lines
+                return get_feed_mill_tooltip_lines(processing_plant, animals)
             return get_processing_tooltip_lines(processing_plant)
 
         orchard_tree = find_tree_at(buildings, row, col)

@@ -3,6 +3,7 @@ from datetime import datetime
 
 import pygame
 from minimap import draw_minimap, get_minimap_rect
+from feed_mill import run_weekly_feed_mills
 
 from app_state import AppState, AppStateManager
 from animals import (
@@ -1162,6 +1163,8 @@ def main():
                 )
                 bank_system.apply_weekly_repayment()
                 grow_crops(fields, elapsed_week, notification_manager)
+                run_weekly_feed_mills(world, buildings, animals, economy, vehicles,
+                                     elapsed_week, current_ticks=pygame.time.get_ticks())
                 run_weekly_animal_cycle(
                     animals, buildings, economy, notification_manager,
                     storage_block_manager,

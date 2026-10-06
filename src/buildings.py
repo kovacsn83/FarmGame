@@ -107,8 +107,9 @@ def apply_garage_upgrades(buildings, purchased_upgrades):
 BUILDING_TYPES = {
     "feed_mill": {
         "name": "Takarmánykeverő üzem",
-        "width": 6,
-        "height": 5,
+        "width": 12,
+        "height": 8,
+        "draw_grass_underlay": True,
         "color": (165, 155, 115),
         "build_cost": FEED_MILL_BUILD_COST,
         "placement_rule": "road",
@@ -319,6 +320,9 @@ def place_building(world, buildings, row, col, building_type):
     elif building_type == "processing_plant":
         from processing import initialize_processing_plant
         initialize_processing_plant(data)
+    elif building_type == "feed_mill":
+        from feed_mill import initialize_feed_mill
+        initialize_feed_mill(data)
 
     for r in range(data["height"]):
         for c in range(data["width"]):

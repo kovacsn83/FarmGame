@@ -169,6 +169,9 @@ def _migrate_legacy_crop_data(data):
                 building.setdefault("trees", [])
             elif building.get("type") == "processing_plant":
                 initialize_processing_plant(building)
+            elif building.get("type") == "feed_mill":
+                from feed_mill import initialize_feed_mill
+                initialize_feed_mill(building)
 
     data.setdefault("purchased_upgrades", [])
     tractors = data.setdefault("tractors", [])
@@ -205,6 +208,7 @@ def _migrate_save_schema(data):
         return False
     version = data.get("save_version")
     if version == SAVE_VERSION:
+        _migrate_feed_mill_footprints(data)
         _migrate_removed_market_buildings(data)
         _repair_legacy_processing_references(data)
         data.setdefault("vehicle_runtime", None)
@@ -212,6 +216,7 @@ def _migrate_save_schema(data):
         data.setdefault("restaurant_auto_sell", {})
         return True
     if version in LEGACY_SAVE_VERSIONS:
+        _migrate_feed_mill_footprints(data)
         _migrate_farmhouse_footprints(data)
         _migrate_farmhouse_levels(data)
         _migrate_removed_market_buildings(data)
@@ -222,6 +227,20 @@ def _migrate_save_schema(data):
         data.setdefault("restaurant_auto_sell", {})
         return True
     return False
+
+
+def _migrate_feed_mill_footprints(data):
+    """Keep old compact mills loadable without expanding over adjacent property."""
+    world = data.get("world")
+    buildings = data.get("buildings")
+    if not isinstance(world, list) or not isinstance(buildings, list):
+        return
+    for building in buildings:
+        if not isinstance(building, dict) or building.get("type") != "feed_mill":
+            continue
+        if (building.get("width"), building.get("height")) not in ((6, 5), (4, 4)):
+            continue
+        building["legacy_footprint"] = True
 
 
 def _repair_legacy_processing_references(data):
@@ -682,7 +701,9 @@ def _validate_vehicle_runtime_schema(data):
             if target_ref["kind"] != "field":
                 return False
         elif (target_ref["kind"] != "building"
-              or data["buildings"][target_ref["index"]].get("type") != target_type):
+              or data["buildings"][target_ref["index"]].get("type") not in
+              (("processing_plant", "feed_mill") if target_type == "processing_plant"
+               else (target_type,))):
             return False
         if record.get("status", "waiting") not in ("waiting", "active", "completed", "cancelled"):
             return False
@@ -877,6 +898,21 @@ def _validate_processing_line(line):
 
 
 def _validate_inventory(building):
+    if building["type"] == "feed_mill":
+        inventory = building.get("processing_inventory")
+        transit = building.get("processing_in_transit")
+        bonus = building.get("bonus_tenths")
+        return (building.get("processing_capacity") == 200
+                and isinstance(inventory, dict)
+                and set(inventory) == {"wheat", "corn", "chicken_feed"}
+                and all(_is_plain_int(v) and v >= 0 for v in inventory.values())
+                and isinstance(transit, dict) and set(transit).issubset({"wheat", "corn"})
+                and all(_is_plain_int(v) and v >= 0 for v in transit.values())
+                and sum(inventory.values()) + sum(transit.values()) <= 200
+                and isinstance(bonus, dict) and set(bonus) == {"egg", "chicken_meat"}
+                and all(_is_plain_int(v) and 0 <= v <= 9 for v in bonus.values())
+                and _is_plain_int(building.get("feed_mill_week"))
+                and isinstance(building.get("fed_this_week"), bool))
     if building["type"] == "processing_plant":
         inventory = building.get("processing_inventory")
         in_transit = building.get("processing_in_transit")
@@ -943,8 +979,11 @@ def _validate_buildings(data):
             and building.get("legacy_footprint") is True
             and (width, height) == FARMHOUSE_BUILDING_SIZE
         )
+        legacy_feed_mill = (building_type == "feed_mill"
+                            and building.get("legacy_footprint") is True
+                            and (width, height) in ((4, 4), (6, 5)))
         if (width != definition["width"] or height != definition["height"]):
-            if not legacy_farmhouse:
+            if not (legacy_farmhouse or legacy_feed_mill):
                 return False
         if not _area_is_inside(
                 row, col, width, height, world_width, world_height):
@@ -1194,13 +1233,18 @@ def _validate_animals(data):
         pen = next(
             (
                 building for building in data["buildings"]
-                if building.get("type") == "animal_pen"
+                if building.get("type") in ("animal_pen", "feed_mill")
                 and building.get("row") == animal["pen_row"]
                 and building.get("col") == animal["pen_col"]
             ),
             None,
         )
         group = find_animal_pen_group(data["buildings"], pen)
+        if pen is not None and pen.get("type") == "feed_mill":
+            from feed_mill import mill_animals
+            flock = mill_animals(pen, animals)
+            if animal["type"] != "chicken" or len(flock) > 12:
+                return False
         if (
             pen is None
             or (animal["row"], animal["col"]) not in get_pen_group_tiles(group)

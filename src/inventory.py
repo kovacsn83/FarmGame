@@ -7,6 +7,12 @@ from financial_history import (
 
 # Az állati termékek a közös raktárkapacitást és az adatvezérelt piaci szabályt használják.
 PRODUCTS = {
+    "chicken_feed": {
+        "product_id": "chicken_feed", "name": "Csirketáp", "price": 0.00,
+        "product_category": "feed", "income_category": INCOME_PROCESSED_PRODUCT_SALES,
+        "inventory_source": "feed_mill", "marketable": False,
+        "restaurant_sellable": False,
+    },
     "kefir": {
         "product_id": "kefir", "name": "Kefír", "price": 22.00,
         "product_category": "processed_products",

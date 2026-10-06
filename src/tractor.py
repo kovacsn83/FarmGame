@@ -1178,8 +1178,10 @@ class Vehicle:
                         completed_work = delivered == task.resource_amount
                         if completed_work:
                             log(
-                                f"{delivered} db {get_inventory_item_name(task.cargo_type)} "
-                                "megérkezett a Feldolgozó üzembe.",
+                                f"{delivered} db {get_inventory_item_name(task.cargo_type)} " +
+                                ("megérkezett a Takarmánykeverő üzembe."
+                                 if task.field.get("type") == "feed_mill"
+                                 else "megérkezett a Feldolgozó üzembe."),
                                 "Processing",
                             )
                     elif task.task_type == TASK_SUPPLY_FEED:

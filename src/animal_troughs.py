@@ -250,6 +250,16 @@ def _draw_trough(screen, rect, fill_color, stock, capacity, water=False):
             )
 
 
+def draw_feed_mill_troughs(screen, building):
+    """Use the ordinary trough geometry and renderer without manual supply input."""
+    for kind, world_rect in _group_trough_world_rects([building]).items():
+        water = kind == "water"
+        _draw_trough(screen, _to_screen_rect(world_rect),
+                     TROUGH_WATER_COLOR if water else TROUGH_FEED_COLOR,
+                     1 if water or building.get("fed_this_week") else 0,
+                     1, water=water)
+
+
 def draw_pen_troughs(screen, buildings, animals):
     """Karámcsoportonként pontosan egy etető- és itatóvályút rajzol."""
     troughs = list(iter_troughs(buildings, animals))

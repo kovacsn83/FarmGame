@@ -632,6 +632,9 @@ class SimulationBot:
         run_weekly_orchard_cycle(
             self.buildings, elapsed_week,
         )
+        from feed_mill import run_weekly_feed_mills
+        run_weekly_feed_mills(self.world, self.buildings, self.animals, self.economy,
+                             self.vehicles, elapsed_week, current_ticks=self.virtual_ticks)
         run_weekly_animal_cycle(self.animals, self.buildings, self.economy)
         if run_weekly_animal_supply_automation(
                 self.world, self.buildings, self.economy, self.animals,

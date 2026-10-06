@@ -159,6 +159,8 @@ def _pen_identity(pen):
 
 def find_animal_pen_group(buildings, pen):
     """Megkeresi a konkrét Karámot tartalmazó összefüggő karámrendszert."""
+    if pen is not None and pen.get("type") == "feed_mill":
+        return [pen]
     if pen is None or pen.get("type") != "animal_pen":
         return None
     return next(
@@ -174,6 +176,8 @@ def get_pen_group_capacity(group):
     """Négy karámmezőnként egy állat férőhelyét biztosítja."""
     if not group:
         return 0
+    if group[0].get("type") == "feed_mill":
+        return 12
     tile_count = sum(
         pen["width"] * pen["height"]
         for pen in group
@@ -195,6 +199,9 @@ def get_pen_group_tiles(group):
     """Egyetlen összefüggő karámrendszer minden bejárható tile-ját adja vissza."""
     if not group:
         return set()
+    if group[0].get("type") == "feed_mill":
+        from feed_mill import yard_tiles
+        return yard_tiles(group[0])
     return {
         (pen["row"] + row, pen["col"] + col)
         for pen in group
@@ -207,7 +214,7 @@ def _find_assigned_pen(buildings, animal):
     return next(
         (
             building for building in buildings
-            if building.get("type") == "animal_pen"
+            if building.get("type") in ("animal_pen", "feed_mill")
             and building.get("row") == animal.get("pen_row")
             and building.get("col") == animal.get("pen_col")
         ),
@@ -422,8 +429,14 @@ def get_animal_placement_error(
     if definition is None:
         return "Ismeretlen állattípus."
     pen = find_building_data(buildings, row, col)
-    if pen is None or pen.get("type") != "animal_pen":
+    if pen is None or pen.get("type") not in ("animal_pen", "feed_mill"):
         return f"A {definition['name'].lower()} csak Karámba helyezhető."
+    if pen.get("type") == "feed_mill":
+        from feed_mill import yard_tiles
+        if animal_type != "chicken":
+            return "A Takarmánykeverő üzem I. egyelőre csak csirkét fogad."
+        if (row, col) not in yard_tiles(pen):
+            return "Az állat csak az üzemhez tartozó Karámba helyezhető."
     if any(
             animal["row"] == row and animal["col"] == col
             for animal in animals):
@@ -564,7 +577,16 @@ def produce_weekly_animal_products(
         animal_produced = False
         weekly_products = definition.get("weekly_products", {})
         if weekly_products:
+            from feed_mill import bonus_output, commit_bonus
+            bonuses = []
+            boosted = {}
+            for item, base in weekly_products.items():
+                boosted[item], pending = bonus_output(animal, buildings, item, base)
+                bonuses.append(pending)
+            weekly_products = boosted
             if store_items(buildings, weekly_products):
+                for pending in bonuses:
+                    commit_bonus(pending)
                 animal_produced = True
                 for item_id, amount in weekly_products.items():
                     produced_totals[item_id] = (
@@ -585,7 +607,10 @@ def produce_weekly_animal_products(
             # húshozam biztonságosan el nem fér a Raktárban.
             animal[counter_key] = production["interval_weeks"]
             amount = production["amount"]
+            from feed_mill import bonus_output, commit_bonus
+            amount, bonus = bonus_output(animal, buildings, item_id, amount)
             if store_items(buildings, {item_id: amount}):
+                commit_bonus(bonus)
                 animal_produced = True
                 produced_totals[item_id] = (
                     produced_totals.get(item_id, 0) + amount
@@ -665,6 +690,8 @@ def _report_waiting_slaughter_blocks(animals, buildings, storage_block_manager):
             continue
         definition = ANIMAL_TYPES[animal_type]
         required = production["amount"]
+        from feed_mill import bonus_output
+        required = max(bonus_output(a, buildings, item_id, required)[0] for a in waiting)
         capacity = get_total_capacity(buildings)
         used = sum(get_total_inventory(buildings).values())
         free = get_free_capacity(buildings)
@@ -699,8 +726,11 @@ def retry_waiting_animal_slaughters(
             animal.pop(SLAUGHTER_STATE_KEY, None)
             continue
         amount = production["amount"]
+        from feed_mill import bonus_output, commit_bonus
+        amount, bonus = bonus_output(animal, buildings, item_id, amount)
         if not store_items(buildings, {item_id: amount}):
             continue
+        commit_bonus(bonus)
         animal.pop(SLAUGHTER_STATE_KEY, None)
         resumed.append((animal, item_id, amount))
 
@@ -730,7 +760,10 @@ def retry_waiting_animal_slaughters(
 
 def feed_animals(animals, buildings, economy):
     """A Karámcsoport közös Etető- és Itatóvályújából biztosít ellátást."""
-    return supply_animals_from_troughs(animals, buildings), 0.0
+    from feed_mill import feed_mill_fed_animals, assigned_mill
+    ordinary = [a for a in animals if assigned_mill(a, buildings) is None]
+    return (supply_animals_from_troughs(ordinary, buildings)
+            + feed_mill_fed_animals(animals, buildings)), 0.0
 
 
 def run_weekly_animal_cycle(
@@ -763,7 +796,7 @@ run_daily_animal_cycle = run_weekly_animal_cycle
 
 def animal_pen_demolition_block_reason(building, buildings, animals):
     """Megakadályozza egy állatokat tartalmazó karámrendszer megbontását."""
-    if building is None or building.get("type") != "animal_pen":
+    if building is None or building.get("type") not in ("animal_pen", "feed_mill"):
         return None
     group = find_animal_pen_group(buildings, building)
     if get_animals_in_pen_group(animals, group):

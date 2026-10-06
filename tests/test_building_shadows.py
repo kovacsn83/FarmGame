@@ -52,8 +52,14 @@ class BuildingShadowTests(unittest.TestCase):
                         building.update(width=4, height=4, legacy_footprint=True)
                     render(surface, building)
                     width, height = building['width'] * 20, building['height'] * 20
-                    self.assert_darkened(surface.get_at((60 + width // 2, 108)), ground)
-                    self.assert_darkened(surface.get_at((60 + width + 1, 110 + height // 2)), ground)
+                    top = 110
+                    if kind == 'feed_mill':
+                        # Only the 4x4 hall casts a building shadow, not the open yard.
+                        width = height = 80
+                        top += 80
+                    self.assert_darkened(surface.get_at((60 + width // 2, top - 2)), ground)
+                    right_sample = 60 + width + (2 if kind == 'feed_mill' else 1)
+                    self.assert_darkened(surface.get_at((right_sample, top + height // 2)), ground)
 
     def test_cached_shadow_does_not_capture_the_background(self):
         first = _building_shadow_surface((100, 80), PROCEDURAL_SHADOW_COLOR)
