@@ -257,6 +257,12 @@ def find_timed_object_tooltip(
         if processing_plant is not None:
             if processing_plant.get("type") == "feed_mill":
                 from feed_mill import get_feed_mill_tooltip_lines
+                body_row = processing_plant["row"] + (
+                    4 if (processing_plant["width"], processing_plant["height"]) == (12, 8) else 0
+                )
+                if not (body_row <= row < body_row + 4
+                        and processing_plant["col"] <= col < processing_plant["col"] + 4):
+                    return None
                 return get_feed_mill_tooltip_lines(processing_plant, animals)
             return get_processing_tooltip_lines(processing_plant)
 

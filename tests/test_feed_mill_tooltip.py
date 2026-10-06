@@ -16,10 +16,10 @@ class FeedMillTooltipTests(unittest.TestCase):
     def hover(self, row, col):
         return find_timed_object_tooltip(row, col, [], [], {}, buildings=[self.mill])
 
-    def test_inside_full_plot_only(self):
-        for position in ((8, 10), (15, 21), (13, 11)):
+    def test_inside_four_by_four_building_only(self):
+        for position in ((12, 10), (15, 13), (13, 11)):
             self.assertEqual(self.hover(*position)[0], "Takarmánykeverő üzem I.")
-        for position in ((7, 10), (16, 10), (8, 22)):
+        for position in ((7, 10), (16, 10), (8, 22), (8, 10), (15, 21), (11, 13), (12, 14)):
             self.assertIsNone(self.hover(*position))
 
     def test_live_stock_and_status_without_mutation(self):
@@ -27,14 +27,19 @@ class FeedMillTooltipTests(unittest.TestCase):
         self.mill["processing_in_transit"]["corn"] = 5
         self.mill["fed_this_week"] = True
         before = deepcopy(self.mill)
-        lines = self.hover(8, 10)
+        lines = self.hover(12, 10)
         self.assertIn("Raktár: 17 / 200", lines)
         self.assertIn("Csirketáp: 12", lines)
         self.assertIn("Úton lévő alapanyag: 5", lines)
         self.assertIn("Etetés: Biztosítva", lines)
         self.assertEqual(self.mill, before)
         self.mill["processing_inventory"]["chicken_feed"] = 0
-        self.assertIn("Csirketáp: 0", self.hover(8, 10))
+        self.assertIn("Csirketáp: 0", self.hover(12, 10))
+
+    def test_legacy_compact_building_still_has_tooltip(self):
+        self.mill.update(width=4, height=4)
+        self.assertIsNotNone(self.hover(8, 10))
+        self.assertIsNone(self.hover(12, 10))
 
 
 if __name__ == "__main__":
