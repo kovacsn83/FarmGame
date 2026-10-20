@@ -912,6 +912,8 @@ def _validate_inventory(building):
                 and isinstance(bonus, dict) and set(bonus) == {"egg", "chicken_meat"}
                 and all(_is_plain_int(v) and 0 <= v <= 9 for v in bonus.values())
                 and _is_plain_int(building.get("feed_mill_week"))
+                and _is_plain_int(building.get("feed_produced_week", -1))
+                and -1 <= building.get("feed_produced_week", -1) <= building["feed_mill_week"]
                 and isinstance(building.get("fed_this_week"), bool))
     if building["type"] == "processing_plant":
         inventory = building.get("processing_inventory")

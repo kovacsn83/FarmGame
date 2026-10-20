@@ -28,10 +28,10 @@ class FeedMillTooltipTests(unittest.TestCase):
         self.mill["fed_this_week"] = True
         before = deepcopy(self.mill)
         lines = self.hover(12, 10)
-        self.assertIn("Raktár: 17 / 200", lines)
+        self.assertIn("Raktár telítettsége: 17 / 200 (8%)", lines)
         self.assertIn("Csirketáp: 12", lines)
-        self.assertIn("Úton lévő alapanyag: 5", lines)
-        self.assertIn("Etetés: Biztosítva", lines)
+        self.assertIn("Úton: Búza 0, Kukorica 5 db", lines)
+        self.assertIn("Etetés: nincs etetendő csirke", lines)
         self.assertEqual(self.mill, before)
         self.mill["processing_inventory"]["chicken_feed"] = 0
         self.assertIn("Csirketáp: 0", self.hover(12, 10))

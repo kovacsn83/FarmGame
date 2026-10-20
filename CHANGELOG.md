@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Takarmánykeverő alapanyag-puffer: 20–20 db (négy heti) célkészlet,
+  10 db alatti utánrendelés az úton lévő mennyiséget is figyelembe véve;
+  legfeljebb 20 egységes fuvarok, változatlan heti 12-es gyártás mellett.
+  Részletesebb popup és tooltip, közös zöld készlet-/sárga szállítási kapacitássávval.
+
+- A Takarmánykeverő üzem az alapanyag célba érkezésekor is gyárt, legfeljebb
+  heti egy 12 darabos adagot. A heti keret mentés/betöltés után is megmarad.
+  A popup és a tooltip részletesebben jelzi az alapanyaghiányt, a folyamatban
+  lévő szállítást, a járműre várást és a heti gyártási keret felhasználását.
+
 - Javítva a szilvát vagy kecsketejet szállító pótkocsik mentésellenőrzése:
   a szabályos rakomány miatt többé nem minősül sérültnek a mentés.
 

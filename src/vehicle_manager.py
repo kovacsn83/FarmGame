@@ -1233,8 +1233,8 @@ class VehicleManager:
             current_ticks=None):
         """Saját Raktárból Traktor + Pótkocsi fuvart foglal egy üzemhez."""
         initialize_processing_plant(plant)
-        from processing import get_processing_line_capacity
-        amount = min(max(0, int(amount)), get_processing_line_capacity(plant))
+        from processing import get_processing_delivery_capacity
+        amount = min(max(0, int(amount)), get_processing_delivery_capacity(plant))
         if amount <= 0 or plant not in buildings:
             return 0
         if (plant.get("type") != "feed_mill" and len(get_processing_lines(plant)) == 1
@@ -1292,8 +1292,8 @@ class VehicleManager:
             current_ticks=None):
         """Piacról vásárol, majd a Raktártól fizikai fuvart indít az üzemhez."""
         initialize_processing_plant(plant)
-        from processing import get_processing_line_capacity
-        amount = min(max(0, int(amount)), get_processing_line_capacity(plant))
+        from processing import get_processing_delivery_capacity
+        amount = min(max(0, int(amount)), get_processing_delivery_capacity(plant))
         if amount <= 0 or plant not in buildings:
             return 0
         if (plant.get("type") != "feed_mill" and len(get_processing_lines(plant)) == 1

@@ -688,6 +688,21 @@ def wrap_tooltip_lines(font, text, max_content_width):
     return wrapped_lines or [""]
 
 
+def draw_storage_meter(screen, rect, used, incoming, capacity):
+    """Physical inventory is green; reserved incoming cargo is amber."""
+    pygame.draw.rect(screen, (66, 69, 64), rect)
+    inner = rect.inflate(-2, -2)
+    stored_width = round(inner.width * min(1, max(0, used) / max(1, capacity)))
+    incoming_width = min(inner.width - stored_width,
+                         round(inner.width * max(0, incoming) / max(1, capacity)))
+    if stored_width:
+        pygame.draw.rect(screen, (65, 158, 88), (inner.x, inner.y, stored_width, inner.height))
+    if incoming_width:
+        pygame.draw.rect(screen, (218, 171, 66),
+                         (inner.x + stored_width, inner.y, incoming_width, inner.height))
+    pygame.draw.rect(screen, (150, 155, 145), rect, 1)
+
+
 def draw_tooltip(screen, font, text, button_rect):
     screen_width, screen_height = get_screen_size()
     max_content_width = max(
@@ -702,6 +717,9 @@ def draw_tooltip(screen, font, text, button_rect):
     content_width = max(line.get_width() for line in rendered_lines)
     content_height = sum(line.get_height() for line in rendered_lines)
     content_height += TOOLTIP_LINE_GAP * (len(rendered_lines) - 1)
+    meter = getattr(text, "storage_meter", None)
+    if meter is not None:
+        content_height += 24
     tooltip_rect = pygame.Rect(
         0, 0,
         content_width + TOOLTIP_PADDING_X * 2,
@@ -734,6 +752,10 @@ def draw_tooltip(screen, font, text, button_rect):
     for rendered_line in rendered_lines:
         screen.blit(rendered_line, (tooltip_rect.x + TOOLTIP_PADDING_X, line_y))
         line_y += rendered_line.get_height() + TOOLTIP_LINE_GAP
+    if meter is not None:
+        draw_storage_meter(screen, pygame.Rect(tooltip_rect.x + TOOLTIP_PADDING_X,
+                           tooltip_rect.bottom - TOOLTIP_PADDING_Y - 16,
+                           content_width, 16), *meter)
     return tooltip_rect
 
 
@@ -2321,24 +2343,30 @@ class InfoPanel(PopupWindow):
             self._draw_processing_plant(screen, font)
 
     def _draw_feed_mill(self, screen, font, game_state):
-        from feed_mill import initialize_feed_mill, mill_animals
+        from feed_mill import (initialize_feed_mill, mill_animals,
+                               get_feed_mill_status_lines, get_feed_mill_feeding_line,
+                               get_feed_mill_stock_lines)
         initialize_feed_mill(self.building)
-        self.rect.size = (500, 390)
-        self.rect.center = get_screen_center()
-        pygame.draw.rect(screen, (245, 245, 239), self.rect)
-        pygame.draw.rect(screen, (60, 60, 60), self.rect, 2)
         inventory = self.building["processing_inventory"]
         lines = ["Takarmánykeverő üzem I.",
                  f"Csirkék: {len(mill_animals(self.building, game_state.animals))} / 12",
                  "Heti recept: 5 Búza + 5 Kukorica = 12 Csirketáp",
-                 f"Üzemi raktár: {sum(inventory.values())} / 200",
-                 f"Búza: {inventory['wheat']}", f"Kukorica: {inventory['corn']}",
+                 *get_feed_mill_stock_lines(self.building),
                  f"Csirketáp: {inventory['chicken_feed']}",
-                 f"Úton lévő alapanyag: {sum(self.building['processing_in_transit'].values())}",
-                 "Heti etetés: " + ("Biztosítva" if self.building['fed_this_week'] else "Táphiány / nincs állat"),
+                 *get_feed_mill_status_lines(self.building),
+                 get_feed_mill_feeding_line(self.building, game_state.animals),
                  "Automatikus itatás | Tojás és hús: +10%"]
+        lines = wrap_tooltip_lines(font, lines, 580)
+        line_height = font.get_linesize() + 4
+        self.rect.size = (620, len(lines) * line_height + 88)
+        self.rect.center = get_screen_center()
+        pygame.draw.rect(screen, (245, 245, 239), self.rect)
+        pygame.draw.rect(screen, (60, 60, 60), self.rect, 2)
         for index, line in enumerate(lines):
-            self.draw_text(screen, font, line, self.rect.x + 20, self.rect.y + 22 + index * 32)
+            self.draw_text(screen, font, line, self.rect.x + 20, self.rect.y + 18 + index * line_height)
+        draw_storage_meter(screen, pygame.Rect(self.rect.x + 20, self.rect.bottom - 54, 580, 18),
+                           sum(inventory.values()), sum(self.building['processing_in_transit'].values()), 200)
+        self.draw_text(screen, font, "Zöld: raktáron | Sárga: szállítás alatt", self.rect.x + 20, self.rect.bottom - 30)
 
     def _draw_processing_plant(self, screen, font):
         """Az üzem termékválasztását, készletét és állapotát mutatja."""

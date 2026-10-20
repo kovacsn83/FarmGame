@@ -118,7 +118,7 @@ class FeedMillOperationTests(unittest.TestCase):
 
     def test_freight_is_real_and_pending_tasks_survive_save(self):
         garage = place_building(self.world, self.buildings, 2, 2, "garage")
-        self.warehouse["inventory"].update(wheat=5, corn=5)
+        self.warehouse["inventory"].update(wheat=20, corn=20)
         manager = VehicleManager()
         tractor = manager._create_managed_asset(VehicleType.TRACTOR, garage, 0)
         manager._create_managed_asset(VehicleType.TRAILER, garage, 1)
@@ -126,7 +126,7 @@ class FeedMillOperationTests(unittest.TestCase):
         state = GameState(self.world, [], self.buildings, self.economy, time, vehicles=manager)
         manager.ensure_idle_positions(self.world, self.buildings)
         run_weekly_feed_mills(self.world, self.buildings, [], self.economy, manager, 1, current_ticks=0)
-        self.assertEqual(sum(self.mill["processing_in_transit"].values()), 10)
+        self.assertEqual(sum(self.mill["processing_in_transit"].values()), 40)
         self.assertEqual(self.inventory["wheat"], 0)
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "freight.json"
@@ -138,8 +138,9 @@ class FeedMillOperationTests(unittest.TestCase):
             if all(a.is_idle for a in state.vehicles.tractors) and not state.vehicles.task_queue:
                 break
         mill = next(b for b in state.buildings if b["type"] == "feed_mill")
-        self.assertEqual(mill["processing_inventory"]["wheat"], 5)
-        self.assertEqual(mill["processing_inventory"]["corn"], 5)
+        self.assertEqual(mill["processing_inventory"]["wheat"], 15)
+        self.assertEqual(mill["processing_inventory"]["corn"], 15)
+        self.assertEqual(mill["processing_inventory"]["chicken_feed"], 12)
 
     def test_no_vehicle_means_no_purchase_or_virtual_delivery(self):
         before = self.economy.money
@@ -156,10 +157,10 @@ class FeedMillOperationTests(unittest.TestCase):
         manager.ensure_idle_positions(self.world, self.buildings)
         before = self.economy.money
         run_weekly_feed_mills(self.world, self.buildings, [], self.economy, manager, 1, current_ticks=0)
-        expected = sum((get_inventory_item_data(item)["price"] + 3) * 5
+        expected = sum((get_inventory_item_data(item)["price"] + 3) * 20
                        for item in ("wheat", "corn"))
         self.assertEqual(before - self.economy.money, expected)
-        self.assertEqual(sum(self.mill["processing_in_transit"].values()), 10)
+        self.assertEqual(sum(self.mill["processing_in_transit"].values()), 40)
         self.assertEqual(sum(self.inventory.values()), 0)
         run_weekly_feed_mills(self.world, self.buildings, [], self.economy, manager, 2, current_ticks=0)
         self.assertEqual(before - self.economy.money, expected)

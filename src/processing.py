@@ -71,6 +71,13 @@ def get_processing_line_capacity(plant):
     return PROCESSING_LEVELS.get(plant.get("_processing_plant_level", 1), PROCESSING_LEVELS[1])["per_line"]
 
 
+def get_processing_delivery_capacity(plant):
+    if plant.get("type") == "feed_mill":
+        from feed_mill import DELIVERY_CAPACITY
+        return DELIVERY_CAPACITY
+    return get_processing_line_capacity(plant)
+
+
 def initialize_processing_plant(plant):
     """Új és korábbi mentésből érkező üzemhez biztonságos alapállapotot ad."""
     if plant.get("type") == "feed_mill":
@@ -253,6 +260,9 @@ def receive_processing_delivery(plant, item_id, amount):
     plant["processing_status"] = PROCESSING_STATUS_READY
     if plant.get("type") != "feed_mill":
         start_processing_batch(plant)
+    else:
+        from feed_mill import try_produce_feed
+        try_produce_feed(plant)
     return amount
 
 
