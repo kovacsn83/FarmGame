@@ -1,0 +1,23 @@
+{
+  "notice": "Synthetic display fixture only; no economy, production, missions or saved-game state.",
+  "buildings": [
+    {"type": "farmhouse", "row": 10, "col": 6},
+    {"type": "garage", "row": 16, "col": 17},
+    {"type": "warehouse", "row": 16, "col": 25},
+    {"type": "processing_plant", "row": 15, "col": 36},
+    {"type": "feed_mill", "row": 12, "col": 48}
+  ],
+  "fields": [
+    {"type": "field_4x4", "row": 24, "col": 12},
+    {"type": "field_6x6", "row": 24, "col": 20},
+    {"type": "field_8x8", "row": 24, "col": 32}
+  ],
+  "road_segments": [
+    {"from": [5, 20], "to": [70, 20]},
+    {"from": [70, 20], "to": [70, 36]},
+    {"from": [70, 36], "to": [5, 36]},
+    {"from": [5, 36], "to": [5, 10]},
+    {"from": [5, 23], "to": [42, 23]}
+  ],
+  "demo_route": [[5, 20], [70, 20], [70, 36], [5, 36]]
+}
